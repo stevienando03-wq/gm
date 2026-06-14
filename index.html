@@ -179,10 +179,10 @@ const DEPTH_GROUPS = [
 /* ============================ STATE ============================ */
 const LS_KEY="fm_team_manager_v2";
 let STATE = load();
-function blankState(){ return { current:null, snapshots:[], overrides:{}, settings:{youthAge:21,releaseScore:9.0,youthKeep:9.5,benchSize:9}, fmConnected:false }; }
+function blankState(){ return { current:null, snapshots:[], overrides:{}, settings:{youthAge:21,releaseScore:9.0,youthKeep:9.5,benchSize:9}, fmConnected:false, season:{results:[]} }; }
 function load(){
-  try{ const s=JSON.parse(localStorage.getItem(LS_KEY)); if(s&&s.settings) return s; }catch(e){}
-  try{ const o=JSON.parse(localStorage.getItem("fm_team_manager_v1")); if(o&&o.settings){o.fmConnected=false;return o;} }catch(e){}
+  try{ const s=JSON.parse(localStorage.getItem(LS_KEY)); if(s&&s.settings){ s.season=s.season||{results:[]}; return s; } }catch(e){}
+  try{ const o=JSON.parse(localStorage.getItem("fm_team_manager_v1")); if(o&&o.settings){o.fmConnected=false;o.season=o.season||{results:[]};return o;} }catch(e){}
   const st=blankState(); st.current={label:"Seed squad",date:todayStr(),records:SEED}; return st;
 }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(STATE)); }
@@ -234,7 +234,7 @@ function esc(s){ return (s+"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">"
 function last(n){ return n.split(" ").slice(-1)[0]; }
 
 /* ============================ TABS ============================ */
-const TABS=[["dash","🏠 Dashboard"],["advice","🧭 Decisions"],["squad","👥 Squad"],["xi","⚽ Best XI"],["matchday","⚡ Matchday"],["setpiece","🎯 Set Pieces"],["tactics","🏆 Tactics"],["training","🏋️ Training"],["reports","📋 Reports"],["youth","🌟 Wonderkids"],["release","🗑️ Release"],["depth","📊 Depth"],["progress","📈 Progress"],["history","🗂️ More"],["notice","📖 Help"]];
+const TABS=[["dash","🏠 Dashboard"],["advice","🧭 Decisions"],["squad","👥 Squad"],["compare","⚖️ Compare"],["xi","⚽ Best XI"],["matchday","⚡ Matchday"],["season","📝 Season"],["setpiece","🎯 Set Pieces"],["tactics","🏆 Tactics"],["training","🏋️ Training"],["reports","📋 Reports"],["youth","🌟 Wonderkids"],["release","🗑️ Release"],["depth","📊 Depth"],["progress","📈 Progress"],["history","🗂️ More"],["notice","📖 Help"]];
 let TAB="dash";
 function renderTabs(){ document.getElementById("tabs").innerHTML=TABS.map(([k,l])=>`<button class="${k===TAB?'active':''}" onclick="go('${k}')">${l}</button>`).join(""); }
 function go(k){ TAB=k; renderTabs(); render(); window.scrollTo(0,0); }
@@ -242,7 +242,7 @@ function render(){
   document.getElementById("refreshBtn").textContent = STATE.fmConnected ? "🔄 Refresh from FM" : "🔗 Connect FM";
   const v=document.getElementById("view");
   if(!STATE.current){ v.innerHTML=`<div class="card"><h2>No squad loaded</h2><p class="sub">Import your <code>Untitled.html</code> FM export to begin.</p><button class="btn primary" onclick="openImport()">Import now</button></div>`; return; }
-  v.innerHTML=({dash:vDash,advice:vAdvice,squad:vSquad,xi:vXI,matchday:vMatchday,setpiece:vSetpiece,reports:vReports,training:vTraining,youth:vYouth,release:vRelease,depth:vDepth,progress:vProgress,tactics:vTactics,history:vHistory,notice:vNotice}[TAB]||vDash)();
+  v.innerHTML=({dash:vDash,advice:vAdvice,squad:vSquad,compare:vCompare,xi:vXI,matchday:vMatchday,season:vSeason,setpiece:vSetpiece,reports:vReports,training:vTraining,youth:vYouth,release:vRelease,depth:vDepth,progress:vProgress,tactics:vTactics,history:vHistory,notice:vNotice}[TAB]||vDash)();
   if(TAB==="squad") wireSquad();
 }
 
@@ -351,6 +351,7 @@ function openPlayer(name){
     <h2 style="margin:0">${esc(p.name)}</h2>
     <p class="sub">${p.age} y · ${esc(p.position)} · L:${esc(p.lf)||"–"} R:${esc(p.rf)||"–"} &nbsp; ${rolePill(role)} ${scoreBadge(scoreFor(p,role))}</p>
     ${facts?`<div class="fchips">${facts}</div>`:""}
+    ${(()=>{const [st,t]=recommendStatus(p);return `<p style="margin:0 0 12px"><span class="tag ${t}">Suggested squad status: ${st}</span></p>`;})()}
     ${statLine}
     <div class="row" style="margin-bottom:12px">
       <label class="muted">Assigned role:
@@ -472,9 +473,13 @@ function vDepth(){
   const blocks=DEPTH_GROUPS.map(g=>{
     const cand=ps.filter(p=>eligible(p,g.slot)).map(p=>({p,s:scoreFor(p,g.role)})).sort((a,b)=>b.s-a.s);
     const good=cand.filter(c=>c.s>=11).length;
-    const status=good>=2?["good","Solid"]:good==1?["warn","Thin — 1 deep"]:["bad","WEAK — buy/promote"];
+    const status=good>=2?["good","Solid"]:good==1?["warn","Thin — 1 deep"]:["bad","WEAK — retrain/promote"];
     const list=cand.slice(0,6).map(c=>`<div class="depthcell" onclick="openPlayer('${esc(c.p.name)}')" style="cursor:pointer;margin:3px 0"><span style="min-width:120px"><b>${esc(last(c.p.name))}</b> <span class="muted">${c.p.age}</span></span><span class="barmini"><i style="width:${c.s/20*100}%;background:${scoreColor(c.s)}"></i></span><span style="font-weight:700;color:${scoreColor(c.s)};min-width:34px;text-align:right">${c.s.toFixed(1)}</span></div>`).join("")||'<span class="muted">No natural option.</span>';
-    return `<div class="card" style="margin-bottom:0"><div class="row" style="justify-content:space-between"><h3 style="margin:0">${g.label}</h3><span class="tag ${status[0]}">${status[1]}</span></div><p class="sub" style="margin:6px 0 8px">${rolePill(g.role)} · ${cand.length} natural · ${good} good (≥11)</p>${list}</div>`;
+    // retraining advisor: non-natural players whose attributes suit this role (no transfers in a youth challenge)
+    const usedNames=new Set(cand.map(c=>c.p.name));
+    const retrain=good<2?ps.filter(p=>!usedNames.has(p.name)).map(p=>({p,s:scoreFor(p,g.role)})).filter(o=>o.s>=10).sort((a,b)=>b.s-a.s).slice(0,3):[];
+    const retrainHtml=retrain.length?`<div class="tipbox amber" style="margin:8px 0 0;padding:8px 10px"><b>🔁 Retrain here:</b> ${retrain.map(o=>esc(last(o.p.name))+" ("+o.s.toFixed(1)+")").join(", ")} — good attributes for this role, just not natural. Set position retraining.</div>`:'';
+    return `<div class="card" style="margin-bottom:0"><div class="row" style="justify-content:space-between"><h3 style="margin:0">${g.label}</h3><span class="tag ${status[0]}">${status[1]}</span></div><p class="sub" style="margin:6px 0 8px">${rolePill(g.role)} · ${cand.length} natural · ${good} good (≥11)</p>${list}${retrainHtml}</div>`;
   }).join("");
   return `<div class="card"><h2>📊 Squad depth</h2><p class="sub">Per position: your natural options ranked. <span class="tag bad">WEAK</span> = fewer than 2 players ≥11 — your transfer priorities.</p></div>
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">${blocks}</div>`;
@@ -819,6 +824,86 @@ function repPersonality(){
   return `<div class="tipbox"><b>©️ Best dressing-room leaders:</b> ${leaders.slice(0,3).map(r=>esc(last(r.p.name))).join(", ")} — captain material, lift everyone's Determination.</div>
     ${mentors.length&&needMentor.length?`<div class="tipbox"><b>🤝 Mentoring tutor groups:</b> put senior pros (${mentors.slice(0,3).map(r=>esc(last(r.p.name))).join(", ")}) in a group with your weak-personality youngsters (${needMentor.slice(0,4).map(r=>esc(last(r.p.name))).join(", ")}) to fix their mentality & Determination.</div>`:''}
     <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>Personality</th><th>Det</th><th></th></tr></thead><tbody>${rows.filter(r=>r.pers).sort((a,b)=>b.det-a.det).map(r=>`<tr onclick="openPlayer('${esc(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td>${r.p.age}</td><td class="muted">${esc(r.pers)}</td><td>${r.det}</td><td>${good(r.pers)?'<span class="tag good">good</span>':bad(r.pers)?'<span class="tag bad">risk</span>':''}</td></tr>`).join("")}</tbody></table></div>`;
+}
+
+/* ============================ SQUAD STATUS ============================ */
+function recommendStatus(p){
+  const {score}=bestRole(p), dev=devProxy(p,score), ya=STATE.settings.youthAge;
+  if(score>=14) return ["Star Player","good"];
+  if(score>=12) return ["Important Player","good"];
+  if(p.age<=ya && dev>=STATE.settings.youthKeep+1) return ["Hot Prospect","info"];
+  if(score>=10) return ["Squad Player","info"];
+  if(p.age<=ya) return ["Youngster — develop / loan","warn"];
+  if(score<STATE.settings.releaseScore) return ["Surplus — loan or release","bad"];
+  return ["Fringe / Backup","warn"];
+}
+
+/* ============================ COMPARE ============================ */
+let cmpA=null,cmpB=null;
+function vCompare(){
+  const ps=players().slice().sort((a,b)=>a.name.localeCompare(b.name));
+  if(!ps.length) return `<div class="card"><h2>⚖️ Compare</h2><p class="muted">No squad.</p></div>`;
+  if(!cmpA||!ps.find(p=>p.name===cmpA)) cmpA=ps[0].name;
+  if(!cmpB||!ps.find(p=>p.name===cmpB)) cmpB=(ps[1]||ps[0]).name;
+  const A=players().find(p=>p.name===cmpA), B=players().find(p=>p.name===cmpB);
+  const opt=sel=>ps.map(p=>`<option ${sel===p.name?'selected':''}>${esc(p.name)}</option>`).join("");
+  const fA=bestRole(A), fB=bestRole(B);
+  const cell=(v,o,left)=>{const win=v>o;return `<td style="text-align:${left?'right':'left'};font-weight:${win?'800':'500'};color:${win?'#34d399':v>=12?'var(--txt)':'var(--mut)'}">${v}</td>`;};
+  const attrRows=ATTRS.map(a=>{const va=A.attrs[a]||0,vb=B.attrs[a]||0;return `<tr>${cell(va,vb,1)}<td class="an" style="text-align:center;color:var(--mut)">${a}</td>${cell(vb,va,0)}</tr>`;}).join("");
+  const roleRows=ROLES.map(r=>{const sa=scoreFor(A,r),sb=scoreFor(B,r);return `<tr><td style="text-align:right;font-weight:${sa>sb?800:500};color:${sa>sb?'#34d399':'var(--mut)'}">${sa.toFixed(1)}</td><td class="an" style="text-align:center;color:var(--mut)">${r}</td><td style="font-weight:${sb>sa?800:500};color:${sb>sa?'#34d399':'var(--mut)'}">${sb.toFixed(1)}</td></tr>`;}).join("");
+  const sharedRole=assignedRole(A), sA=scoreFor(A,sharedRole), sB=scoreFor(B,sharedRole);
+  const verdict = Math.abs(sA-sB)<0.3?"Too close to call — pick on form & freshness.":(sA>sB?esc(last(A.name)):esc(last(B.name)))+" is the better fit for "+sharedRole+" ("+Math.max(sA,sB).toFixed(1)+" vs "+Math.min(sA,sB).toFixed(1)+").";
+  return `<div class="card"><h2>⚖️ Compare players</h2><p class="sub">Side-by-side for selection calls. Higher value is <b style="color:#34d399">green</b>.</p>
+    <div style="display:grid;grid-template-columns:1fr 50px 1fr;gap:8px;align-items:center;margin-bottom:12px">
+      <select onchange="cmpA=this.value;render()">${opt(cmpA)}</select><span class="muted" style="text-align:center">vs</span><select onchange="cmpB=this.value;render()">${opt(cmpB)}</select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 50px 1fr;gap:8px;text-align:center;margin-bottom:8px">
+      <div><b>${esc(A.name)}</b><br><span class="muted">${A.age}y · ${esc(A.position)}</span><br>${scoreBadge(fA.score)} <span class="muted">${fA.role.split(" ")[0]}</span></div>
+      <div></div>
+      <div><b>${esc(B.name)}</b><br><span class="muted">${B.age}y · ${esc(B.position)}</span><br>${scoreBadge(fB.score)} <span class="muted">${fB.role.split(" ")[0]}</span></div>
+    </div>
+    <div class="tipbox"><b>Verdict:</b> ${verdict}</div>
+    <h3>Role fit</h3><div class="tablewrap"><table><tbody>${roleRows}</tbody></table></div>
+    <h3>Attributes</h3><div class="tablewrap"><table><tbody>${attrRows}</tbody></table></div>
+  </div>`;
+}
+
+/* ============================ SEASON / RESULT LOG ============================ */
+function seasonStats(){ const r=STATE.season.results; let w=0,d=0,l=0,gf=0,ga=0; r.forEach(m=>{gf+=+m.gf;ga+=+m.ga;if(+m.gf>+m.ga)w++;else if(+m.gf<+m.ga)l++;else d++;}); return {p:r.length,w,d,l,gf,ga,gd:gf-ga,pts:w*3+d}; }
+function addResult(){
+  const opp=document.getElementById("rOpp").value.trim()||"Opponent";
+  const ha=document.getElementById("rHA").value, gf=+document.getElementById("rGF").value, ga=+document.getElementById("rGA").value, comp=document.getElementById("rComp").value.trim();
+  if(isNaN(gf)||isNaN(ga)){toast("Enter both scores");return;}
+  STATE.season.results.unshift({date:todayStr(),opp,ha,gf,ga,comp}); save(); render();
+}
+function delResult(i){ STATE.season.results.splice(i,1); save(); render(); }
+function clearSeason(){ if(confirm("Clear all results?")){ STATE.season.results=[]; save(); render(); } }
+function vSeason(){
+  const s=seasonStats(), r=STATE.season.results;
+  const last5=r.slice(0,5).map(m=>{const res=+m.gf>+m.ga?["W","#22c55e"]:+m.gf<+m.ga?["L","#f43f5e"]:["D","#fbbf24"];return `<span title="${esc(m.opp)} ${m.gf}-${m.ga}" style="display:inline-flex;width:26px;height:26px;border-radius:6px;background:${res[1]};color:#06140d;font-weight:800;align-items:center;justify-content:center;margin-right:4px">${res[0]}</span>`;}).join("");
+  // streak
+  let streak="",sc=0,st=null; for(const m of r){const o=+m.gf>+m.ga?"W":+m.gf<+m.ga?"L":"D"; const cat=o==="W"?"win":o==="L"?"loss":"draw"; if(st===null){st=(o==="L")?"winless":(o==="W")?"unbeaten":"unbeaten";} if((st==="unbeaten"&&o!=="L")||(st==="winless"&&o!=="W")){sc++;}else break;}
+  if(r.length) streak=`${sc} ${st==="winless"?"winless":"unbeaten"}`;
+  const rows=r.map((m,i)=>{const res=+m.gf>+m.ga?["W","good"]:+m.gf<+m.ga?["L","bad"]:["D","warn"];return `<tr><td><span class="tag ${res[1]}">${res[0]}</span></td><td>${m.ha==="H"?"🏠":"✈️"} <b>${esc(m.opp)}</b></td><td><b>${m.gf}-${m.ga}</b></td><td class="muted">${esc(m.comp||"")}</td><td class="muted">${m.date}</td><td><button class="btn sm ghost" onclick="delResult(${i})">✕</button></td></tr>`;}).join("");
+  return `<div class="card"><h2>📝 Season log</h2><p class="sub">Type each result after a match to track your form & run. Saved in your browser + backups.</p>
+    <div class="grid kpis">
+      <div class="kpi"><div class="n">${s.pts}</div><div class="l">Points (${s.p} pl)</div></div>
+      <div class="kpi"><div class="n">${s.w}-${s.d}-${s.l}</div><div class="l">W-D-L</div></div>
+      <div class="kpi"><div class="n">${s.gf}:${s.ga}</div><div class="l">Goals (${s.gd>=0?'+':''}${s.gd})</div></div>
+      <div class="kpi"><div class="n" style="font-size:18px">${streak||'—'}</div><div class="l">Current run</div></div>
+    </div>
+    ${r.length?`<h3>Form (last 5)</h3><div>${last5}</div>`:''}
+    <h3>Add result</h3>
+    <div class="row">
+      <select id="rHA"><option value="H">🏠 Home</option><option value="A">✈️ Away</option></select>
+      <input type="text" id="rOpp" placeholder="Opponent" style="flex:1;min-width:120px">
+      <input type="number" id="rGF" placeholder="us" style="width:64px">
+      <input type="number" id="rGA" placeholder="them" style="width:64px">
+      <input type="text" id="rComp" placeholder="Comp (optional)" style="width:130px">
+      <button class="btn primary" onclick="addResult()">Add</button>
+    </div>
+    ${r.length?`<h3>Results</h3><div class="tablewrap"><table><thead><tr><th>Res</th><th>Match</th><th>Score</th><th>Comp</th><th>Date</th><th></th></tr></thead><tbody>${rows}</tbody></table></div><button class="btn ghost sm" style="margin-top:10px" onclick="clearSeason()">Clear season</button>`:'<p class="muted" style="margin-top:14px">No results yet — add your first above.</p>'}
+  </div>`;
 }
 
 /* ============================ DECISION CENTRE (your assistant) ============================ */
