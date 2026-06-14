@@ -192,7 +192,7 @@ function normalize(rec){
   const g=k=>rec[k]!==undefined?rec[k]:"";
   const attrs={}; ATTRS.forEach(a=>attrs[a]=num(g(a)));
   const role=(g("Position/Role/Duty")||"").trim();
-  return {name:(g("Name")||"").trim(),age:num(g("Age")),position:(g("Position")||"").trim(),lf:(g("Left Foot")||"").trim(),rf:(g("Right Foot")||"").trim(),role:ROLES.includes(role)?role:"",attrs};
+  return {name:(g("Name")||"").trim(),age:num(g("Age")),position:(g("Position")||"").trim(),lf:(g("Left Foot")||"").trim(),rf:(g("Right Foot")||"").trim(),role:ROLES.includes(role)?role:"",attrs,raw:rec};
 }
 function players(){ return (STATE.current?.records||[]).map(normalize).filter(p=>p.name); }
 function scoreFor(p,role){ if(!SCORING.weights[role])return 0; let D=footScore(p.lf)+footScore(p.rf); const w=SCORING.weights[role]; for(const a of ATTRS) D+=(p.attrs[a]||0)*(w[a]||0); return Math.round(D/SCORING.rolemax[role]*20*100)/100; }
@@ -231,7 +231,7 @@ function esc(s){ return (s+"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">"
 function last(n){ return n.split(" ").slice(-1)[0]; }
 
 /* ============================ TABS ============================ */
-const TABS=[["dash","🏠 Dashboard"],["squad","👥 Squad"],["xi","⚽ Best XI"],["matchday","⚡ Matchday"],["setpiece","🎯 Set Pieces"],["tactics","🏆 Tactics"],["training","🏋️ Training"],["youth","🌱 Youth"],["release","🗑️ Release"],["depth","📊 Depth"],["progress","📈 Progress"],["history","🗂️ More"],["notice","📖 Help"]];
+const TABS=[["dash","🏠 Dashboard"],["squad","👥 Squad"],["xi","⚽ Best XI"],["matchday","⚡ Matchday"],["setpiece","🎯 Set Pieces"],["tactics","🏆 Tactics"],["training","🏋️ Training"],["reports","📋 Reports"],["youth","🌱 Youth"],["release","🗑️ Release"],["depth","📊 Depth"],["progress","📈 Progress"],["history","🗂️ More"],["notice","📖 Help"]];
 let TAB="dash";
 function renderTabs(){ document.getElementById("tabs").innerHTML=TABS.map(([k,l])=>`<button class="${k===TAB?'active':''}" onclick="go('${k}')">${l}</button>`).join(""); }
 function go(k){ TAB=k; renderTabs(); render(); window.scrollTo(0,0); }
@@ -239,7 +239,7 @@ function render(){
   document.getElementById("refreshBtn").textContent = STATE.fmConnected ? "🔄 Refresh from FM" : "🔗 Connect FM";
   const v=document.getElementById("view");
   if(!STATE.current){ v.innerHTML=`<div class="card"><h2>No squad loaded</h2><p class="sub">Import your <code>Untitled.html</code> FM export to begin.</p><button class="btn primary" onclick="openImport()">Import now</button></div>`; return; }
-  v.innerHTML=({dash:vDash,squad:vSquad,xi:vXI,matchday:vMatchday,setpiece:vSetpiece,training:vTraining,youth:vYouth,release:vRelease,depth:vDepth,progress:vProgress,tactics:vTactics,history:vHistory,notice:vNotice}[TAB]||vDash)();
+  v.innerHTML=({dash:vDash,squad:vSquad,xi:vXI,matchday:vMatchday,setpiece:vSetpiece,reports:vReports,training:vTraining,youth:vYouth,release:vRelease,depth:vDepth,progress:vProgress,tactics:vTactics,history:vHistory,notice:vNotice}[TAB]||vDash)();
   if(TAB==="squad") wireSquad();
 }
 
@@ -547,6 +547,15 @@ function vNotice(){
     <li>Phone: <b>💾 Backup</b> on PC → send file → <b>↩</b> Restore on phone.</li>
   </ol>
   <div class="tipbox amber"><b>Why not fully automatic?</b> Browsers can't silently read your disk (security). "Connect FM" lets you pick <code>Untitled.html</code> once; after that it's a single click to reload it. On mobile, use Backup/Restore.</div>
+  <h3>➕ Columns to add (so it can read everything)</h3>
+  <p class="sub">In FM, on your squad screen: right-click a column header → <b>Customise</b> → tick these → then export. Each one unlocks a 📋 Reports section automatically:</p>
+  <div class="tablewrap"><table><thead><tr><th>Add these FM columns</th><th>Unlocks</th></tr></thead><tbody>
+    <tr><td><b>Condition</b>, <b>Match Sharpness</b>, <b>Morale</b></td><td>💪 Fitness — who to rest / fresh XI</td></tr>
+    <tr><td><b>Apps</b>, <b>Gls</b>, <b>Ast</b>, <b>Av Rat</b>, <b>Mins</b></td><td>📈 Form & Stats — top scorers, form</td></tr>
+    <tr><td><b>Transfer Value</b>, <b>Wage</b>, <b>Expires</b></td><td>💰 Finance — sell-for-profit, expiring deals</td></tr>
+    <tr><td><b>Personality</b></td><td>🧠 Personality — captains & youth mentoring</td></tr>
+  </tbody></table></div>
+  <p class="sub">You never lose anything by adding columns — the app keeps the ones it already uses (Name, Age, Position, the 47 attributes, feet, Position/Role/Duty) and simply switches on the extras when present.</p>
   <h3>The score (0–20)</h3>
   <p><code>Score = (feet + Σ attribute × role-weight) ÷ role-max × 20</code> — a <b>fit</b> rating for that role, not potential.</p>
   <div class="row" style="gap:10px;margin:8px 0">${[["Excellent",14.5],["Good/starter",12],["Rotation",10],["Weak",7],["Poor",4]].map(([t,s])=>`<span>${scoreBadge(s)} <b>${t}</b></span>`).join(" ")}</div>
@@ -688,6 +697,68 @@ function vMatchday(){
     </tbody></table></div>
     <div class="tipbox"><b>Rule of thumb:</b> match the body-language to the performance, not just the score. Reading the players' reaction (green = it worked) matters more than the exact words.</div>
   </div>`;
+}
+
+/* ============================ REPORTS (fitness / form / finance / personality) ============================ */
+let repSeg="fitness";
+function rawOf(p,keys){ if(!p.raw)return null; for(const k of keys){ if(p.raw[k]!==undefined&&(p.raw[k]+"").trim()!=="") return (p.raw[k]+"").trim(); } return null; }
+function hasCol(keys){ return players().some(p=>rawOf(p,keys)!==null); }
+function parsePct(s){ if(s==null)return null; const m=(s+"").match(/(\d+)/); return m?+m[1]:null; }
+function parseNumLoose(s){ if(s==null)return null; const m=(s+"").replace(/,/g,"").match(/-?[\d.]+/); return m?parseFloat(m[0]):null; }
+function parseMoney(s){ if(s==null)return null; const str=(s+"").replace(/,/g,""); if(/not for sale|n\/a|^-$|^£?0$/i.test(str.trim()))return 0; const parts=str.split("-"); const t=parts[parts.length-1]; const m=t.match(/([\d.]+)\s*([KMB])?/i); if(!m)return 0; let n=parseFloat(m[1]); const u=(m[2]||"").toUpperCase(); if(u==="K")n*=1e3; if(u==="M")n*=1e6; if(u==="B")n*=1e9; return n; }
+function money(n){ if(n==null)return "—"; if(n>=1e6)return (n/1e6).toFixed(2)+"M"; if(n>=1e3)return Math.round(n/1e3)+"K"; return Math.round(n); }
+const GOOD_PERS=["model citizen","model professional","professional","determined","resolute","driven","perfectionist","spirited","charismatic leader","born leader","leader","iron-willed","iron willed","fairly determined","fairly professional","very ambitious","ambitious","jovial","light-hearted"];
+const BAD_PERS=["casual","temperamental","unambitious","low determination","spineless","slack","easily discouraged","unsporting","mercenary","realist"];
+const KEYS={con:["Condition","Con"],sharp:["Match Sharpness","Sharp","Sharpness"],mor:["Morale","Mor"],apps:["Apps","Appearances"],gls:["Gls","Goals"],ast:["Ast","Assists"],rat:["Av Rat","Avg Rat","Average Rating","Rating","Av.R"],mins:["Mins","Minutes"],val:["Transfer Value","Value"],wage:["Wage","Salary"],exp:["Expires","Contract","Contract Expires","Expiry"],pers:["Personality"]};
+function noData(label,cols){ return `<div class="tipbox amber"><b>➕ Add the “${cols.join("” / “")}” column</b> to your FM squad view, re-export, and re-import — then ${label} fills in automatically.</div>`; }
+
+function vReports(){
+  const seg=[["fitness","💪 Fitness"],["form","📈 Form & Stats"],["finance","💰 Finance"],["personality","🧠 Personality"]].map(([k,l])=>`<button class="${repSeg===k?'on':''}" onclick="repSeg='${k}';render()">${l}</button>`).join("");
+  return `<div class="card"><h2>📋 Reports</h2><p class="sub">Deeper squad analysis. Each section activates when its FM column is in your export — see <b>📖 Help → columns to add</b>.</p><div class="seg">${seg}</div><div>${({fitness:repFitness,form:repForm,finance:repFinance,personality:repPersonality}[repSeg])()}</div></div>`;
+}
+function repFitness(){
+  if(!hasCol(KEYS.con)&&!hasCol(KEYS.sharp)) return noData("a fitness/rotation view",["Condition","Match Sharpness"]);
+  const starters=new Set(Object.values(bestXI().assign).map(a=>a.p.name));
+  const rows=players().map(p=>({p,con:parsePct(rawOf(p,KEYS.con)),sh:parsePct(rawOf(p,KEYS.sharp)),mor:rawOf(p,KEYS.mor)})).filter(r=>r.con!=null||r.sh!=null);
+  rows.sort((a,b)=>(a.con??101)-(b.con??101));
+  const rest=rows.filter(r=>starters.has(r.p.name)&&r.con!=null&&r.con<92);
+  return `${rest.length?`<div class="tipbox amber"><b>Rest before next match:</b> ${rest.map(r=>esc(last(r.p.name))+" ("+r.con+"%)").join(", ")} — start a fresh deputy or they'll fade & risk injury.</div>`:`<div class="tipbox"><b>Squad is fresh</b> — no starter below 92% condition.</div>`}
+    <div class="tablewrap"><table><thead><tr><th>Name</th><th>XI</th><th>Condition</th><th>Sharpness</th><th>Morale</th></tr></thead><tbody>${rows.map(r=>`<tr onclick="openPlayer('${esc(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td>${starters.has(r.p.name)?'<span class="tag good">XI</span>':''}</td><td>${r.con!=null?`<span class="row"><span class="barmini" style="max-width:80px"><i style="width:${r.con}%;background:${r.con>=92?'#22c55e':r.con>=80?'#fbbf24':'#f43f5e'}"></i></span> ${r.con}%</span>`:'—'}</td><td>${r.sh!=null?r.sh+'%':'—'}</td><td class="muted">${esc(r.mor||'—')}</td></tr>`).join("")}</tbody></table></div>`;
+}
+function repForm(){
+  if(!hasCol(KEYS.gls)&&!hasCol(KEYS.rat)&&!hasCol(KEYS.ast)) return noData("top scorers, assists & form",["Gls","Ast","Av Rat","Apps"]);
+  const rows=players().map(p=>({p,apps:rawOf(p,KEYS.apps),g:parseNumLoose(rawOf(p,KEYS.gls)),a:parseNumLoose(rawOf(p,KEYS.ast)),rat:parseNumLoose(rawOf(p,KEYS.rat)),mins:parseNumLoose(rawOf(p,KEYS.mins))}));
+  const top=(key,n)=>rows.filter(r=>r[key]!=null).sort((a,b)=>b[key]-a[key]).slice(0,n);
+  const card=(title,list,fmt)=>`<div><h3 style="margin-top:0">${title}</h3>${list.length?list.map((r,i)=>`<div class="row" style="justify-content:space-between" onclick="openPlayer('${esc(r.p.name)}')"><span style="cursor:pointer">${i+1}. <b>${esc(r.p.name)}</b></span><b>${fmt(r)}</b></div>`).join(""):'<p class="muted">No data.</p>'}</div>`;
+  return `<div class="flex2">${card("⚽ Top scorers",top('g',6),r=>r.g+" gls")}${card("🅰️ Top assists",top('a',6),r=>r.a+" ast")}</div>
+    <div class="flex2">${card("⭐ Best average rating",top('rat',6),r=>r.rat.toFixed(2))}${card("⏱️ Most minutes",top('mins',6),r=>money(r.mins))}</div>
+    <h3>Full stats</h3><div class="tablewrap"><table><thead><tr><th>Name</th><th>Apps</th><th>Gls</th><th>Ast</th><th>Av Rat</th></tr></thead><tbody>${rows.filter(r=>r.apps||r.g!=null||r.rat!=null).sort((a,b)=>(b.rat??0)-(a.rat??0)).map(r=>`<tr onclick="openPlayer('${esc(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td class="muted">${esc(r.apps||'—')}</td><td>${r.g??'—'}</td><td>${r.a??'—'}</td><td>${r.rat!=null?`<span style="color:${r.rat>=7?'#22c55e':r.rat>=6.7?'#fbbf24':'#f43f5e'};font-weight:700">${r.rat.toFixed(2)}</span>`:'—'}</td></tr>`).join("")}</tbody></table></div>`;
+}
+function repFinance(){
+  if(!hasCol(KEYS.val)&&!hasCol(KEYS.wage)&&!hasCol(KEYS.exp)) return noData("squad value, wage bill, sell-for-profit & expiring contracts",["Transfer Value","Wage","Expires"]);
+  const rows=players().map(p=>({p,val:parseMoney(rawOf(p,KEYS.val)),wage:parseMoney(rawOf(p,KEYS.wage)),exp:rawOf(p,KEYS.exp),score:bestRole(p).score}));
+  const totV=rows.reduce((s,r)=>s+(r.val||0),0), totW=rows.reduce((s,r)=>s+(r.wage||0),0);
+  const valuable=rows.filter(r=>r.val).sort((a,b)=>b.val-a.val).slice(0,6);
+  const profit=rows.filter(r=>r.val&&r.val>=50000&&r.score<10).sort((a,b)=>b.val-a.val).slice(0,8);
+  const expSoon=rows.filter(r=>r.exp&&/202[5-9]|203[0-9]/.test(r.exp)).map(r=>({...r,y:(r.exp.match(/20\d\d/)||[])[0]})).filter(r=>r.y).sort((a,b)=>a.y-b.y).slice(0,10);
+  return `<div class="grid kpis"><div class="kpi"><div class="n">${money(totV)}</div><div class="l">Squad value</div></div><div class="kpi"><div class="n">${money(totW)}</div><div class="l">Weekly wage bill</div></div></div>
+    <div class="flex2" style="margin-top:14px">
+      <div><h3 style="margin-top:0">💎 Most valuable</h3>${valuable.map((r,i)=>`<div class="row" style="justify-content:space-between" onclick="openPlayer('${esc(r.p.name)}')"><span style="cursor:pointer">${i+1}. <b>${esc(r.p.name)}</b></span><b>${money(r.val)}</b></div>`).join("")||'<p class="muted">No value data.</p>'}</div>
+      <div><h3 style="margin-top:0">💰 Sell for profit <span class="muted" style="font-size:11px">(valuable but low fit)</span></h3>${profit.length?profit.map(r=>`<div class="row" style="justify-content:space-between" onclick="openPlayer('${esc(r.p.name)}')"><span style="cursor:pointer"><b>${esc(r.p.name)}</b> <span class="muted">fit ${r.score.toFixed(1)}</span></span><b>${money(r.val)}</b></div>`).join(""):'<p class="muted">None — your value matches your quality.</p>'}</div>
+    </div>
+    <h3>⏳ Contracts expiring (renew or cash in)</h3>${expSoon.length?`<div class="tablewrap"><table><thead><tr><th>Name</th><th>Expires</th><th>Best role</th><th>Fit</th></tr></thead><tbody>${expSoon.map(r=>`<tr onclick="openPlayer('${esc(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td class="muted">${esc(r.exp)}</td><td>${rolePill(bestRole(r.p).role)}</td><td>${scoreBadge(r.score)}</td></tr>`).join("")}</tbody></table></div>`:'<p class="muted">No contract dates found.</p>'}`;
+}
+function repPersonality(){
+  if(!hasCol(KEYS.pers)) return noData("personality, captain influence & youth mentoring",["Personality"]);
+  const rows=players().map(p=>({p,pers:rawOf(p,KEYS.pers),det:A(p,'Det'),ldr:A(p,'Ldr')}));
+  const good=p=>p&&GOOD_PERS.some(g=>p.toLowerCase().includes(g));
+  const bad=p=>p&&BAD_PERS.some(g=>p.toLowerCase().includes(g));
+  const leaders=rows.filter(r=>r.pers).sort((a,b)=>(b.ldr*0.5+b.det*0.5)-(a.ldr*0.5+a.det*0.5)).slice(0,5);
+  const mentors=rows.filter(r=>r.p.age>=27&&good(r.pers)&&r.det>=13);
+  const needMentor=rows.filter(r=>r.p.age<=21&&(bad(r.pers)||r.det<10));
+  return `<div class="tipbox"><b>©️ Best dressing-room leaders:</b> ${leaders.slice(0,3).map(r=>esc(last(r.p.name))).join(", ")} — captain material, lift everyone's Determination.</div>
+    ${mentors.length&&needMentor.length?`<div class="tipbox"><b>🤝 Mentoring tutor groups:</b> put senior pros (${mentors.slice(0,3).map(r=>esc(last(r.p.name))).join(", ")}) in a group with your weak-personality youngsters (${needMentor.slice(0,4).map(r=>esc(last(r.p.name))).join(", ")}) to fix their mentality & Determination.</div>`:''}
+    <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>Personality</th><th>Det</th><th></th></tr></thead><tbody>${rows.filter(r=>r.pers).sort((a,b)=>b.det-a.det).map(r=>`<tr onclick="openPlayer('${esc(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td>${r.p.age}</td><td class="muted">${esc(r.pers)}</td><td>${r.det}</td><td>${good(r.pers)?'<span class="tag good">good</span>':bad(r.pers)?'<span class="tag bad">risk</span>':''}</td></tr>`).join("")}</tbody></table></div>`;
 }
 
 /* ============================ IMPORT / FM CONNECT ============================ */
