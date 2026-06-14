@@ -231,7 +231,7 @@ function esc(s){ return (s+"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">"
 function last(n){ return n.split(" ").slice(-1)[0]; }
 
 /* ============================ TABS ============================ */
-const TABS=[["dash","🏠 Dashboard"],["squad","👥 Squad"],["xi","⚽ Best XI"],["training","🎯 Training"],["youth","🌱 Youth"],["release","🗑️ Release"],["depth","📊 Depth"],["progress","📈 Progress"],["tactics","🏆 Tactics"],["history","🗂️ More"],["notice","📖 Help"]];
+const TABS=[["dash","🏠 Dashboard"],["squad","👥 Squad"],["xi","⚽ Best XI"],["matchday","⚡ Matchday"],["setpiece","🎯 Set Pieces"],["tactics","🏆 Tactics"],["training","🏋️ Training"],["youth","🌱 Youth"],["release","🗑️ Release"],["depth","📊 Depth"],["progress","📈 Progress"],["history","🗂️ More"],["notice","📖 Help"]];
 let TAB="dash";
 function renderTabs(){ document.getElementById("tabs").innerHTML=TABS.map(([k,l])=>`<button class="${k===TAB?'active':''}" onclick="go('${k}')">${l}</button>`).join(""); }
 function go(k){ TAB=k; renderTabs(); render(); window.scrollTo(0,0); }
@@ -239,7 +239,7 @@ function render(){
   document.getElementById("refreshBtn").textContent = STATE.fmConnected ? "🔄 Refresh from FM" : "🔗 Connect FM";
   const v=document.getElementById("view");
   if(!STATE.current){ v.innerHTML=`<div class="card"><h2>No squad loaded</h2><p class="sub">Import your <code>Untitled.html</code> FM export to begin.</p><button class="btn primary" onclick="openImport()">Import now</button></div>`; return; }
-  v.innerHTML=({dash:vDash,squad:vSquad,xi:vXI,training:vTraining,youth:vYouth,release:vRelease,depth:vDepth,progress:vProgress,tactics:vTactics,history:vHistory,notice:vNotice}[TAB]||vDash)();
+  v.innerHTML=({dash:vDash,squad:vSquad,xi:vXI,matchday:vMatchday,setpiece:vSetpiece,training:vTraining,youth:vYouth,release:vRelease,depth:vDepth,progress:vProgress,tactics:vTactics,history:vHistory,notice:vNotice}[TAB]||vDash)();
   if(TAB==="squad") wireSquad();
 }
 
@@ -560,6 +560,133 @@ function vNotice(){
   </div>
   <details style="margin-top:14px"><summary>Attribute glossary (47)</summary><div class="def-grid" style="margin-top:8px">${ATTRS.map(a=>`<div><b>${a}</b> — ${ATTR_FULL[a]||a}</div>`).join("")}</div></details>
   <div class="tipbox"><b>Privacy:</b> all data stays in this browser + your backup files. Nothing is uploaded.</div>
+  </div>`;
+}
+
+/* ============================ SET PIECES & LEADERS ============================ */
+function A(p,a){ return p.attrs[a]||0; }
+function pickTop(fn,n){ return players().map(p=>({p,v:fn(p)})).sort((a,b)=>b.v-a.v).slice(0,n); }
+function inXIset(){ return new Set(Object.values(bestXI().assign).map(a=>a.p.name)); }
+function spTag(name,set){ return set.has(name)?'<span class="tag good" style="margin-left:6px">XI</span>':'<span class="tag warn" style="margin-left:6px">bench</span>'; }
+function spTable(list,set,fmt){ return `<div class="tablewrap"><table><tbody>${list.map((o,i)=>`<tr onclick="openPlayer('${esc(o.p.name)}')"><td style="width:26px;color:var(--mut)">${i+1}</td><td><b>${esc(o.p.name)}</b>${spTag(o.p.name,set)}</td><td class="muted">${esc(o.p.position)}</td><td style="text-align:right">${fmt(o)}</td></tr>`).join("")}</tbody></table></div>`; }
+function vSetpiece(){
+  const set=inXIset();
+  const pen=pickTop(p=>A(p,'Pen')*0.45+A(p,'Cmp')*0.25+A(p,'Tec')*0.15+A(p,'Fin')*0.15,5);
+  const corner=pickTop(p=>A(p,'Cor')*0.6+A(p,'Tec')*0.25+A(p,'Vis')*0.15,3);
+  const fk=pickTop(p=>A(p,'Fre')*0.6+A(p,'Tec')*0.25+A(p,'Cmp')*0.15,3);
+  const lthrow=pickTop(p=>A(p,'L Th'),3).filter(o=>o.v>=10);
+  const aerial=pickTop(p=>A(p,'Jum')*0.5+A(p,'Hea')*0.35+A(p,'Bra')*0.15,6);
+  const captain=pickTop(p=>A(p,'Ldr')*0.45+A(p,'Det')*0.25+A(p,'Cmp')*0.15+A(p,'Tea')*0.15,4);
+  const fast=pickTop(p=>A(p,'Pac')*0.6+A(p,'Acc')*0.4,3);
+  const throwWeapon = lthrow.length && lthrow[0].v>=14;
+  return `<div class="card">
+    <h2>🎯 Set pieces & leaders</h2>
+    <p class="sub">Auto-picked from your squad's attributes — set pieces are roughly <b>a third of all goals</b>, so getting these right wins games. <span class="tag good">XI</span> = currently a starter. Tap any name for detail.</p>
+    <div class="flex2">
+      <div><h3 style="margin-top:0">⚽ Penalty taker order</h3>${spTable(pen,set,o=>'<b>'+Math.round(o.v)+'</b>')}<p class="sub" style="margin-top:6px">Order = your shootout list too. Top man takes match penalties.</p></div>
+      <div><h3 style="margin-top:0">🚩 Corners</h3>${spTable(corner,set,o=>'Cor '+A(o.p,'Cor'))}<h3>🎯 Direct free kicks</h3>${spTable(fk,set,o=>'Fre '+A(o.p,'Fre'))}</div>
+    </div>
+    <h3>🛬 Attacking set-piece targets (who to send into the box)</h3>
+    ${spTable(aerial,set,o=>'Jump '+A(o.p,'Jum')+' · Head '+A(o.p,'Hea'))}
+    <div class="tipbox"><b>Routine:</b> put your top 2 aerial men on <b>Attack near post</b> & <b>Attack far post</b>, the 3rd to <b>Lurk outside area</b> for the knock-down. Keep your fastest forward (${esc(last(fast[0].p.name))}) <b>Stay forward</b> to punish a turnover.</div>
+    ${throwWeapon?`<div class="tipbox amber"><b>Long-throw weapon:</b> ${esc(lthrow[0].p.name)} has Long Throws ${lthrow[0].v} — set throw-ins near the box to <b>launch into the area</b> like an extra corner.</div>`:lthrow.length?`<p class="muted">Best long throw: ${esc(lthrow[0].p.name)} (${lthrow[0].v}) — usable but not a weapon.</p>`:''}
+    <h3>©️ Captain candidates</h3>
+    ${spTable(captain,set,o=>'Ldr '+A(o.p,'Ldr')+' · Det '+A(o.p,'Det'))}
+    <div class="tipbox"><b>Pick:</b> make <b>${esc(captain[0].p.name)}</b> captain and <b>${esc(captain[1]?captain[1].p.name:'—')}</b> vice — leadership lifts the whole team's Determination on the pitch.</div>
+    <h3>🛡️ Defending set pieces</h3>
+    <div class="tipbox"><b>Man-mark their tall men</b> with your best aerial defenders (${aerial.filter(o=>/D /.test(o.p.position)).slice(0,2).map(o=>esc(last(o.p.name))).join(", ")||esc(last(aerial[0].p.name))}). Leave your fastest forward (${esc(last(fast[0].p.name))}) up the pitch to counter. Use <b>zonal + man-marking mix</b> if your defenders' Heading is below 12.</div>
+  </div>`;
+}
+
+/* ============================ IN-MATCH ASSISTANT ============================ */
+const MENT=['Very Defensive','Defensive','Cautious','Balanced','Positive','Attacking','Very Attacking'];
+let MD={min:75, sit:'losing1', opp:'similar', men:'even'};
+let oppArch="possession";
+function setMD(k,v){ MD[k]=v; render(); }
+function mdAdvice(){
+  const {min,sit,opp,men}=MD;
+  const late=min>=78, vl=min>=88;
+  let idx;
+  if(sit==='losingBig') idx = late?6:5;
+  else if(sit==='losing1') idx = vl?6:late?5:(min>=30?4:4);
+  else if(sit==='drawing') idx = late?4:3;
+  else if(sit==='winning1') idx = late?2:3;
+  else if(sit==='winningBig') idx = late?1:2;
+  else idx=3;
+  // opponent strength
+  if(opp==='weaker') idx+=1;
+  if(opp==='stronger') idx-=1;
+  // man advantage
+  if(men==='up') idx+=1;
+  if(men==='down') idx-=2;
+  // floors/ceilings: if losing and late, never go below Positive
+  if((sit==='losing1'||sit==='losingBig') && late) idx=Math.max(idx,5);
+  if((sit==='winning1'||sit==='winningBig') && late) idx=Math.min(idx,3);
+  idx=Math.max(0,Math.min(6,idx));
+  const m=MENT[idx];
+  let poss,def,subs,note;
+  if(idx>=5){ poss="Higher tempo · more risky/direct passes · full-backs & wingers join attacks · pack the box · 'Be more expressive'"; def="Higher line + higher press to win it back fast (watch the counter)"; subs="Throw on a fresh striker/winger for a defensive mid — go 4-2-4 / 4-3-3 shape"; }
+  else if(idx===4){ poss="Keep tempo up · work ball into box · run at them"; def="Standard press, stay compact"; subs="Like-for-like fresh legs up front"; }
+  else if(idx===3){ poss="Play the percentages, hold your shape, don't force it"; def="Standard block"; subs="Only if someone's tiring or carded"; }
+  else { poss="Lower tempo · retain possession · take it to the corner flags · fewer men forward · waste time"; def="Drop deeper (mid/low block) · don't dive into tackles · mark tight in the box"; subs="Fresh legs in midfield + an extra defensive mid or centre-back to see it out"; }
+  // situational note
+  if(sit==='losingBig') note = late?"Kitchen-sink time — but keep ONE quick man back so a 3rd goal doesn't kill morale.":"Down two but loads of time — don't panic, raise tempo one notch and trust the chances.";
+  else if(sit==='losing1') note = late?"Go for it now: push the full-backs and your support winger to Attack.":"Stay calm — you're creating, just lift the tempo and width.";
+  else if(sit==='drawing') note = opp==='weaker'?"You should beat this lot — go and win it.":opp==='stronger'?"A draw here is a good result — don't get greedy and lose it.":"Trust the plan; the late surge usually comes if you stay patient.";
+  else if(sit==='winning1') note = late?"Protect it: both inside forwards to Support, slow it right down, defend the box.":"Don't get complacent — keep the press on, a 2nd goal kills the game.";
+  else note = late?"Game's won — rest a key man or two and protect legs for next match.":"Stay professional, don't ease off until it's truly safe.";
+  if(men==='down') note += " ⚠️ A man down: go compact 4-4-1, protect the box, hit on the break.";
+  if(men==='up') note += " ✅ Extra man: stretch the play wide and be patient — overload them.";
+  return {m,idx,poss,def,subs,note};
+}
+function vMatchday(){
+  const a=mdAdvice();
+  const seg=(k,opts)=>opts.map(([v,l])=>`<button class="${MD[k]===v?'on':''}" onclick="setMD('${k}','${v}')">${l}</button>`).join("");
+  // fitness watch from XI starters
+  const starters=Object.values(bestXI().assign).map(x=>x.p);
+  const tired=starters.filter(p=>A(p,'Sta')<13||A(p,'Nat')<11).map(p=>`${esc(last(p.name))} <span class="muted">(Sta ${A(p,'Sta')}/Nat ${A(p,'Nat')})</span>`);
+  const OI={
+    possession:["Press their centre-backs & deep midfielder hard","Higher defensive line, close down the goalkeeper's short distribution","Tight-mark their deepest playmaker"],
+    counter:["Sit a touch deeper, don't over-commit both full-backs","Stay compact between the lines — deny the space they run into","Lower the tempo of YOUR build-up so you're set when you lose it"],
+    targetman:["Man-mark their target man with your best aerial CB","Defend crosses (not the cross) · drop your line a little","Show their wide men down the line, away from the box"],
+    wingers:["Show wingers INSIDE onto their weaker foot","Have the inside forward + full-back double up on them","Don't get caught with high full-backs — pick Support duty"],
+    playmaker:["Tight-mark + hard-tackle their number 10","Your nearest defensive mid picks him up everywhere","Cut the supply: press the man feeding him"]
+  };
+  const archLabels={possession:"Possession / plays out from the back",counter:"Counter-attacking & direct",targetman:"Target man & crosses",wingers:"Fast wingers out wide",playmaker:"Star number 10 / playmaker"};
+  return `<div class="card">
+    <h2>⚡ In-Match Assistant</h2>
+    <p class="sub">Set the situation and get exactly what to change — mentality, instructions and the sub to make. Use it live while the match is paused.</p>
+    <h3 style="margin-top:6px">Minute: <b style="color:var(--brand)">${MD.min}'</b></h3>
+    <input type="range" min="0" max="95" value="${MD.min}" style="width:100%" oninput="MD.min=+this.value;render()">
+    <h3>Score situation</h3><div class="seg">${seg('sit',[['winningBig','🟢 Winning 2+'],['winning1','🟢 Winning by 1'],['drawing','🟡 Drawing'],['losing1','🔴 Losing by 1'],['losingBig','🔴 Losing 2+']])}</div>
+    <h3>Opponent strength</h3><div class="seg">${seg('opp',[['weaker','Weaker'],['similar','Similar'],['stronger','Stronger']])}</div>
+    <h3>Players on pitch</h3><div class="seg">${seg('men',[['up','⬆ Extra man (they got a red)'],['even','11 v 11'],['down','⬇ Down a man (we got a red)']])}</div>
+    <div class="card" style="background:linear-gradient(135deg,#0c2b20,#121821);margin-top:14px">
+      <div class="row" style="justify-content:space-between"><h3 style="margin:0">📋 Do this now</h3><span class="score" style="background:${a.idx>=5?'#f43f5e':a.idx>=4?'#fbbf24':a.idx<=2?'#38bdf8':'#10b981'};color:#06140d">${a.m}</span></div>
+      <p style="margin:10px 0 4px"><b>🎚️ Mentality:</b> ${a.m}</p>
+      <p style="margin:4px 0"><b>⚔️ In possession:</b> ${a.poss}</p>
+      <p style="margin:4px 0"><b>🛡️ Out of possession:</b> ${a.def}</p>
+      <p style="margin:4px 0"><b>🔄 Substitution:</b> ${a.subs}</p>
+      <div class="tipbox" style="margin-top:10px">${a.note}</div>
+    </div>
+    ${tired.length?`<div class="tipbox amber"><b>Fitness watch:</b> these starters tire fast — plan to sub around 60-65': ${tired.join(", ")}.</div>`:''}
+  </div>
+  <div class="card">
+    <h2>🆚 Opposition instructions</h2>
+    <p class="sub">Pick how your opponent plays → get the instructions to shut them down.</p>
+    <div class="row"><label>Opponent style: <select onchange="oppArch=this.value;render()">${Object.keys(archLabels).map(k=>`<option value="${k}" ${oppArch===k?'selected':''}>${archLabels[k]}</option>`).join("")}</select></label></div>
+    <ul class="notice" style="margin-top:10px">${OI[oppArch].map(i=>`<li>${i}</li>`).join("")}</ul>
+  </div>
+  <div class="card notice">
+    <h2>🗣️ Team talks (quick guide)</h2>
+    <div class="tablewrap"><table><thead><tr><th>When</th><th>If favourite</th><th>If underdog</th></tr></thead><tbody>
+      <tr><td><b>Before kickoff</b></td><td>"I expect a win" (calm/assertive)</td><td>"Relaxed — I have faith in you" (low pressure)</td></tr>
+      <tr><td><b>HT — winning</b></td><td>"Pleased, but don't get complacent"</td><td>"Delighted! Keep it up" (passionate)</td></tr>
+      <tr><td><b>HT — drawing</b></td><td>"I expect more from you" (demanding)</td><td>"Encouraged — keep going"</td></tr>
+      <tr><td><b>HT — losing</b></td><td>Aggressive "Not good enough" IF they played badly; "Unlucky, I have faith" if they played well</td><td>"I have faith in you" (calm)</td></tr>
+      <tr><td><b>Full time</b></td><td>Praise a win · constructive after a loss</td><td>Praise effort whatever the result</td></tr>
+    </tbody></table></div>
+    <div class="tipbox"><b>Rule of thumb:</b> match the body-language to the performance, not just the score. Reading the players' reaction (green = it worked) matters more than the exact words.</div>
   </div>`;
 }
 
