@@ -126,6 +126,7 @@ code{background:var(--bg3);padding:1px 5px;border-radius:5px;font-size:12px}
     <button class="btn sm primary" id="refreshBtn" onclick="refreshOrConnect()">🔗 Connect FM</button>
     <button class="btn sm" onclick="openImport()">📥 Import</button>
     <button class="btn sm" onclick="backup()">💾 Backup</button>
+    <button class="btn sm ghost" title="Text size" onclick="cycleText()">🔠</button>
     <button class="btn sm ghost" onclick="document.getElementById('restoreFile').click()">↩</button>
     <input type="file" id="restoreFile" accept="application/json" class="hidden">
   </div>
@@ -179,7 +180,9 @@ const DEPTH_GROUPS = [
 /* ============================ STATE ============================ */
 const LS_KEY="fm_team_manager_v2";
 let STATE = load();
-function blankState(){ return { current:null, snapshots:[], overrides:{}, settings:{youthAge:21,releaseScore:9.0,youthKeep:9.5,benchSize:9}, fmConnected:false, season:{results:[]} }; }
+function blankState(){ return { current:null, snapshots:[], overrides:{}, settings:{youthAge:21,releaseScore:9.0,youthKeep:9.5,benchSize:9,textScale:1}, fmConnected:false, season:{results:[]} }; }
+function applyTextScale(){ try{ document.documentElement.style.zoom=(STATE.settings.textScale||1); }catch(e){} }
+function cycleText(){ const cur=STATE.settings.textScale||1; STATE.settings.textScale=cur>=1.25?1:Math.round((cur+0.12)*100)/100; save(); applyTextScale(); toast("Text size "+Math.round(STATE.settings.textScale*100)+"%"); }
 function load(){
   try{ const s=JSON.parse(localStorage.getItem(LS_KEY)); if(s&&s.settings){ s.season=s.season||{results:[]}; return s; } }catch(e){}
   try{ const o=JSON.parse(localStorage.getItem("fm_team_manager_v1")); if(o&&o.settings){o.fmConnected=false;o.season=o.season||{results:[]};return o;} }catch(e){}
@@ -296,11 +299,13 @@ function vDash(){
 function daysAgo(d){ try{const ms=Date.now()-new Date(d).getTime();const days=Math.round(ms/86400000);return days<=0?"today":days+" day"+(days>1?"s":"")+" ago";}catch(e){return d;} }
 
 /* ---------- SQUAD ---------- */
-let squadSort={key:"score",dir:-1}, squadFilter={role:"",q:""};
+let squadSort={key:"score",dir:-1}, squadFilter={role:"",q:"",attr:"",minVal:0,ageMax:99};
 function squadRows(){
   let rows=players().map(p=>{const r=assignedRole(p);return{p,role:r,score:scoreFor(p,r),best:bestRole(p)};});
   if(squadFilter.role)rows=rows.filter(r=>r.role===squadFilter.role);
   if(squadFilter.q){const q=squadFilter.q.toLowerCase();rows=rows.filter(r=>r.p.name.toLowerCase().includes(q));}
+  if(squadFilter.attr&&squadFilter.minVal>0)rows=rows.filter(r=>(r.p.attrs[squadFilter.attr]||0)>=squadFilter.minVal);
+  if(squadFilter.ageMax<99)rows=rows.filter(r=>r.p.age<=squadFilter.ageMax);
   const k=squadSort.key,d=squadSort.dir;
   rows.sort((a,b)=>{let va,vb;if(k==="name"){return a.p.name<b.p.name?-d:a.p.name>b.p.name?d:0;}if(k==="age"){va=a.p.age;vb=b.p.age;}else if(k==="role"){return a.role<b.role?-d:a.role>b.role?d:0;}else if(k==="pos"){return a.p.position<b.p.position?-d:a.p.position>b.p.position?d:0;}else{va=a.score;vb=b.score;}return(va-vb)*d;});
   return rows;
@@ -310,10 +315,17 @@ function vSquad(){
   const opts=`<option value="">All roles</option>`+ROLES.map(r=>`<option ${squadFilter.role===r?'selected':''}>${r}</option>`).join("");
   return `<div class="card">
     <h2>👥 Squad — ${rows.length} players</h2>
-    <p class="sub">Tap any player for full attributes, role fit & training. Score = fit in the assigned role.</p>
-    <div class="row" style="margin-bottom:12px">
+    <p class="sub">Tap any player for full attributes, role fit, radar & training. Score = fit in the assigned role.</p>
+    <div class="row" style="margin-bottom:10px">
       <input type="text" id="sq" placeholder="🔍 Search name…" value="${esc(squadFilter.q)}">
       <select id="sr">${opts}</select>
+    </div>
+    <div class="row" style="margin-bottom:12px;font-size:12px">
+      <span class="muted">Filter:</span>
+      <select id="fAttr"><option value="">attribute…</option>${ATTRS.map(a=>`<option value="${a}" ${squadFilter.attr===a?'selected':''}>${a} — ${ATTR_FULL[a]||a}</option>`).join("")}</select>
+      <span class="muted">≥</span><input type="number" id="fMin" min="1" max="20" value="${squadFilter.minVal||''}" placeholder="val" style="width:60px">
+      <span class="muted">· age ≤</span><input type="number" id="fAge" min="14" max="40" value="${squadFilter.ageMax<99?squadFilter.ageMax:''}" placeholder="any" style="width:60px">
+      ${(squadFilter.attr||squadFilter.ageMax<99)?'<button class="btn sm ghost" onclick="squadFilter.attr=\'\';squadFilter.minVal=0;squadFilter.ageMax=99;render()">clear</button>':''}
     </div>
     <div class="tablewrap"><table>
       <thead><tr><th data-k="name">Name</th><th data-k="age">Age</th><th data-k="pos">Position</th><th data-k="role">Role</th><th data-k="score">Score</th><th>Best</th></tr></thead>
@@ -330,9 +342,25 @@ function wireSquad(){
   const sq=document.getElementById("sq"),sr=document.getElementById("sr");
   sq.oninput=()=>{squadFilter.q=sq.value;const pos=sq.selectionStart;render();const el=document.getElementById("sq");el.focus();el.setSelectionRange(pos,pos);};
   sr.onchange=()=>{squadFilter.role=sr.value;render();};
+  const fAttr=document.getElementById("fAttr"),fMin=document.getElementById("fMin"),fAge=document.getElementById("fAge");
+  if(fAttr)fAttr.onchange=()=>{squadFilter.attr=fAttr.value;render();};
+  if(fMin)fMin.oninput=()=>{squadFilter.minVal=+fMin.value||0;const v=fMin.value;render();const el=document.getElementById("fMin");if(el){el.focus();el.value=v;}};
+  if(fAge)fAge.oninput=()=>{squadFilter.ageMax=+fAge.value||99;const v=fAge.value;render();const el=document.getElementById("fAge");if(el){el.focus();el.value=v;}};
 }
 
 /* ---------- PLAYER MODAL ---------- */
+function radarSVG(p,role){
+  const w=SCORING.weights[role]||{};
+  const top=ATTRS.filter(a=>(w[a]||0)>0).sort((x,y)=>(w[y]||0)-(w[x]||0)).slice(0,8);
+  if(top.length<3) return "";
+  const cx=110,cy=110,R=78,n=top.length;
+  const pt=(i,r)=>{const ang=-Math.PI/2+i*2*Math.PI/n;return [cx+r*Math.cos(ang),cy+r*Math.sin(ang)];};
+  let grid="";[0.25,0.5,0.75,1].forEach(f=>{const poly=top.map((_,i)=>pt(i,R*f).map(x=>x.toFixed(1)).join(",")).join(" ");grid+=`<polygon points="${poly}" fill="none" stroke="#28323f" stroke-width="1"/>`;});
+  let axes="",labels="";
+  top.forEach((a,i)=>{const[x,y]=pt(i,R);axes+=`<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#28323f"/>`;const[lx,ly]=pt(i,R+16);const v=p.attrs[a]||0;labels+=`<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-size="10" fill="#8a97a8" text-anchor="middle" dominant-baseline="middle">${a} <tspan fill="${attrColor(v)}" font-weight="700">${v}</tspan></text>`;});
+  const poly=top.map((a,i)=>pt(i,R*Math.min(1,(p.attrs[a]||0)/20)).map(x=>x.toFixed(1)).join(",")).join(" ");
+  return `<svg viewBox="0 0 220 220" width="100%" style="max-width:260px;display:block;margin:4px auto">${grid}${axes}<polygon points="${poly}" fill="#10b98155" stroke="#10b981" stroke-width="2"/>${labels}</svg>`;
+}
 function openPlayer(name){
   const p=players().find(x=>x.name===name); if(!p)return;
   const role=assignedRole(p), tr=trainingFor(p);
@@ -366,6 +394,8 @@ function openPlayer(name){
       ${tr.focuses.length?`<b>Additional focus:</b> ${tr.focuses.map(f=>`${esc(f[0])} <span class="muted">(${f[1].join(", ")})</span>`).join(" · ")}`:`<b>Already strong</b> for this role — keep general role training.`}
     </div>
     ${p.age<=STATE.settings.youthAge?`<h3>🎓 Development plan</h3><div class="tipbox">${devPlan(p).map(s=>`<div style="margin:4px 0"><b>${s[0]}</b> — ${s[1]}</div>`).join("")}</div>`:""}
+    <h3>🕸️ Role profile <span class="muted" style="font-size:12px;font-weight:400">— his 8 key attributes for ${esc(role)}</span></h3>
+    ${radarSVG(p,role)}
     <h3>📐 Role fit (all 7 roles)</h3>
     ${fits.map(f=>`<div class="rolefit"><span>${esc(f.r)}</span><span class="barmini"><i style="width:${f.s/20*100}%;background:${scoreColor(f.s)}"></i></span><span style="text-align:right;font-weight:700;color:${scoreColor(f.s)}">${f.s.toFixed(1)}</span></div>`).join("")}
     <h3>📋 Attributes</h3>
@@ -616,16 +646,33 @@ function vNotice(){
   <h3>The score (0–20)</h3>
   <p><code>Score = (feet + Σ attribute × role-weight) ÷ role-max × 20</code> — a <b>fit</b> rating for that role, not potential.</p>
   <div class="row" style="gap:10px;margin:8px 0">${[["Excellent",14.5],["Good/starter",12],["Rotation",10],["Weak",7],["Poor",4]].map(([t,s])=>`<span>${scoreBadge(s)} <b>${t}</b></span>`).join(" ")}</div>
-  <h3>Tabs</h3>
+  <h3>Every tab, what it's for (17)</h3>
   <div class="def-grid">
-    <div><b>🏠 Dashboard</b> — squad health + what to do</div><div><b>👥 Squad</b> — all players, tap for detail</div>
-    <div><b>⚽ Best XI</b> — strongest legal 4-2-3-1</div><div><b>🎯 Training</b> — individual training plan</div>
-    <div><b>🌱 Youth</b> — who to develop</div><div><b>🗑️ Release</b> — who to sell</div>
-    <div><b>📊 Depth</b> — weak positions to fix</div><div><b>📈 Progress</b> — gains vs a snapshot</div>
-    <div><b>🏆 Tactics</b> — two ready setups</div><div><b>🗂️ More</b> — data, snapshots, settings</div>
+    <div><b>🏠 Dashboard</b> — squad health + what-to-do + age chart</div>
+    <div><b>🧭 Decisions</b> — your weekly checklist so you never miss a call</div>
+    <div><b>👥 Squad</b> — all players; search + attribute filters; tap for full card</div>
+    <div><b>⚖️ Compare</b> — two players side by side + verdict</div>
+    <div><b>⚽ Best XI</b> — 3 modes: Strongest / rest-tired / blood-youth</div>
+    <div><b>⚡ Matchday</b> — live in-match assistant, opponent game-plan, team talks</div>
+    <div><b>📝 Season</b> — log results → form guide, run, points</div>
+    <div><b>🎯 Set Pieces</b> — takers, aerial targets, captain</div>
+    <div><b>🏆 Tactics</b> — two ready 4-2-3-1 setups + ME tips</div>
+    <div><b>🏋️ Training</b> — individual training plan per player</div>
+    <div><b>📋 Reports</b> — Fitness · Form · Analytics(xG) · Finance · Personality+mentoring</div>
+    <div><b>🌟 Wonderkids</b> — youth ranked by potential + dev guide</div>
+    <div><b>🗑️ Release</b> — who's surplus</div>
+    <div><b>📊 Depth</b> — thin positions + retraining advisor</div>
+    <div><b>📈 Progress</b> — attribute gains vs a snapshot</div>
+    <div><b>🗂️ More</b> — import, snapshots, settings</div>
+    <div><b>📖 Help</b> — this page</div>
   </div>
+  <h3>Tap a player → you get</h3>
+  <p class="sub">FM best-role & bio chips · season stats · suggested squad status · development plan (youth) · 🕸️ role radar · fit in all 7 roles · all 47 attributes with bars · change his role.</p>
+  <h3>Reading & comfort</h3>
+  <p class="sub">Header <b>🔠</b> button cycles text size. <b>💾 Backup</b> downloads your data; <b>↩</b> restores it (use it to move between PC & phone). Everything's tappable.</p>
   <details style="margin-top:14px"><summary>Attribute glossary (47)</summary><div class="def-grid" style="margin-top:8px">${ATTRS.map(a=>`<div><b>${a}</b> — ${ATTR_FULL[a]||a}</div>`).join("")}</div></details>
   <div class="tipbox"><b>Privacy:</b> all data stays in this browser + your backup files. Nothing is uploaded.</div>
+  <p class="muted" style="font-size:11px;margin-top:10px">Tips & development advice sourced from FM24 community guides (footballmanagerblog, sortitoutsi, FM Scout, Toxigon, GiveMeSport).</p>
   </div>`;
 }
 
@@ -865,6 +912,30 @@ function repFinance(){
     </div>
     <h3>⏳ Contracts expiring soonest (renew or cash in)</h3>${expSoon.length?`<div class="tablewrap"><table><thead><tr><th>Name</th><th>Expires</th><th>Best role</th><th>Fit</th><th>Value</th></tr></thead><tbody>${expSoon.map(r=>`<tr onclick="openPlayer('${esc(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td class="muted">${esc(r.exp)}</td><td>${rolePill(bestRole(r.p).role)}</td><td>${scoreBadge(r.score)}</td><td>${r.val?C+money(r.val):'—'}</td></tr>`).join("")}</tbody></table></div><p class="sub" style="margin-top:6px">Players whose deals expire by ${minY+1}. Renew your good ones now; let low-fit ones run down or sell.</p>`:'<p class="muted">No contract dates found.</p>'}`;
 }
+function buildMentorGroups(){
+  if(!hasCol(KEYS.pers)) return "";
+  const ps=players(), ya=STATE.settings.youthAge;
+  const mentors=ps.filter(p=>p.age>=25&&persIsGood(rawOf(p,KEYS.pers))&&A(p,"Det")>=13)
+    .map(p=>({p,score:A(p,"Det")+A(p,"Ldr")*0.5+(/(model|born leader|charismatic|perfectionist|driven|iron)/i.test(rawOf(p,KEYS.pers)||"")?6:2)}))
+    .sort((a,b)=>b.score-a.score);
+  const mentees=ps.filter(p=>p.age<=ya&&(persIsBad(rawOf(p,KEYS.pers))||A(p,"Det")<11))
+    .map(p=>({p,need:(persIsBad(rawOf(p,KEYS.pers))?2:0)+(11-A(p,"Det"))/11})).sort((a,b)=>b.need-a.need);
+  if(!mentors.length||!mentees.length) return `<div class="tipbox"><b>🤝 Mentoring:</b> ${!mentors.length?"No settled senior pro to lead a group yet — develop one first.":"No youngsters need mentoring right now — attitudes look healthy. ✅"}</div>`;
+  const nGroups=Math.min(2,mentors.length,Math.max(1,Math.ceil(mentees.length/3)));
+  const groups=[]; for(let g=0;g<nGroups;g++) groups.push({leader:mentors[g],extra:[],kids:[]});
+  mentors.slice(nGroups,nGroups*2).forEach((m,i)=>groups[i%nGroups].extra.push(m));
+  let gi=0; for(const k of mentees){ let placed=false; for(let t=0;t<nGroups;t++){const idx=(gi+t)%nGroups; if(groups[idx].kids.length<4){groups[idx].kids.push(k);gi=idx+1;placed=true;break;}} if(!placed)break; }
+  return `<h3>🤝 Suggested mentoring groups</h3>
+  <p class="sub">Mentoring transfers <b>personality, Determination & mental attributes</b> from the leader to the kids — create these as tutoring groups in FM.</p>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">${groups.map((grp,i)=>`
+    <div class="card" style="margin:0"><b>Group ${i+1}</b>
+    <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-top:6px">Tutor (leader)</div>
+    ${advItem(grp.leader.p.name,esc(rawOf(grp.leader.p,KEYS.pers))+" · Det "+A(grp.leader.p,"Det"),'<span class="tag good">lead</span>')}
+    ${grp.extra.map(m=>advItem(m.p.name,"support tutor",'<span class="tag info">tutor</span>')).join("")}
+    <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-top:8px">Learners</div>
+    ${grp.kids.map(k=>advItem(k.p.name,esc(rawOf(k.p,KEYS.pers)||"")+" · Det "+A(k.p,"Det"),'<span class="tag bad">learn</span>')).join("")}
+    </div>`).join("")}</div>`;
+}
 function repPersonality(){
   if(!hasCol(KEYS.pers)) return noData("personality, captain influence & youth mentoring",["Personality"]);
   const rows=players().map(p=>({p,pers:rawOf(p,KEYS.pers),det:A(p,'Det'),ldr:A(p,'Ldr')}));
@@ -874,7 +945,8 @@ function repPersonality(){
   const mentors=rows.filter(r=>r.p.age>=27&&good(r.pers)&&r.det>=13);
   const needMentor=rows.filter(r=>r.p.age<=21&&(bad(r.pers)||r.det<10));
   return `<div class="tipbox"><b>©️ Best dressing-room leaders:</b> ${leaders.slice(0,3).map(r=>esc(last(r.p.name))).join(", ")} — captain material, lift everyone's Determination.</div>
-    ${mentors.length&&needMentor.length?`<div class="tipbox"><b>🤝 Mentoring tutor groups:</b> put senior pros (${mentors.slice(0,3).map(r=>esc(last(r.p.name))).join(", ")}) in a group with your weak-personality youngsters (${needMentor.slice(0,4).map(r=>esc(last(r.p.name))).join(", ")}) to fix their mentality & Determination.</div>`:''}
+    ${buildMentorGroups()}
+    <h3>All personalities</h3>
     <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>Personality</th><th>Det</th><th></th></tr></thead><tbody>${rows.filter(r=>r.pers).sort((a,b)=>b.det-a.det).map(r=>`<tr onclick="openPlayer('${esc(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td>${r.p.age}</td><td class="muted">${esc(r.pers)}</td><td>${r.det}</td><td>${good(r.pers)?'<span class="tag good">good</span>':bad(r.pers)?'<span class="tag bad">risk</span>':''}</td></tr>`).join("")}</tbody></table></div>`;
 }
 
@@ -1118,7 +1190,7 @@ function backup(){const blob=new Blob([JSON.stringify(STATE)],{type:"application
 document.getElementById("restoreFile").onchange=e=>{const f=e.target.files[0];if(!f)return;f.text().then(t=>{try{const s=JSON.parse(t);if(s.settings){STATE=s;save();toast("Restored");go("dash");}else toast("Not a valid backup");}catch(err){toast("Bad file");}});};
 
 /* ============================ BOOT ============================ */
-renderTabs(); go("dash");
+renderTabs(); applyTextScale(); go("dash");
 </script>
 </body>
 </html>
