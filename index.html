@@ -365,6 +365,7 @@ function openPlayer(name){
       <b>Individual role training:</b> ${esc(tr.fmRole)}<br>
       ${tr.focuses.length?`<b>Additional focus:</b> ${tr.focuses.map(f=>`${esc(f[0])} <span class="muted">(${f[1].join(", ")})</span>`).join(" · ")}`:`<b>Already strong</b> for this role — keep general role training.`}
     </div>
+    ${p.age<=STATE.settings.youthAge?`<h3>🎓 Development plan</h3><div class="tipbox">${devPlan(p).map(s=>`<div style="margin:4px 0"><b>${s[0]}</b> — ${s[1]}</div>`).join("")}</div>`:""}
     <h3>📐 Role fit (all 7 roles)</h3>
     ${fits.map(f=>`<div class="rolefit"><span>${esc(f.r)}</span><span class="barmini"><i style="width:${f.s/20*100}%;background:${scoreColor(f.s)}"></i></span><span style="text-align:right;font-weight:700;color:${scoreColor(f.s)}">${f.s.toFixed(1)}</span></div>`).join("")}
     <h3>📋 Attributes</h3>
@@ -450,6 +451,19 @@ function vYouth(){
     <p class="sub"><b>Potential</b> = a development-headroom proxy (FM hides true PA): current fit + youth + Determination + attitude. Higher = more room to grow into a star. Sorted by it. Change the age cut-off in <b>More → Settings</b>.</p>
     <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>FM best role / pos</th><th>My role</th><th>Now</th><th>Potential</th><th>Verdict</th></tr></thead><tbody>${rows||'<tr><td colspan=7 class="muted">No players ≤'+ya+'.</td></tr>'}</tbody></table></div>
     <div class="tipbox"><b>How to use it:</b> give your ⭐ Wonderkids real minutes + the role training from the <b>🏋️ Training</b> tab. ${hasPers?'A <span class="tag bad">attitude</span> tag (bad personality like Mercenary) means pair him with a pro mentor in <b>Reports → Personality</b> before he infects the dressing room.':'Add the <b>Personality</b> column to your export to flag attitude risks here.'}</div>
+  </div>
+  <div class="card notice">
+    <h3 style="margin-top:0">📚 Youth development — what the experts say</h3>
+    <p class="sub">Sourced from FM24 community guides (not assumptions):</p>
+    <ul>
+      <li><b>Game time is the #1 driver.</b> Competitive minutes develop players faster than anything — rotate, use cup games, and loan out anyone not getting first-team football. <span class="muted">(footballmanagerblog, sortitoutsi)</span></li>
+      <li><b>Training intensity Medium / Automatic</b> for youngsters, with rest after matches — high intensity burns them out and causes injuries. <span class="muted">(FM Scout / Passion4FM)</span></li>
+      <li><b>Assign a Position/Role/Duty</b> (not just a position) so individual training targets that role's key attributes. <span class="muted">(JonasMorais youth guide)</span></li>
+      <li><b>Physical → Technical → Mental:</b> from ~18 they develop physicals fastest, then technicals, then mentals. Prioritise accordingly. <span class="muted">(sortitoutsi)</span></li>
+      <li><b>Mentoring</b> transfers personality, Determination & mental attributes — group a weak-attitude kid with a senior pro (good personality, high Determination). <span class="muted">(toxigon, sortitoutsi)</span></li>
+      <li><b>Don't rush promotions</b> — only push a youngster into the XI when he's genuinely ready; patience compounds. <span class="muted">(toxigon)</span></li>
+      <li><b>Upgrade Youth facilities, Junior Coaching & Recruitment</b> when funds allow — better intakes & faster growth. <span class="muted">(footballmanagerblog)</span></li>
+    </ul>
   </div>`;
 }
 
@@ -705,6 +719,13 @@ function vMatchday(){
     playmaker:["Tight-mark + hard-tackle their number 10","Your nearest defensive mid picks him up everywhere","Cut the supply: press the man feeding him"]
   };
   const archLabels={possession:"Possession / plays out from the back",counter:"Counter-attacking & direct",targetman:"Target man & crosses",wingers:"Fast wingers out wide",playmaker:"Star number 10 / playmaker"};
+  const APP={
+    possession:["Beat their press: <b>Positive</b>, play quick & direct past their high line — your pacey IFs/AF run in behind.","Win the midfield: your double pivot outnumbers their build-up."],
+    counter:["Don't over-commit: <b>Balanced/Positive</b>, full-backs on Support, keep two men back.","Patience — they want you to chase. Recycle and strike when set."],
+    targetman:["Keep it low: pass through midfield, deny them crosses & second balls.","<b>Positive</b>, work the ball into the box rather than crossing into their big men."],
+    wingers:["Pin their full-backs back: get YOUR wide men high so theirs must defend.","<b>Positive</b>; if they're rapid, don't push your line too high."],
+    playmaker:["Kill the supply, then it's <b>Positive</b> and front-foot — without their 10 they're blunt.","Counter through the space their advanced 10 leaves."]
+  };
   return `<div class="card">
     <h2>⚡ In-Match Assistant</h2>
     <p class="sub">Set the situation and get exactly what to change — mentality, instructions and the sub to make. Use it live while the match is paused.</p>
@@ -724,10 +745,24 @@ function vMatchday(){
     ${tired.length?`<div class="tipbox amber"><b>Fitness watch:</b> these starters tire fast — plan to sub around 60-65': ${tired.join(", ")}.</div>`:''}
   </div>
   <div class="card">
-    <h2>🆚 Opposition instructions</h2>
-    <p class="sub">Pick how your opponent plays → get the instructions to shut them down.</p>
+    <h2>🆚 Game plan vs opponent</h2>
+    <p class="sub">Pick how your opponent plays → how to stop them <i>and</i> how to hurt them.</p>
     <div class="row"><label>Opponent style: <select onchange="oppArch=this.value;render()">${Object.keys(archLabels).map(k=>`<option value="${k}" ${oppArch===k?'selected':''}>${archLabels[k]}</option>`).join("")}</select></label></div>
-    <ul class="notice" style="margin-top:10px">${OI[oppArch].map(i=>`<li>${i}</li>`).join("")}</ul>
+    <h3>🛡️ Shut them down (opposition instructions)</h3>
+    <ul class="notice">${OI[oppArch].map(i=>`<li>${i}</li>`).join("")}</ul>
+    <h3>⚔️ Hurt them (your approach)</h3>
+    <ul class="notice">${APP[oppArch].map(i=>`<li>${i}</li>`).join("")}</ul>
+  </div>
+  <div class="card notice">
+    <h2>🧠 Principles that beat the match engine</h2>
+    <p class="sub">From the FM24 tactics community — not guesses. FM24 rewards an aggressive, front-foot approach.</p>
+    <ul>
+      <li><b>Aggression + getting men forward wins.</b> FM24 rewards attacking systems that flood the box and high-press the opponent into errors. <span class="muted">(givemesport / FM Scout)</span></li>
+      <li><b>High press forces mistakes</b> — but only sustainable if your players have the Stamina/Work Rate for it. With tired youngsters, press in bursts, not for 90'.</li>
+      <li><b>Overload one area</b> — the old "Grid System" exploited spacing; SI patches specific exploits but the <i>principle</i> (create overloads, get numbers around the ball) still works. <span class="muted">(FM Scout)</span></li>
+      <li><b>Match-engine patches change the meta</b> — what's "broken" this patch may be nerfed next. Don't marry one downloaded tactic; understand the principles.</li>
+      <li><b>Your edge in a youth save:</b> pace & energy. Your scoring model already prizes Pace/Acceleration — pick the high-fit, fresh players the app gives you and run at tired defenders.</li>
+    </ul>
   </div>
   <div class="card notice">
     <h2>🗣️ Team talks (quick guide)</h2>
@@ -777,12 +812,20 @@ function repFitness(){
 }
 function repAnalytics(){
   if(!hasCol(KEYS.xg)&&!hasCol(KEYS.xa)&&!hasCol(KEYS.ccc)) return noData("xG / xA / chance-creation analytics",["xG","xA","CCC","K Pas"]);
-  const rows=players().map(p=>({p,xg:parseNumLoose(rawOf(p,KEYS.xg)),xa:parseNumLoose(rawOf(p,KEYS.xa)),ccc:parseNumLoose(rawOf(p,KEYS.ccc)),kp:parseNumLoose(rawOf(p,KEYS.kpas)),tckr:rawOf(p,KEYS.tckr),hdr:rawOf(p,KEYS.hdrpc),conv:rawOf(p,KEYS.convpc),mins:parseNumLoose(rawOf(p,KEYS.mins))})).filter(r=>r.mins);
+  const rows=players().map(p=>({p,xg:parseNumLoose(rawOf(p,KEYS.xg)),xa:parseNumLoose(rawOf(p,KEYS.xa)),ccc:parseNumLoose(rawOf(p,KEYS.ccc)),kp:parseNumLoose(rawOf(p,KEYS.kpas)),tckr:rawOf(p,KEYS.tckr),hdr:rawOf(p,KEYS.hdrpc),conv:rawOf(p,KEYS.convpc),g:parseNumLoose(rawOf(p,KEYS.gls)),mins:parseNumLoose(rawOf(p,KEYS.mins))})).filter(r=>r.mins);
   const top=(k,n)=>rows.filter(r=>r[k]!=null).sort((a,b)=>b[k]-a[k]).slice(0,n);
   const card=(t,list,fmt)=>`<div><h3 style="margin-top:0">${t}</h3>${list.length?list.map((r,i)=>`<div class="row" style="justify-content:space-between;cursor:pointer" onclick="openPlayer('${esc(r.p.name)}')"><span>${i+1}. <b>${esc(r.p.name)}</b></span><b>${fmt(r)}</b></div>`).join(""):'<p class="muted">No data.</p>'}</div>`;
+  // xG over/under-performance (Goals - xG). Sourced: tends to regress to the mean.
+  const perf=rows.filter(r=>r.xg!=null&&r.g!=null&&r.xg>=1).map(r=>({...r,diff:r.g-r.xg})).sort((a,b)=>b.diff-a.diff);
+  const over=perf.slice(0,5), under=perf.slice(-5).reverse();
+  const pc=(r,sign)=>`<div class="row" style="justify-content:space-between;cursor:pointer" onclick="openPlayer('${esc(r.p.name)}')"><span><b>${esc(r.p.name)}</b> <span class="muted">${r.g} gls / ${r.xg.toFixed(1)} xG</span></span><b style="color:${r.diff>=0?'#34d399':'#fb7185'}">${r.diff>=0?'+':''}${r.diff.toFixed(1)}</b></div>`;
   return `<p class="sub">Underlying performance (players with minutes). <b>xG</b>=expected goals, <b>xA</b>=expected assists, <b>CCC</b>=clear-cut chances created, <b>K Pas</b>=key passes.</p>
     <div class="flex2">${card("🎯 Goal threat (xG)",top('xg',6),r=>r.xg.toFixed(2))}${card("🅰️ Creativity (xA)",top('xa',6),r=>r.xa.toFixed(2))}</div>
     <div class="flex2">${card("🔑 Chances created (CCC)",top('ccc',6),r=>r.ccc)}${card("📨 Key passes",top('kp',6),r=>r.kp)}</div>
+    ${perf.length?`<h3>⚖️ Finishing: goals vs xG</h3>
+    <div class="flex2"><div><div class="muted" style="font-size:12px;margin-bottom:4px">🔥 Over-performing (clinical — but expect some regression)</div>${over.map(r=>pc(r)).join("")}</div>
+      <div><div class="muted" style="font-size:12px;margin-bottom:4px">❄️ Under-performing (unlucky or wasteful — often bounces back)</div>${under.map(r=>pc(r)).join("")}</div></div>
+    <div class="tipbox"><b>How to read it:</b> a striker scoring <i>well above</i> his xG is finishing hot — enjoy it, but don't expect it forever (it regresses). One scoring <i>below</i> xG is getting the chances and just needs them to drop — keep faith, or train Finishing/Composure. <span class="muted">(xG-vs-goals is a finishing & regression signal, per football analytics.)</span></div>`:''}
     <h3>Full analytics</h3><div class="tablewrap"><table><thead><tr><th>Name</th><th>xG</th><th>xA</th><th>CCC</th><th>K Pas</th><th>Tck R</th><th>Hdr %</th></tr></thead><tbody>${rows.sort((a,b)=>((b.xg||0)+(b.xa||0))-((a.xg||0)+(a.xa||0))).map(r=>`<tr onclick="openPlayer('${esc(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td>${r.xg!=null?r.xg.toFixed(2):'—'}</td><td>${r.xa!=null?r.xa.toFixed(2):'—'}</td><td>${r.ccc??'—'}</td><td>${r.kp??'—'}</td><td class="muted">${esc(r.tckr||'—')}</td><td class="muted">${esc(r.hdr||'—')}</td></tr>`).join("")}</tbody></table></div>`;
 }
 function repForm(){
@@ -790,8 +833,17 @@ function repForm(){
   const rows=players().map(p=>({p,apps:rawOf(p,KEYS.apps),g:parseNumLoose(rawOf(p,KEYS.gls)),a:parseNumLoose(rawOf(p,KEYS.ast)),rat:parseNumLoose(rawOf(p,KEYS.rat)),mins:parseNumLoose(rawOf(p,KEYS.mins))}));
   const top=(key,n)=>rows.filter(r=>r[key]!=null).sort((a,b)=>b[key]-a[key]).slice(0,n);
   const card=(title,list,fmt)=>`<div><h3 style="margin-top:0">${title}</h3>${list.length?list.map((r,i)=>`<div class="row" style="justify-content:space-between" onclick="openPlayer('${esc(r.p.name)}')"><span style="cursor:pointer">${i+1}. <b>${esc(r.p.name)}</b></span><b>${fmt(r)}</b></div>`).join(""):'<p class="muted">No data.</p>'}</div>`;
+  const ratPs=rows.filter(r=>r.rat!=null&&r.mins&&r.mins>=270);
+  const star=ratPs.slice().sort((a,b)=>b.rat-a.rat)[0];
+  const used=new Set();
+  const tots=FORMATION.map(s=>{const c=ratPs.filter(r=>eligible(r.p,s)&&!used.has(r.p.name)).sort((a,b)=>b.rat-a.rat)[0];if(c)used.add(c.p.name);return{s,c};});
+  const totsFilled=tots.filter(t=>t.c).length;
   return `<div class="flex2">${card("⚽ Top scorers",top('g',6),r=>r.g+" gls")}${card("🅰️ Top assists",top('a',6),r=>r.a+" ast")}</div>
     <div class="flex2">${card("⭐ Best average rating",top('rat',6),r=>r.rat.toFixed(2))}${card("⏱️ Most minutes",top('mins',6),r=>money(r.mins))}</div>
+    ${star?`<div class="tipbox"><b>🏅 Star man:</b> <b>${esc(star.p.name)}</b> — ${star.rat.toFixed(2)} avg over ${star.apps||""}. Your form player; build around him & keep him happy.</div>`:''}
+    ${totsFilled>=7?`<h3>🌟 Team of the season <span class="muted" style="font-size:12px">(your XI by average match rating)</span></h3>
+    <div class="tablewrap"><table><thead><tr><th>Slot</th><th>Player</th><th>Avg rating</th></tr></thead><tbody>${tots.map(t=>`<tr ${t.c?`onclick="openPlayer('${esc(t.c.p.name)}')"`:''}><td class="muted">${t.s.label}</td><td>${t.c?'<b>'+esc(t.c.p.name)+'</b>':'<span class="muted">—</span>'}</td><td>${t.c?`<b style="color:${t.c.rat>=7.2?'#22c55e':t.c.rat>=6.9?'#a3e635':'#fbbf24'}">${t.c.rat.toFixed(2)}</b>`:'—'}</td></tr>`).join("")}</tbody></table></div>
+    <p class="sub" style="margin-top:6px">This is who's actually performing — compare it to your <b>Best XI</b> (by attribute fit) to spot players over- or under-delivering.</p>`:''}
     <h3>Full stats</h3><div class="tablewrap"><table><thead><tr><th>Name</th><th>Apps</th><th>Gls</th><th>Ast</th><th>Av Rat</th></tr></thead><tbody>${rows.filter(r=>r.apps||r.g!=null||r.rat!=null).sort((a,b)=>(b.rat??0)-(a.rat??0)).map(r=>`<tr onclick="openPlayer('${esc(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td class="muted">${esc(r.apps||'—')}</td><td>${r.g??'—'}</td><td>${r.a??'—'}</td><td>${r.rat!=null?`<span style="color:${r.rat>=7?'#22c55e':r.rat>=6.7?'#fbbf24':'#f43f5e'};font-weight:700">${r.rat.toFixed(2)}</span>`:'—'}</td></tr>`).join("")}</tbody></table></div>`;
 }
 function repFinance(){
@@ -824,6 +876,21 @@ function repPersonality(){
   return `<div class="tipbox"><b>©️ Best dressing-room leaders:</b> ${leaders.slice(0,3).map(r=>esc(last(r.p.name))).join(", ")} — captain material, lift everyone's Determination.</div>
     ${mentors.length&&needMentor.length?`<div class="tipbox"><b>🤝 Mentoring tutor groups:</b> put senior pros (${mentors.slice(0,3).map(r=>esc(last(r.p.name))).join(", ")}) in a group with your weak-personality youngsters (${needMentor.slice(0,4).map(r=>esc(last(r.p.name))).join(", ")}) to fix their mentality & Determination.</div>`:''}
     <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>Personality</th><th>Det</th><th></th></tr></thead><tbody>${rows.filter(r=>r.pers).sort((a,b)=>b.det-a.det).map(r=>`<tr onclick="openPlayer('${esc(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td>${r.p.age}</td><td class="muted">${esc(r.pers)}</td><td>${r.det}</td><td>${good(r.pers)?'<span class="tag good">good</span>':bad(r.pers)?'<span class="tag bad">risk</span>':''}</td></tr>`).join("")}</tbody></table></div>`;
+}
+
+/* ============================ DEVELOPMENT (sourced advice) ============================ */
+/* Principles drawn from FM24 community guides — see Wonderkids tab for sources */
+function devPlan(p){
+  const tr=trainingFor(p), m=mins(p), br=bestRole(p), dev=devProxy(p,br.score), pers=rawOf(p,KEYS.pers), th=rawOf(p,KEYS.trainhappy);
+  const steps=[];
+  steps.push(["🏋️ Train", `Set Individual Training to <b>${esc(tr.fmRole)}</b>${tr.focuses.length?` · additional focus <b>${esc(tr.focuses[0][0])}</b>`:""}. Keep intensity <b>Medium / Automatic</b> and rest after matches (avoids burnout & injury).`]);
+  if(th&&/unhappy/i.test(th)) steps.push(["⚠️ Training mood",`He's <b>unhappy with training</b> — lower his workload or change focus before morale drops.`]);
+  if(persIsBad(pers)||A(p,"Det")<11) steps.push(["🤝 Mentor",`Weak personality/Determination — put him in a mentoring group led by a senior pro (good personality, Det ≥14). Personality & mentals transfer.`]);
+  if(!m||m<900) steps.push(["⏱️ Minutes",`Only ${m||0} mins. <b>Game time is the #1 driver of development</b> — start him in cups, or <b>loan him out</b> for regular first-team football.`]);
+  else steps.push(["⏱️ Minutes",`${m} mins — healthy. Keep him playing regularly.`]);
+  if(br.score>=12) steps.push(["🚀 Promote",`Already first-team level (${br.score.toFixed(1)}). Raise his squad status and start him.`]);
+  else steps.push(["⏳ Don't rush",`Projected ceiling ${dev.toFixed(1)}. Keep developing — only promote when he's genuinely ready.`]);
+  return steps;
 }
 
 /* ============================ SQUAD STATUS ============================ */
