@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1117">
+<title>FM Team Manager — Highway Star 4-2-3-1</title>
+<style>
+:root{
+  --bg:#0d1117; --bg2:#161b22; --bg3:#21262d; --line:#30363d;
+  --txt:#e6edf3; --mut:#8b949e; --acc:#2f81f7; --acc2:#1f6feb;
+  --green:#2ea043; --lime:#3fb950; --yellow:#d29922; --orange:#db6d28; --red:#da3633;
+  --gk:#d29922; --def:#2f81f7; --mid:#3fb950; --att:#da3633;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45;-webkit-text-size-adjust:100%}
+a{color:var(--acc)}
+header{position:sticky;top:0;z-index:50;background:linear-gradient(180deg,#0d1117,#0d1117ee);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;gap:10px;padding:10px 14px;max-width:1200px;margin:0 auto;flex-wrap:wrap}
+.logo{font-weight:800;font-size:16px;letter-spacing:.3px;display:flex;align-items:center;gap:8px}
+.logo b{color:var(--acc)}
+.spacer{flex:1}
+.btn{background:var(--bg3);color:var(--txt);border:1px solid var(--line);padding:7px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600}
+.btn:hover{border-color:var(--acc)}
+.btn.primary{background:var(--acc2);border-color:var(--acc2)}
+.btn.primary:hover{background:var(--acc)}
+.btn.ghost{background:transparent}
+.btn.sm{padding:4px 8px;font-size:12px}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;padding:6px 10px;max-width:1200px;margin:0 auto;-webkit-overflow-scrolling:touch}
+nav.tabs button{white-space:nowrap;background:transparent;border:none;color:var(--mut);padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px}
+nav.tabs button.active{background:var(--bg3);color:var(--txt)}
+main{max-width:1200px;margin:0 auto;padding:16px 14px 80px}
+.card{background:var(--bg2);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.card h2{margin:0 0 4px;font-size:18px}
+.card h3{margin:18px 0 8px;font-size:15px;color:var(--txt)}
+.sub{color:var(--mut);font-size:13px;margin:0 0 12px}
+.grid{display:grid;gap:14px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+.kpi{background:var(--bg3);border:1px solid var(--line);border-radius:10px;padding:12px}
+.kpi .n{font-size:24px;font-weight:800}
+.kpi .l{color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px}
+th,td{padding:7px 9px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{position:sticky;top:0;background:var(--bg3);cursor:pointer;font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.4px}
+th:hover{color:var(--txt)}
+tbody tr:hover{background:#1c2230}
+.score{font-weight:800;padding:2px 8px;border-radius:6px;color:#0d1117;display:inline-block;min-width:42px;text-align:center}
+.pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid var(--line)}
+.pill.gk{color:var(--gk);border-color:var(--gk)}
+.pill.def{color:var(--def);border-color:var(--def)}
+.pill.mid{color:var(--mid);border-color:var(--mid)}
+.pill.att{color:var(--att);border-color:var(--att)}
+select,input[type=number],input[type=text]{background:var(--bg3);color:var(--txt);border:1px solid var(--line);border-radius:7px;padding:6px 8px;font-size:13px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.muted{color:var(--mut)}
+.tag{font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px}
+.tag.good{background:#11331c;color:var(--lime)}
+.tag.warn{background:#3a2a0c;color:var(--yellow)}
+.tag.bad{background:#3a1414;color:#ff7b72}
+.tag.info{background:#0c2a40;color:#79c0ff}
+/* Pitch */
+.pitchwrap{display:grid;grid-template-columns:1.3fr 1fr;gap:16px}
+@media(max-width:820px){.pitchwrap{grid-template-columns:1fr}.pitch{max-width:420px;margin:0 auto}}
+.pitch{position:relative;width:100%;aspect-ratio:68/95;background:
+  repeating-linear-gradient(0deg,#1b5e20 0 9.5%,#1e6824 9.5% 19%);
+  border:2px solid #2e7d32;border-radius:12px;overflow:hidden}
+.pitch .line{position:absolute;border:2px solid #ffffff55}
+.pitch .center{left:6%;right:6%;top:49%;height:0}
+.pitch .circle{left:38%;width:24%;top:43%;aspect-ratio:1;border-radius:50%}
+.pitch .boxT{left:24%;width:52%;top:0;height:14%;border-top:none}
+.pitch .boxB{left:24%;width:52%;bottom:0;height:14%;border-bottom:none}
+.slot{position:absolute;transform:translate(-50%,-50%);width:64px;text-align:center;cursor:pointer}
+.slot .dot{width:46px;height:46px;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#0d1117;border:2px solid #0d1117;box-shadow:0 2px 8px #0008}
+.slot .nm{font-size:11px;margin-top:3px;font-weight:700;text-shadow:0 1px 3px #000;line-height:1.1}
+.slot .ro{font-size:9px;color:#cde;text-shadow:0 1px 2px #000}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-top:8px}
+.dotleg{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:middle;margin-right:5px}
+details{background:var(--bg3);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px}
+summary{cursor:pointer;font-weight:700}
+.def-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;font-size:12px}
+.def-grid div{background:var(--bg2);padding:5px 8px;border-radius:6px;border:1px solid var(--line)}
+.notice{font-size:13.5px;line-height:1.6}
+.notice li{margin-bottom:5px}
+.flex2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:700px){.flex2{grid-template-columns:1fr}}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:26px;text-align:center;color:var(--mut);cursor:pointer}
+.drop.hot{border-color:var(--acc);color:var(--txt);background:#0c1d33}
+textarea{width:100%;min-height:120px;background:var(--bg3);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:10px;font-family:ui-monospace,monospace;font-size:12px}
+.hidden{display:none!important}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--acc);padding:10px 16px;border-radius:10px;z-index:200;font-weight:600;box-shadow:0 6px 20px #000a}
+.tipbox{background:#0c1d33;border:1px solid #1f4d7a;border-radius:10px;padding:12px 14px;margin:10px 0}
+.tipbox b{color:#79c0ff}
+.barmini{height:6px;background:var(--bg3);border-radius:4px;overflow:hidden;min-width:60px}
+.barmini i{display:block;height:100%;background:var(--acc)}
+hr{border:none;border-top:1px solid var(--line);margin:16px 0}
+code{background:var(--bg3);padding:1px 5px;border-radius:4px;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="logo">⚽ <span>FM <b>Team Manager</b></span></div>
+    <span class="muted" id="seasonLabel" style="font-size:12px"></span>
+    <span class="spacer"></span>
+    <button class="btn sm" onclick="go('import')">📥 Update data</button>
+    <button class="btn sm" onclick="backup()">💾 Backup</button>
+    <button class="btn sm ghost" onclick="document.getElementById('restoreFile').click()">↩ Restore</button>
+    <input type="file" id="restoreFile" accept="application/json" class="hidden">
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+</header>
+<main id="view"></main>
+<div id="toast" class="toast hidden"></div>
+
+<script>
+/* ============================ EMBEDDED CONFIG ============================ */
+const SCORING = {"attrs": ["Acc", "Aer", "Agg", "Agi", "Ant", "Bal", "Bra", "Cmd", "Com", "Cmp", "Cnt", "Cor", "Cro", "Dec", "Det", "Dri", "Ecc", "Fin", "Fir", "Fla", "Fre", "Han", "Hea", "Jum", "Kic", "Ldr", "Lon", "L Th", "Mar", "Nat", "OtB", "1v1", "Pac", "Pas", "Pen", "Pos", "Pun", "Ref", "TRO", "Sta", "Str", "Tck", "Tea", "Tec", "Thr", "Vis", "Wor"], "roles": ["SK - Defend", "FB - Attack", "BPD - Defend", "DM - Support", "IF - Support", "AM - Attack", "AF - Attack"], "weights": {"SK - Defend": {"Acc": 0.0, "Aer": 0.8, "Agg": 0.0, "Agi": 1, "Ant": 0.3, "Bal": 0.0, "Bra": 0.0, "Cmd": 0.3, "Com": 0.55, "Cmp": 0.2, "Cnt": 0.0, "Cor": 0.0, "Cro": 0.0, "Dec": 0.4, "Det": 0.15, "Dri": 0.0, "Ecc": 0.0, "Fin": 0.0, "Fir": 0.0, "Fla": 0.0, "Fre": 0.0, "Han": 0.5, "Hea": 0.0, "Jum": 0.0, "Kic": 0.2, "Ldr": 0.0, "Lon": 0.0, "L Th": 0.0, "Mar": 0.0, "Nat": 0.15, "OtB": 0.0, "1v1": 0.4, "Pac": 0.0, "Pas": 0.0, "Pen": 0.0, "Pos": 0.0, "Pun": 0.0, "Ref": 0.85, "TRO": 0.25, "Sta": 0.0, "Str": 0.0, "Tck": 0.0, "Tea": 0.0, "Tec": 0.0, "Thr": 0.55, "Vis": 0.0, "Wor": 0.0}, "FB - Attack": {"Acc": 0.8, "Aer": 0.0, "Agg": 0.0, "Agi": 0.5, "Ant": 0.7, "Bal": 0.0, "Bra": 0.0, "Cmd": 0.0, "Com": 0.0, "Cmp": 0.45, "Cnt": 0.5, "Cor": 0.0, "Cro": 0.5, "Dec": 0.35, "Det": 0.15, "Dri": 0.5, "Ecc": 0.0, "Fin": 0.0, "Fir": 0.35, "Fla": 0.0, "Fre": 0.0, "Han": 0.0, "Hea": 0.0, "Jum": 0.75, "Kic": 0.0, "Ldr": 0.0, "Lon": 0.0, "L Th": 0.0, "Mar": 0.3, "Nat": 0.15, "OtB": 0.4, "1v1": 0.0, "Pac": 1, "Pas": 0.4, "Pen": 0.0, "Pos": 0.25, "Pun": 0.0, "Ref": 0.0, "TRO": 0.0, "Sta": 0.5, "Str": 0.0, "Tck": 0.35, "Tea": 0.3, "Tec": 0.4, "Thr": 0.0, "Vis": 0.25, "Wor": 0.5}, "BPD - Defend": {"Acc": 0.8, "Aer": 0.0, "Agg": 0.3, "Agi": 0.3, "Ant": 0.7, "Bal": 0.0, "Bra": 0.25, "Cmd": 0.0, "Com": 0.0, "Cmp": 0.45, "Cnt": 0.5, "Cor": 0.0, "Cro": 0.0, "Dec": 0.4, "Det": 0.15, "Dri": 0.5, "Ecc": 0.0, "Fin": 0.0, "Fir": 0.3, "Fla": 0.0, "Fre": 0.0, "Han": 0.0, "Hea": 0.35, "Jum": 1, "Kic": 0.0, "Ldr": 0.0, "Lon": 0.0, "L Th": 0.0, "Mar": 0.4, "Nat": 0.15, "OtB": 0.0, "1v1": 0.0, "Pac": 0.9, "Pas": 0.5, "Pen": 0.0, "Pos": 0.6, "Pun": 0.0, "Ref": 0.0, "TRO": 0.0, "Sta": 0.0, "Str": 0.35, "Tck": 0.4, "Tea": 0.0, "Tec": 0.35, "Thr": 0.0, "Vis": 0.0, "Wor": 0.5}, "DM - Support": {"Acc": 0.95, "Aer": 0.0, "Agg": 0.35, "Agi": 0.0, "Ant": 0.8, "Bal": 0.0, "Bra": 0.0, "Cmd": 0.0, "Com": 0.0, "Cmp": 0.55, "Cnt": 0.45, "Cor": 0.0, "Cro": 0.0, "Dec": 0.45, "Det": 0.15, "Dri": 0.4, "Ecc": 0.0, "Fin": 0.0, "Fir": 0.35, "Fla": 0.0, "Fre": 0.0, "Han": 0.0, "Hea": 0.0, "Jum": 0.55, "Kic": 0.0, "Ldr": 0.0, "Lon": 0.45, "L Th": 0.0, "Mar": 0.2, "Nat": 0.15, "OtB": 0.0, "1v1": 0.0, "Pac": 0.5, "Pas": 0.55, "Pen": 0.0, "Pos": 0.4, "Pun": 0.0, "Ref": 0.0, "TRO": 0.0, "Sta": 0.55, "Str": 0.3, "Tck": 0.35, "Tea": 0.35, "Tec": 0.0, "Thr": 0.0, "Vis": 0.35, "Wor": 0.55}, "IF - Support": {"Acc": 1, "Aer": 0.0, "Agg": 0.15, "Agi": 0.45, "Ant": 0.75, "Bal": 0.4, "Bra": 0.0, "Cmd": 0.0, "Com": 0.0, "Cmp": 0.55, "Cnt": 0.4, "Cor": 0.0, "Cro": 0.35, "Dec": 0.0, "Det": 0.15, "Dri": 0.7, "Ecc": 0.0, "Fin": 0.25, "Fir": 0.4, "Fla": 0.2, "Fre": 0.0, "Han": 0.0, "Hea": 0.0, "Jum": 0.55, "Kic": 0.0, "Ldr": 0.0, "Lon": 0.15, "L Th": 0.0, "Mar": 0.0, "Nat": 0.15, "OtB": 0.35, "1v1": 0.0, "Pac": 1, "Pas": 0.0, "Pen": 0.1, "Pos": 0.0, "Pun": 0.0, "Ref": 0.0, "TRO": 0.0, "Sta": 0.5, "Str": 0.3, "Tck": 0.1, "Tea": 0.0, "Tec": 0.65, "Thr": 0.0, "Vis": 0.3, "Wor": 0.5}, "AM - Attack": {"Acc": 0.9, "Aer": 0.0, "Agg": 0.15, "Agi": 0.35, "Ant": 0.6, "Bal": 0.4, "Bra": 0.0, "Cmd": 0.0, "Com": 0.0, "Cmp": 0.65, "Cnt": 0.65, "Cor": 0.0, "Cro": 0.0, "Dec": 0.4, "Det": 0.15, "Dri": 0.55, "Ecc": 0.0, "Fin": 0.4, "Fir": 0.4, "Fla": 0.25, "Fre": 0.0, "Han": 0.0, "Hea": 0.0, "Jum": 0.45, "Kic": 0.0, "Ldr": 0.0, "Lon": 0.5, "L Th": 0.0, "Mar": 0.0, "Nat": 0.15, "OtB": 0.45, "1v1": 0.0, "Pac": 0.85, "Pas": 0.45, "Pen": 0.0, "Pos": 0.0, "Pun": 0.0, "Ref": 0.0, "TRO": 0.0, "Sta": 0.4, "Str": 0.25, "Tck": 0.1, "Tea": 0.0, "Tec": 0.6, "Thr": 0.0, "Vis": 0.35, "Wor": 0.0}, "AF - Attack": {"Acc": 0.9, "Aer": 0.0, "Agg": 0.35, "Agi": 0.0, "Ant": 0.55, "Bal": 0.55, "Bra": 0.0, "Cmd": 0.0, "Com": 0.0, "Cmp": 0.5, "Cnt": 0.65, "Cor": 0.0, "Cro": 0.0, "Dec": 0.3, "Det": 0.15, "Dri": 0.6, "Ecc": 0.0, "Fin": 0.55, "Fir": 0.4, "Fla": 0.0, "Fre": 0.0, "Han": 0.0, "Hea": 0.0, "Jum": 1, "Kic": 0.0, "Ldr": 0.0, "Lon": 0.0, "L Th": 0.0, "Mar": 0.0, "Nat": 0.15, "OtB": 0.4, "1v1": 0.0, "Pac": 0.95, "Pas": 0.0, "Pen": 0.0, "Pos": 0.0, "Pun": 0.0, "Ref": 0.0, "TRO": 0.0, "Sta": 0.45, "Str": 0.0, "Tck": 0.1, "Tea": 0.0, "Tec": 0.4, "Thr": 0.0, "Vis": 0.35, "Wor": 0.5}}, "foot_w": {"SK - Defend": 0.2, "FB - Attack": 0.2, "BPD - Defend": 0.2, "DM - Support": 0.2, "IF - Support": 0.2, "AM - Attack": 0.2, "AF - Attack": 0.2}, "rolemax": {"SK - Defend": 136, "FB - Attack": 211, "BPD - Defend": 207, "DM - Support": 198, "IF - Support": 212, "AM - Attack": 212, "AF - Attack": 200}, "footmap": {"Very Strong": 10, "Strong": 8, "Fairly Strong": 6, "Reasonable": 4, "Weak": 2, "Very Weak": 0}};
+const SEED = [{"Age": "26", "Name": "Ollie Chapman", "Position": "M (L), AM (RL)", "Left Foot": "Very Strong", "Right Foot": "Reasonable", "Acc": "12", "Aer": "1", "Agg": "8", "Agi": "15", "Ant": "11", "Bal": "12", "Bra": "9", "Cmd": "3", "Com": "2", "Cmp": "12", "Cnt": "7", "Cor": "4", "Cro": "7", "Dec": "12", "Det": "9", "Dri": "11", "Ecc": "1", "Fin": "10", "Fir": "11", "Fla": "11", "Fre": "4", "Han": "3", "Hea": "3", "Jum": "2", "Kic": "1", "Ldr": "14", "Lon": "12", "L Th": "2", "Mar": "6", "Nat": "17", "OtB": "11", "1v1": "2", "Pac": "17", "Pas": "9", "Pen": "8", "Pos": "6", "Pun": "1", "Ref": "2", "TRO": "2", "Sta": "11", "Str": "8", "Tck": "4", "Tea": "14", "Tec": "13", "Thr": "3", "Vis": "11", "Wor": "11", "Position/Role/Duty": "IF - Support"}, {"Age": "25", "Name": "Chris Baker", "Position": "D (LC)", "Left Foot": "Very Strong", "Right Foot": "Reasonable", "Acc": "7", "Aer": "1", "Agg": "11", "Agi": "5", "Ant": "13", "Bal": "5", "Bra": "10", "Cmd": "1", "Com": "1", "Cmp": "11", "Cnt": "15", "Cor": "2", "Cro": "3", "Dec": "14", "Det": "8", "Dri": "6", "Ecc": "1", "Fin": "1", "Fir": "12", "Fla": "8", "Fre": "1", "Han": "2", "Hea": "13", "Jum": "15", "Kic": "3", "Ldr": "11", "Lon": "6", "L Th": "2", "Mar": "15", "Nat": "13", "OtB": "6", "1v1": "1", "Pac": "13", "Pas": "13", "Pen": "1", "Pos": "13", "Pun": "3", "Ref": "3", "TRO": "1", "Sta": "11", "Str": "13", "Tck": "15", "Tea": "13", "Tec": "13", "Thr": "3", "Vis": "12", "Wor": "9", "Position/Role/Duty": "BPD - Defend"}, {"Age": "29", "Name": "James Wardle", "Position": "D (R)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "10", "Aer": "4", "Agg": "13", "Agi": "11", "Ant": "16", "Bal": "12", "Bra": "19", "Cmd": "4", "Com": "3", "Cmp": "10", "Cnt": "14", "Cor": "2", "Cro": "8", "Dec": "13", "Det": "10", "Dri": "8", "Ecc": "2", "Fin": "2", "Fir": "12", "Fla": "10", "Fre": "1", "Han": "2", "Hea": "7", "Jum": "5", "Kic": "4", "Ldr": "11", "Lon": "3", "L Th": "2", "Mar": "14", "Nat": "13", "OtB": "9", "1v1": "3", "Pac": "12", "Pas": "9", "Pen": "2", "Pos": "13", "Pun": "2", "Ref": "3", "TRO": "1", "Sta": "12", "Str": "8", "Tck": "12", "Tea": "10", "Tec": "13", "Thr": "2", "Vis": "9", "Wor": "11", "Position/Role/Duty": "FB - Attack"}, {"Age": "24", "Name": "Sam Uda", "Position": "GK", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "11", "Aer": "12", "Agg": "14", "Agi": "14", "Ant": "9", "Bal": "16", "Bra": "8", "Cmd": "14", "Com": "13", "Cmp": "11", "Cnt": "15", "Cor": "3", "Cro": "1", "Dec": "12", "Det": "10", "Dri": "1", "Ecc": "2", "Fin": "3", "Fir": "9", "Fla": "3", "Fre": "3", "Han": "8", "Hea": "1", "Jum": "12", "Kic": "12", "Ldr": "16", "Lon": "1", "L Th": "1", "Mar": "1", "Nat": "15", "OtB": "2", "1v1": "14", "Pac": "10", "Pas": "11", "Pen": "2", "Pos": "12", "Pun": "8", "Ref": "14", "TRO": "8", "Sta": "9", "Str": "8", "Tck": "3", "Tea": "7", "Tec": "8", "Thr": "15", "Vis": "12", "Wor": "8", "Position/Role/Duty": "SK - Defend"}, {"Age": "30", "Name": "Charlie Padmore", "Position": "DM, M (C)", "Left Foot": "Fairly Strong", "Right Foot": "Very Strong", "Acc": "11", "Aer": "1", "Agg": "7", "Agi": "5", "Ant": "12", "Bal": "11", "Bra": "9", "Cmd": "3", "Com": "4", "Cmp": "13", "Cnt": "15", "Cor": "2", "Cro": "3", "Dec": "15", "Det": "10", "Dri": "6", "Ecc": "1", "Fin": "3", "Fir": "11", "Fla": "6", "Fre": "1", "Han": "1", "Hea": "5", "Jum": "12", "Kic": "3", "Ldr": "10", "Lon": "3", "L Th": "2", "Mar": "15", "Nat": "16", "OtB": "11", "1v1": "2", "Pac": "8", "Pas": "12", "Pen": "4", "Pos": "15", "Pun": "2", "Ref": "3", "TRO": "2", "Sta": "16", "Str": "12", "Tck": "11", "Tea": "9", "Tec": "11", "Thr": "3", "Vis": "12", "Wor": "12", "Position/Role/Duty": "DM - Support"}, {"Age": "31", "Name": "Tyler James", "Position": "D (RC), M (C)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "4", "Aer": "1", "Agg": "16", "Agi": "4", "Ant": "13", "Bal": "6", "Bra": "10", "Cmd": "2", "Com": "2", "Cmp": "12", "Cnt": "14", "Cor": "1", "Cro": "2", "Dec": "17", "Det": "11", "Dri": "6", "Ecc": "3", "Fin": "2", "Fir": "10", "Fla": "10", "Fre": "1", "Han": "2", "Hea": "6", "Jum": "14", "Kic": "3", "Ldr": "16", "Lon": "4", "L Th": "5", "Mar": "12", "Nat": "13", "OtB": "11", "1v1": "3", "Pac": "10", "Pas": "12", "Pen": "3", "Pos": "16", "Pun": "3", "Ref": "3", "TRO": "2", "Sta": "10", "Str": "12", "Tck": "10", "Tea": "12", "Tec": "15", "Thr": "1", "Vis": "14", "Wor": "10", "Position/Role/Duty": "BPD - Defend"}, {"Age": "23", "Name": "Neil Matthews", "Position": "AM (RL), ST (C)", "Left Foot": "Very Strong", "Right Foot": "Reasonable", "Acc": "14", "Aer": "2", "Agg": "14", "Agi": "11", "Ant": "8", "Bal": "14", "Bra": "8", "Cmd": "3", "Com": "1", "Cmp": "10", "Cnt": "3", "Cor": "7", "Cro": "7", "Dec": "10", "Det": "9", "Dri": "11", "Ecc": "2", "Fin": "11", "Fir": "13", "Fla": "15", "Fre": "4", "Han": "3", "Hea": "8", "Jum": "14", "Kic": "1", "Ldr": "8", "Lon": "9", "L Th": "1", "Mar": "1", "Nat": "16", "OtB": "11", "1v1": "3", "Pac": "14", "Pas": "9", "Pen": "1", "Pos": "2", "Pun": "1", "Ref": "3", "TRO": "2", "Sta": "13", "Str": "10", "Tck": "2", "Tea": "12", "Tec": "17", "Thr": "4", "Vis": "10", "Wor": "11", "Position/Role/Duty": "IF - Support"}, {"Age": "21", "Name": "James Okoli", "Position": "DM, M (C)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "12", "Aer": "2", "Agg": "11", "Agi": "11", "Ant": "12", "Bal": "16", "Bra": "11", "Cmd": "1", "Com": "2", "Cmp": "12", "Cnt": "13", "Cor": "3", "Cro": "5", "Dec": "16", "Det": "9", "Dri": "10", "Ecc": "4", "Fin": "6", "Fir": "13", "Fla": "9", "Fre": "4", "Han": "2", "Hea": "5", "Jum": "13", "Kic": "2", "Ldr": "16", "Lon": "9", "L Th": "4", "Mar": "12", "Nat": "15", "OtB": "13", "1v1": "1", "Pac": "11", "Pas": "12", "Pen": "3", "Pos": "17", "Pun": "3", "Ref": "3", "TRO": "2", "Sta": "15", "Str": "16", "Tck": "13", "Tea": "11", "Tec": "15", "Thr": "2", "Vis": "11", "Wor": "8", "Position/Role/Duty": "DM - Support"}, {"Age": "24", "Name": "Fresnel Mbala", "Position": "D (R)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "9", "Aer": "1", "Agg": "12", "Agi": "12", "Ant": "13", "Bal": "11", "Bra": "14", "Cmd": "3", "Com": "2", "Cmp": "8", "Cnt": "12", "Cor": "4", "Cro": "10", "Dec": "14", "Det": "11", "Dri": "11", "Ecc": "3", "Fin": "2", "Fir": "11", "Fla": "8", "Fre": "1", "Han": "3", "Hea": "7", "Jum": "5", "Kic": "2", "Ldr": "14", "Lon": "5", "L Th": "6", "Mar": "11", "Nat": "12", "OtB": "8", "1v1": "3", "Pac": "12", "Pas": "8", "Pen": "1", "Pos": "12", "Pun": "3", "Ref": "3", "TRO": "2", "Sta": "13", "Str": "12", "Tck": "9", "Tea": "14", "Tec": "11", "Thr": "2", "Vis": "9", "Wor": "12", "Position/Role/Duty": "FB - Attack"}, {"Age": "23", "Name": "Ryan Griffiths", "Position": "DM, M (C)", "Left Foot": "Fairly Strong", "Right Foot": "Very Strong", "Acc": "7", "Aer": "1", "Agg": "8", "Agi": "8", "Ant": "13", "Bal": "12", "Bra": "13", "Cmd": "3", "Com": "2", "Cmp": "13", "Cnt": "14", "Cor": "5", "Cro": "6", "Dec": "16", "Det": "13", "Dri": "8", "Ecc": "3", "Fin": "7", "Fir": "12", "Fla": "5", "Fre": "2", "Han": "2", "Hea": "10", "Jum": "9", "Kic": "3", "Ldr": "13", "Lon": "9", "L Th": "1", "Mar": "15", "Nat": "15", "OtB": "12", "1v1": "1", "Pac": "10", "Pas": "13", "Pen": "9", "Pos": "14", "Pun": "2", "Ref": "3", "TRO": "3", "Sta": "12", "Str": "13", "Tck": "9", "Tea": "11", "Tec": "14", "Thr": "2", "Vis": "13", "Wor": "13", "Position/Role/Duty": "DM - Support"}, {"Age": "21", "Name": "Malcolm Isherwood", "Position": "D (LC), DM", "Left Foot": "Very Strong", "Right Foot": "Reasonable", "Acc": "10", "Aer": "3", "Agg": "9", "Agi": "12", "Ant": "10", "Bal": "15", "Bra": "16", "Cmd": "1", "Com": "3", "Cmp": "7", "Cnt": "12", "Cor": "3", "Cro": "8", "Dec": "14", "Det": "7", "Dri": "8", "Ecc": "2", "Fin": "1", "Fir": "8", "Fla": "7", "Fre": "2", "Han": "3", "Hea": "14", "Jum": "13", "Kic": "1", "Ldr": "13", "Lon": "9", "L Th": "1", "Mar": "13", "Nat": "16", "OtB": "7", "1v1": "3", "Pac": "12", "Pas": "8", "Pen": "4", "Pos": "10", "Pun": "2", "Ref": "2", "TRO": "2", "Sta": "10", "Str": "15", "Tck": "12", "Tea": "12", "Tec": "11", "Thr": "3", "Vis": "10", "Wor": "8", "Position/Role/Duty": "BPD - Defend"}, {"Age": "26", "Name": "Jermaine Nash", "Position": "D (C), DM, M (LC)", "Left Foot": "Very Strong", "Right Foot": "Strong", "Acc": "8", "Aer": "4", "Agg": "8", "Agi": "6", "Ant": "10", "Bal": "7", "Bra": "9", "Cmd": "3", "Com": "4", "Cmp": "8", "Cnt": "14", "Cor": "5", "Cro": "3", "Dec": "10", "Det": "15", "Dri": "10", "Ecc": "2", "Fin": "2", "Fir": "12", "Fla": "4", "Fre": "7", "Han": "3", "Hea": "7", "Jum": "14", "Kic": "1", "Ldr": "6", "Lon": "6", "L Th": "7", "Mar": "10", "Nat": "11", "OtB": "8", "1v1": "3", "Pac": "12", "Pas": "12", "Pen": "5", "Pos": "12", "Pun": "1", "Ref": "4", "TRO": "2", "Sta": "14", "Str": "13", "Tck": "12", "Tea": "12", "Tec": "15", "Thr": "2", "Vis": "8", "Wor": "11", "Position/Role/Duty": "BPD - Defend"}, {"Age": "18", "Name": "Dominic Spencer", "Position": "AM (LC), ST (C)", "Left Foot": "Very Strong", "Right Foot": "Fairly Strong", "Acc": "10", "Aer": "3", "Agg": "13", "Agi": "13", "Ant": "11", "Bal": "9", "Bra": "8", "Cmd": "3", "Com": "2", "Cmp": "12", "Cnt": "8", "Cor": "8", "Cro": "9", "Dec": "11", "Det": "11", "Dri": "11", "Ecc": "2", "Fin": "10", "Fir": "15", "Fla": "13", "Fre": "10", "Han": "2", "Hea": "7", "Jum": "3", "Kic": "3", "Ldr": "15", "Lon": "10", "L Th": "2", "Mar": "5", "Nat": "17", "OtB": "12", "1v1": "4", "Pac": "10", "Pas": "10", "Pen": "7", "Pos": "7", "Pun": "2", "Ref": "2", "TRO": "4", "Sta": "11", "Str": "7", "Tck": "5", "Tea": "8", "Tec": "15", "Thr": "1", "Vis": "11", "Wor": "10", "Position/Role/Duty": "AM - Attack"}, {"Age": "23", "Name": "Sam Sorvel", "Position": "M/AM (C), ST (C)", "Left Foot": "Fairly Strong", "Right Foot": "Very Strong", "Acc": "10", "Aer": "3", "Agg": "6", "Agi": "13", "Ant": "12", "Bal": "15", "Bra": "9", "Cmd": "2", "Com": "3", "Cmp": "13", "Cnt": "6", "Cor": "8", "Cro": "9", "Dec": "12", "Det": "12", "Dri": "12", "Ecc": "1", "Fin": "14", "Fir": "15", "Fla": "16", "Fre": "9", "Han": "2", "Hea": "8", "Jum": "2", "Kic": "2", "Ldr": "12", "Lon": "12", "L Th": "1", "Mar": "7", "Nat": "16", "OtB": "14", "1v1": "4", "Pac": "12", "Pas": "11", "Pen": "9", "Pos": "6", "Pun": "1", "Ref": "3", "TRO": "3", "Sta": "12", "Str": "9", "Tck": "5", "Tea": "11", "Tec": "17", "Thr": "3", "Vis": "16", "Wor": "13", "Position/Role/Duty": "AM - Attack"}, {"Age": "18", "Name": "Brian Jenkins", "Position": "M (R), AM (RL)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "16", "Aer": "1", "Agg": "13", "Agi": "14", "Ant": "9", "Bal": "15", "Bra": "7", "Cmd": "4", "Com": "3", "Cmp": "8", "Cnt": "7", "Cor": "7", "Cro": "11", "Dec": "9", "Det": "10", "Dri": "11", "Ecc": "1", "Fin": "8", "Fir": "10", "Fla": "11", "Fre": "10", "Han": "2", "Hea": "5", "Jum": "8", "Kic": "3", "Ldr": "13", "Lon": "8", "L Th": "8", "Mar": "3", "Nat": "13", "OtB": "10", "1v1": "3", "Pac": "13", "Pas": "9", "Pen": "6", "Pos": "4", "Pun": "4", "Ref": "2", "TRO": "2", "Sta": "11", "Str": "6", "Tck": "3", "Tea": "11", "Tec": "16", "Thr": "3", "Vis": "10", "Wor": "12", "Position/Role/Duty": "IF - Support"}, {"Age": "18", "Name": "Lukas Hopkinson", "Position": "D (RC), WB (R)", "Left Foot": "Very Strong", "Right Foot": "Reasonable", "Acc": "11", "Aer": "2", "Agg": "12", "Agi": "11", "Ant": "10", "Bal": "16", "Bra": "13", "Cmd": "1", "Com": "3", "Cmp": "6", "Cnt": "9", "Cor": "5", "Cro": "11", "Dec": "12", "Det": "11", "Dri": "6", "Ecc": "3", "Fin": "5", "Fir": "5", "Fla": "10", "Fre": "2", "Han": "2", "Hea": "9", "Jum": "15", "Kic": "2", "Ldr": "7", "Lon": "7", "L Th": "4", "Mar": "13", "Nat": "13", "OtB": "7", "1v1": "2", "Pac": "11", "Pas": "9", "Pen": "4", "Pos": "14", "Pun": "3", "Ref": "2", "TRO": "3", "Sta": "11", "Str": "10", "Tck": "10", "Tea": "8", "Tec": "8", "Thr": "3", "Vis": "6", "Wor": "12", "Position/Role/Duty": "BPD - Defend"}, {"Age": "18", "Name": "Steve Thompson", "Position": "M (C), ST (C)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "13", "Aer": "3", "Agg": "12", "Agi": "13", "Ant": "13", "Bal": "11", "Bra": "10", "Cmd": "3", "Com": "1", "Cmp": "14", "Cnt": "10", "Cor": "8", "Cro": "9", "Dec": "13", "Det": "13", "Dri": "12", "Ecc": "2", "Fin": "11", "Fir": "15", "Fla": "14", "Fre": "10", "Han": "3", "Hea": "7", "Jum": "8", "Kic": "2", "Ldr": "9", "Lon": "11", "L Th": "3", "Mar": "12", "Nat": "11", "OtB": "13", "1v1": "3", "Pac": "14", "Pas": "11", "Pen": "6", "Pos": "9", "Pun": "2", "Ref": "1", "TRO": "3", "Sta": "11", "Str": "9", "Tck": "7", "Tea": "13", "Tec": "16", "Thr": "1", "Vis": "12", "Wor": "16", "Position/Role/Duty": "AF - Attack"}, {"Age": "19", "Name": "Joshua Morrison", "Position": "GK", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "12", "Aer": "13", "Agg": "9", "Agi": "15", "Ant": "8", "Bal": "14", "Bra": "11", "Cmd": "13", "Com": "13", "Cmp": "9", "Cnt": "12", "Cor": "5", "Cro": "3", "Dec": "11", "Det": "10", "Dri": "3", "Ecc": "1", "Fin": "3", "Fir": "11", "Fla": "1", "Fre": "4", "Han": "15", "Hea": "1", "Jum": "13", "Kic": "13", "Ldr": "15", "Lon": "3", "L Th": "1", "Mar": "3", "Nat": "11", "OtB": "1", "1v1": "14", "Pac": "8", "Pas": "11", "Pen": "3", "Pos": "13", "Pun": "6", "Ref": "14", "TRO": "8", "Sta": "12", "Str": "5", "Tck": "3", "Tea": "13", "Tec": "5", "Thr": "13", "Vis": "17", "Wor": "10", "Position/Role/Duty": "SK - Defend"}, {"Age": "22", "Name": "Augusto Pérez", "Position": "M (RC), AM (LC)", "Left Foot": "Fairly Strong", "Right Foot": "Very Strong", "Acc": "14", "Aer": "3", "Agg": "7", "Agi": "11", "Ant": "14", "Bal": "14", "Bra": "12", "Cmd": "3", "Com": "3", "Cmp": "9", "Cnt": "7", "Cor": "5", "Cro": "10", "Dec": "12", "Det": "13", "Dri": "11", "Ecc": "2", "Fin": "12", "Fir": "12", "Fla": "14", "Fre": "5", "Han": "3", "Hea": "7", "Jum": "12", "Kic": "2", "Ldr": "5", "Lon": "6", "L Th": "5", "Mar": "8", "Nat": "14", "OtB": "11", "1v1": "4", "Pac": "13", "Pas": "8", "Pen": "3", "Pos": "6", "Pun": "3", "Ref": "2", "TRO": "1", "Sta": "14", "Str": "10", "Tck": "10", "Tea": "13", "Tec": "16", "Thr": "3", "Vis": "9", "Wor": "11", "Position/Role/Duty": "IF - Support"}, {"Age": "19", "Name": "Kofi Acheampong", "Position": "DM, M/AM (C)", "Left Foot": "Very Strong", "Right Foot": "Very Strong", "Acc": "14", "Aer": "3", "Agg": "17", "Agi": "11", "Ant": "9", "Bal": "10", "Bra": "4", "Cmd": "2", "Com": "1", "Cmp": "13", "Cnt": "7", "Cor": "2", "Cro": "7", "Dec": "13", "Det": "11", "Dri": "7", "Ecc": "3", "Fin": "9", "Fir": "16", "Fla": "16", "Fre": "5", "Han": "3", "Hea": "4", "Jum": "3", "Kic": "2", "Ldr": "8", "Lon": "9", "L Th": "1", "Mar": "6", "Nat": "13", "OtB": "13", "1v1": "1", "Pac": "13", "Pas": "8", "Pen": "7", "Pos": "5", "Pun": "3", "Ref": "2", "TRO": "2", "Sta": "8", "Str": "9", "Tck": "4", "Tea": "6", "Tec": "14", "Thr": "2", "Vis": "11", "Wor": "9", "Position/Role/Duty": ""}, {"Age": "19", "Name": "Ross Armstrong", "Position": "M/AM (C), ST (C)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "11", "Aer": "2", "Agg": "14", "Agi": "12", "Ant": "13", "Bal": "11", "Bra": "11", "Cmd": "1", "Com": "3", "Cmp": "13", "Cnt": "7", "Cor": "8", "Cro": "7", "Dec": "10", "Det": "13", "Dri": "10", "Ecc": "3", "Fin": "14", "Fir": "11", "Fla": "16", "Fre": "11", "Han": "3", "Hea": "8", "Jum": "10", "Kic": "2", "Ldr": "12", "Lon": "11", "L Th": "4", "Mar": "8", "Nat": "12", "OtB": "12", "1v1": "1", "Pac": "14", "Pas": "9", "Pen": "5", "Pos": "8", "Pun": "2", "Ref": "1", "TRO": "3", "Sta": "13", "Str": "12", "Tck": "11", "Tea": "11", "Tec": "15", "Thr": "1", "Vis": "13", "Wor": "9", "Position/Role/Duty": "AM - Attack"}, {"Age": "23", "Name": "Neill Mooney", "Position": "D (RLC), DM", "Left Foot": "Very Strong", "Right Foot": "Reasonable", "Acc": "10", "Aer": "2", "Agg": "9", "Agi": "11", "Ant": "12", "Bal": "9", "Bra": "8", "Cmd": "3", "Com": "3", "Cmp": "8", "Cnt": "12", "Cor": "2", "Cro": "8", "Dec": "13", "Det": "11", "Dri": "10", "Ecc": "3", "Fin": "4", "Fir": "8", "Fla": "4", "Fre": "3", "Han": "1", "Hea": "7", "Jum": "12", "Kic": "3", "Ldr": "5", "Lon": "4", "L Th": "4", "Mar": "12", "Nat": "13", "OtB": "8", "1v1": "1", "Pac": "13", "Pas": "8", "Pen": "2", "Pos": "12", "Pun": "1", "Ref": "1", "TRO": "3", "Sta": "13", "Str": "10", "Tck": "8", "Tea": "11", "Tec": "8", "Thr": "4", "Vis": "9", "Wor": "14", "Position/Role/Duty": "FB - Attack"}, {"Age": "29", "Name": "Ross Speight", "Position": "D (RL)", "Left Foot": "Very Strong", "Right Foot": "Reasonable", "Acc": "9", "Aer": "3", "Agg": "11", "Agi": "11", "Ant": "15", "Bal": "10", "Bra": "10", "Cmd": "2", "Com": "3", "Cmp": "9", "Cnt": "11", "Cor": "2", "Cro": "7", "Dec": "12", "Det": "13", "Dri": "6", "Ecc": "3", "Fin": "1", "Fir": "11", "Fla": "10", "Fre": "2", "Han": "1", "Hea": "5", "Jum": "12", "Kic": "1", "Ldr": "12", "Lon": "4", "L Th": "2", "Mar": "12", "Nat": "12", "OtB": "10", "1v1": "2", "Pac": "12", "Pas": "7", "Pen": "1", "Pos": "12", "Pun": "1", "Ref": "1", "TRO": "2", "Sta": "12", "Str": "9", "Tck": "12", "Tea": "10", "Tec": "13", "Thr": "2", "Vis": "7", "Wor": "15", "Position/Role/Duty": "FB - Attack"}, {"Age": "22", "Name": "Jordan Wensley", "Position": "D (RLC)", "Left Foot": "Fairly Strong", "Right Foot": "Very Strong", "Acc": "12", "Aer": "1", "Agg": "15", "Agi": "9", "Ant": "13", "Bal": "16", "Bra": "18", "Cmd": "3", "Com": "3", "Cmp": "8", "Cnt": "13", "Cor": "3", "Cro": "11", "Dec": "12", "Det": "11", "Dri": "7", "Ecc": "3", "Fin": "5", "Fir": "11", "Fla": "6", "Fre": "2", "Han": "2", "Hea": "9", "Jum": "8", "Kic": "2", "Ldr": "13", "Lon": "4", "L Th": "4", "Mar": "13", "Nat": "13", "OtB": "8", "1v1": "1", "Pac": "12", "Pas": "9", "Pen": "2", "Pos": "13", "Pun": "2", "Ref": "2", "TRO": "3", "Sta": "12", "Str": "10", "Tck": "12", "Tea": "12", "Tec": "11", "Thr": "2", "Vis": "10", "Wor": "9", "Position/Role/Duty": "FB - Attack"}, {"Age": "19", "Name": "Denville Lee", "Position": "AM (RLC)", "Left Foot": "Very Strong", "Right Foot": "Fairly Strong", "Acc": "12", "Aer": "3", "Agg": "8", "Agi": "12", "Ant": "9", "Bal": "14", "Bra": "7", "Cmd": "2", "Com": "2", "Cmp": "13", "Cnt": "5", "Cor": "5", "Cro": "7", "Dec": "12", "Det": "7", "Dri": "13", "Ecc": "2", "Fin": "10", "Fir": "10", "Fla": "13", "Fre": "5", "Han": "3", "Hea": "5", "Jum": "14", "Kic": "2", "Ldr": "7", "Lon": "7", "L Th": "1", "Mar": "4", "Nat": "16", "OtB": "9", "1v1": "3", "Pac": "12", "Pas": "10", "Pen": "4", "Pos": "4", "Pun": "3", "Ref": "3", "TRO": "3", "Sta": "13", "Str": "9", "Tck": "4", "Tea": "15", "Tec": "11", "Thr": "2", "Vis": "12", "Wor": "15", "Position/Role/Duty": "IF - Support"}, {"Age": "22", "Name": "Charlie Beckham", "Position": "D/WB (L)", "Left Foot": "Very Strong", "Right Foot": "Reasonable", "Acc": "11", "Aer": "2", "Agg": "7", "Agi": "10", "Ant": "9", "Bal": "15", "Bra": "13", "Cmd": "1", "Com": "1", "Cmp": "7", "Cnt": "12", "Cor": "2", "Cro": "8", "Dec": "11", "Det": "11", "Dri": "6", "Ecc": "1", "Fin": "6", "Fir": "9", "Fla": "8", "Fre": "1", "Han": "1", "Hea": "7", "Jum": "12", "Kic": "3", "Ldr": "15", "Lon": "7", "L Th": "4", "Mar": "11", "Nat": "16", "OtB": "8", "1v1": "2", "Pac": "13", "Pas": "9", "Pen": "5", "Pos": "12", "Pun": "3", "Ref": "2", "TRO": "1", "Sta": "14", "Str": "12", "Tck": "12", "Tea": "14", "Tec": "10", "Thr": "2", "Vis": "7", "Wor": "12", "Position/Role/Duty": "FB - Attack"}, {"Age": "30", "Name": "Darren Allen", "Position": "D/M/AM (R)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "7", "Aer": "2", "Agg": "18", "Agi": "10", "Ant": "14", "Bal": "6", "Bra": "11", "Cmd": "3", "Com": "2", "Cmp": "11", "Cnt": "15", "Cor": "3", "Cro": "10", "Dec": "13", "Det": "12", "Dri": "9", "Ecc": "3", "Fin": "3", "Fir": "9", "Fla": "11", "Fre": "3", "Han": "2", "Hea": "3", "Jum": "5", "Kic": "3", "Ldr": "8", "Lon": "1", "L Th": "3", "Mar": "13", "Nat": "13", "OtB": "12", "1v1": "3", "Pac": "12", "Pas": "9", "Pen": "4", "Pos": "16", "Pun": "1", "Ref": "2", "TRO": "3", "Sta": "11", "Str": "5", "Tck": "10", "Tea": "10", "Tec": "11", "Thr": "1", "Vis": "11", "Wor": "11", "Position/Role/Duty": "FB - Attack"}, {"Age": "31", "Name": "Tony Gallagher", "Position": "DM, M (RC)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "7", "Aer": "1", "Agg": "10", "Agi": "6", "Ant": "12", "Bal": "8", "Bra": "10", "Cmd": "3", "Com": "1", "Cmp": "13", "Cnt": "15", "Cor": "2", "Cro": "3", "Dec": "15", "Det": "10", "Dri": "4", "Ecc": "1", "Fin": "1", "Fir": "12", "Fla": "6", "Fre": "2", "Han": "2", "Hea": "2", "Jum": "13", "Kic": "2", "Ldr": "11", "Lon": "4", "L Th": "3", "Mar": "13", "Nat": "12", "OtB": "8", "1v1": "3", "Pac": "4", "Pas": "11", "Pen": "2", "Pos": "16", "Pun": "3", "Ref": "2", "TRO": "2", "Sta": "12", "Str": "10", "Tck": "7", "Tea": "12", "Tec": "8", "Thr": "1", "Vis": "15", "Wor": "13", "Position/Role/Duty": "DM - Support"}, {"Age": "19", "Name": "Jouni Lindroos", "Position": "DM, M (C)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "11", "Aer": "1", "Agg": "9", "Agi": "12", "Ant": "11", "Bal": "15", "Bra": "16", "Cmd": "3", "Com": "2", "Cmp": "13", "Cnt": "12", "Cor": "6", "Cro": "6", "Dec": "13", "Det": "16", "Dri": "7", "Ecc": "2", "Fin": "6", "Fir": "10", "Fla": "4", "Fre": "7", "Han": "2", "Hea": "7", "Jum": "10", "Kic": "4", "Ldr": "7", "Lon": "9", "L Th": "4", "Mar": "7", "Nat": "14", "OtB": "7", "1v1": "1", "Pac": "12", "Pas": "13", "Pen": "6", "Pos": "12", "Pun": "1", "Ref": "2", "TRO": "2", "Sta": "13", "Str": "12", "Tck": "11", "Tea": "12", "Tec": "10", "Thr": "3", "Vis": "9", "Wor": "14", "Position/Role/Duty": "DM - Support"}, {"Age": "34", "Name": "Richard East", "Position": "M (R), AM (RL)", "Left Foot": "Strong", "Right Foot": "Very Strong", "Acc": "9", "Aer": "3", "Agg": "13", "Agi": "10", "Ant": "10", "Bal": "13", "Bra": "7", "Cmd": "4", "Com": "4", "Cmp": "15", "Cnt": "6", "Cor": "7", "Cro": "6", "Dec": "10", "Det": "16", "Dri": "8", "Ecc": "4", "Fin": "11", "Fir": "8", "Fla": "13", "Fre": "3", "Han": "2", "Hea": "1", "Jum": "3", "Kic": "2", "Ldr": "12", "Lon": "3", "L Th": "2", "Mar": "3", "Nat": "14", "OtB": "9", "1v1": "3", "Pac": "12", "Pas": "9", "Pen": "2", "Pos": "4", "Pun": "1", "Ref": "3", "TRO": "1", "Sta": "10", "Str": "4", "Tck": "3", "Tea": "9", "Tec": "16", "Thr": "1", "Vis": "13", "Wor": "10", "Position/Role/Duty": "IF - Support"}, {"Age": "20", "Name": "Jevin Lindley", "Position": "D (C)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "12", "Aer": "3", "Agg": "13", "Agi": "11", "Ant": "9", "Bal": "12", "Bra": "16", "Cmd": "3", "Com": "2", "Cmp": "7", "Cnt": "13", "Cor": "3", "Cro": "4", "Dec": "12", "Det": "9", "Dri": "5", "Ecc": "3", "Fin": "5", "Fir": "8", "Fla": "7", "Fre": "1", "Han": "1", "Hea": "7", "Jum": "13", "Kic": "1", "Ldr": "10", "Lon": "6", "L Th": "4", "Mar": "10", "Nat": "16", "OtB": "6", "1v1": "3", "Pac": "12", "Pas": "9", "Pen": "2", "Pos": "12", "Pun": "3", "Ref": "4", "TRO": "3", "Sta": "10", "Str": "12", "Tck": "13", "Tea": "7", "Tec": "9", "Thr": "3", "Vis": "8", "Wor": "11", "Position/Role/Duty": "BPD - Defend"}, {"Age": "22", "Name": "Stefan Waddell", "Position": "M (R), AM (RL)", "Left Foot": "Fairly Strong", "Right Foot": "Very Strong", "Acc": "11", "Aer": "2", "Agg": "14", "Agi": "11", "Ant": "10", "Bal": "11", "Bra": "10", "Cmd": "2", "Com": "4", "Cmp": "10", "Cnt": "9", "Cor": "6", "Cro": "13", "Dec": "12", "Det": "17", "Dri": "9", "Ecc": "4", "Fin": "8", "Fir": "13", "Fla": "11", "Fre": "8", "Han": "2", "Hea": "9", "Jum": "16", "Kic": "2", "Ldr": "9", "Lon": "7", "L Th": "4", "Mar": "6", "Nat": "15", "OtB": "8", "1v1": "3", "Pac": "10", "Pas": "9", "Pen": "7", "Pos": "4", "Pun": "2", "Ref": "3", "TRO": "1", "Sta": "11", "Str": "8", "Tck": "7", "Tea": "11", "Tec": "16", "Thr": "3", "Vis": "12", "Wor": "7", "Position/Role/Duty": "IF - Support"}, {"Age": "20", "Name": "Layton Friar", "Position": "D (C), DM, M (C)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "10", "Aer": "2", "Agg": "15", "Agi": "11", "Ant": "11", "Bal": "13", "Bra": "8", "Cmd": "1", "Com": "1", "Cmp": "7", "Cnt": "13", "Cor": "3", "Cro": "6", "Dec": "12", "Det": "10", "Dri": "5", "Ecc": "2", "Fin": "3", "Fir": "9", "Fla": "6", "Fre": "4", "Han": "2", "Hea": "9", "Jum": "8", "Kic": "2", "Ldr": "5", "Lon": "4", "L Th": "3", "Mar": "12", "Nat": "13", "OtB": "6", "1v1": "2", "Pac": "12", "Pas": "11", "Pen": "5", "Pos": "12", "Pun": "1", "Ref": "3", "TRO": "2", "Sta": "14", "Str": "14", "Tck": "14", "Tea": "9", "Tec": "12", "Thr": "2", "Vis": "8", "Wor": "10", "Position/Role/Duty": ""}, {"Age": "18", "Name": "Lee Thompson", "Position": "M (C), AM (RC)", "Left Foot": "Fairly Strong", "Right Foot": "Very Strong", "Acc": "10", "Aer": "3", "Agg": "10", "Agi": "16", "Ant": "12", "Bal": "12", "Bra": "7", "Cmd": "2", "Com": "3", "Cmp": "13", "Cnt": "7", "Cor": "7", "Cro": "8", "Dec": "8", "Det": "13", "Dri": "13", "Ecc": "2", "Fin": "11", "Fir": "11", "Fla": "14", "Fre": "6", "Han": "3", "Hea": "9", "Jum": "9", "Kic": "1", "Ldr": "3", "Lon": "9", "L Th": "3", "Mar": "4", "Nat": "14", "OtB": "10", "1v1": "4", "Pac": "12", "Pas": "12", "Pen": "6", "Pos": "7", "Pun": "3", "Ref": "3", "TRO": "1", "Sta": "10", "Str": "10", "Tck": "6", "Tea": "9", "Tec": "12", "Thr": "2", "Vis": "9", "Wor": "9", "Position/Role/Duty": "AM - Attack"}, {"Age": "18", "Name": "Hamza Osei", "Position": "M (L), AM (RL)", "Left Foot": "Very Strong", "Right Foot": "Reasonable", "Acc": "13", "Aer": "2", "Agg": "11", "Agi": "13", "Ant": "9", "Bal": "12", "Bra": "5", "Cmd": "3", "Com": "2", "Cmp": "11", "Cnt": "5", "Cor": "5", "Cro": "9", "Dec": "8", "Det": "11", "Dri": "10", "Ecc": "1", "Fin": "10", "Fir": "10", "Fla": "13", "Fre": "3", "Han": "1", "Hea": "6", "Jum": "11", "Kic": "1", "Ldr": "14", "Lon": "9", "L Th": "5", "Mar": "7", "Nat": "13", "OtB": "9", "1v1": "1", "Pac": "11", "Pas": "7", "Pen": "6", "Pos": "2", "Pun": "3", "Ref": "3", "TRO": "2", "Sta": "13", "Str": "11", "Tck": "5", "Tea": "12", "Tec": "16", "Thr": "2", "Vis": "5", "Wor": "15", "Position/Role/Duty": "IF - Support"}, {"Age": "18", "Name": "Lee O'Connell", "Position": "GK", "Left Foot": "Weak", "Right Foot": "Very Strong", "Acc": "10", "Aer": "8", "Agg": "11", "Agi": "15", "Ant": "8", "Bal": "16", "Bra": "12", "Cmd": "7", "Com": "13", "Cmp": "6", "Cnt": "13", "Cor": "3", "Cro": "3", "Dec": "14", "Det": "17", "Dri": "2", "Ecc": "2", "Fin": "2", "Fir": "6", "Fla": "3", "Fre": "4", "Han": "13", "Hea": "1", "Jum": "8", "Kic": "8", "Ldr": "6", "Lon": "3", "L Th": "1", "Mar": "2", "Nat": "15", "OtB": "1", "1v1": "13", "Pac": "7", "Pas": "6", "Pen": "3", "Pos": "9", "Pun": "14", "Ref": "15", "TRO": "12", "Sta": "10", "Str": "11", "Tck": "2", "Tea": "13", "Tec": "4", "Thr": "10", "Vis": "9", "Wor": "13", "Position/Role/Duty": "SK - Defend"}, {"Age": "21", "Name": "Archie Horrocks", "Position": "DM, M/AM (C)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "12", "Aer": "1", "Agg": "19", "Agi": "11", "Ant": "9", "Bal": "14", "Bra": "8", "Cmd": "2", "Com": "2", "Cmp": "8", "Cnt": "9", "Cor": "3", "Cro": "6", "Dec": "9", "Det": "9", "Dri": "7", "Ecc": "3", "Fin": "8", "Fir": "7", "Fla": "13", "Fre": "3", "Han": "3", "Hea": "7", "Jum": "7", "Kic": "1", "Ldr": "13", "Lon": "8", "L Th": "2", "Mar": "9", "Nat": "13", "OtB": "9", "1v1": "3", "Pac": "9", "Pas": "7", "Pen": "5", "Pos": "9", "Pun": "1", "Ref": "2", "TRO": "2", "Sta": "13", "Str": "12", "Tck": "12", "Tea": "12", "Tec": "9", "Thr": "1", "Vis": "12", "Wor": "14", "Position/Role/Duty": ""}, {"Age": "19", "Name": "Romal Bryan", "Position": "D (C)", "Left Foot": "Fairly Strong", "Right Foot": "Very Strong", "Acc": "9", "Aer": "1", "Agg": "17", "Agi": "10", "Ant": "7", "Bal": "13", "Bra": "14", "Cmd": "3", "Com": "4", "Cmp": "7", "Cnt": "12", "Cor": "3", "Cro": "3", "Dec": "8", "Det": "7", "Dri": "7", "Ecc": "2", "Fin": "1", "Fir": "7", "Fla": "8", "Fre": "2", "Han": "3", "Hea": "9", "Jum": "10", "Kic": "1", "Ldr": "14", "Lon": "4", "L Th": "3", "Mar": "10", "Nat": "15", "OtB": "5", "1v1": "2", "Pac": "11", "Pas": "8", "Pen": "3", "Pos": "10", "Pun": "3", "Ref": "3", "TRO": "1", "Sta": "14", "Str": "12", "Tck": "10", "Tea": "17", "Tec": "8", "Thr": "4", "Vis": "4", "Wor": "16", "Position/Role/Duty": "BPD - Defend"}, {"Age": "18", "Name": "Thamindu Geer", "Position": "D (RLC)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "12", "Aer": "2", "Agg": "7", "Agi": "14", "Ant": "8", "Bal": "9", "Bra": "17", "Cmd": "2", "Com": "3", "Cmp": "10", "Cnt": "8", "Cor": "5", "Cro": "11", "Dec": "15", "Det": "15", "Dri": "6", "Ecc": "2", "Fin": "3", "Fir": "8", "Fla": "7", "Fre": "3", "Han": "3", "Hea": "8", "Jum": "12", "Kic": "4", "Ldr": "4", "Lon": "4", "L Th": "6", "Mar": "9", "Nat": "16", "OtB": "8", "1v1": "1", "Pac": "11", "Pas": "6", "Pen": "2", "Pos": "10", "Pun": "3", "Ref": "2", "TRO": "3", "Sta": "14", "Str": "11", "Tck": "12", "Tea": "12", "Tec": "5", "Thr": "3", "Vis": "7", "Wor": "11", "Position/Role/Duty": "FB - Attack"}, {"Age": "19", "Name": "Joe Cox", "Position": "AM (RL)", "Left Foot": "Very Strong", "Right Foot": "Reasonable", "Acc": "15", "Aer": "2", "Agg": "11", "Agi": "16", "Ant": "10", "Bal": "12", "Bra": "7", "Cmd": "1", "Com": "1", "Cmp": "8", "Cnt": "3", "Cor": "7", "Cro": "6", "Dec": "5", "Det": "5", "Dri": "9", "Ecc": "1", "Fin": "8", "Fir": "10", "Fla": "13", "Fre": "3", "Han": "3", "Hea": "8", "Jum": "13", "Kic": "2", "Ldr": "11", "Lon": "5", "L Th": "1", "Mar": "2", "Nat": "14", "OtB": "8", "1v1": "1", "Pac": "12", "Pas": "10", "Pen": "1", "Pos": "1", "Pun": "1", "Ref": "3", "TRO": "1", "Sta": "12", "Str": "9", "Tck": "5", "Tea": "5", "Tec": "14", "Thr": "3", "Vis": "8", "Wor": "7", "Position/Role/Duty": ""}, {"Age": "21", "Name": "Jack Tweed", "Position": "D (LC), DM", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "10", "Aer": "3", "Agg": "13", "Agi": "11", "Ant": "9", "Bal": "14", "Bra": "7", "Cmd": "3", "Com": "2", "Cmp": "6", "Cnt": "6", "Cor": "6", "Cro": "9", "Dec": "13", "Det": "4", "Dri": "11", "Ecc": "2", "Fin": "4", "Fir": "8", "Fla": "7", "Fre": "9", "Han": "4", "Hea": "6", "Jum": "13", "Kic": "3", "Ldr": "3", "Lon": "4", "L Th": "3", "Mar": "8", "Nat": "13", "OtB": "5", "1v1": "3", "Pac": "12", "Pas": "8", "Pen": "3", "Pos": "10", "Pun": "1", "Ref": "4", "TRO": "4", "Sta": "11", "Str": "11", "Tck": "11", "Tea": "9", "Tec": "11", "Thr": "1", "Vis": "7", "Wor": "13", "Position/Role/Duty": "BPD - Defend"}, {"Age": "18", "Name": "Daniel Raimadji", "Position": "M (R), AM (RL)", "Left Foot": "Fairly Strong", "Right Foot": "Very Strong", "Acc": "11", "Aer": "3", "Agg": "10", "Agi": "10", "Ant": "8", "Bal": "12", "Bra": "9", "Cmd": "1", "Com": "3", "Cmp": "10", "Cnt": "8", "Cor": "7", "Cro": "9", "Dec": "11", "Det": "13", "Dri": "12", "Ecc": "3", "Fin": "7", "Fir": "11", "Fla": "11", "Fre": "9", "Han": "1", "Hea": "5", "Jum": "10", "Kic": "2", "Ldr": "11", "Lon": "6", "L Th": "4", "Mar": "4", "Nat": "16", "OtB": "9", "1v1": "1", "Pac": "12", "Pas": "10", "Pen": "5", "Pos": "6", "Pun": "3", "Ref": "1", "TRO": "1", "Sta": "12", "Str": "9", "Tck": "6", "Tea": "13", "Tec": "14", "Thr": "4", "Vis": "11", "Wor": "10", "Position/Role/Duty": "IF - Support"}, {"Age": "20", "Name": "Kudakwashe Linyama", "Position": "M/AM (C)", "Left Foot": "Strong", "Right Foot": "Very Strong", "Acc": "14", "Aer": "3", "Agg": "11", "Agi": "10", "Ant": "7", "Bal": "14", "Bra": "4", "Cmd": "3", "Com": "1", "Cmp": "8", "Cnt": "6", "Cor": "8", "Cro": "3", "Dec": "8", "Det": "4", "Dri": "9", "Ecc": "1", "Fin": "7", "Fir": "12", "Fla": "16", "Fre": "8", "Han": "3", "Hea": "9", "Jum": "9", "Kic": "2", "Ldr": "5", "Lon": "8", "L Th": "1", "Mar": "3", "Nat": "14", "OtB": "11", "1v1": "3", "Pac": "12", "Pas": "11", "Pen": "2", "Pos": "3", "Pun": "3", "Ref": "3", "TRO": "3", "Sta": "12", "Str": "9", "Tck": "1", "Tea": "4", "Tec": "14", "Thr": "1", "Vis": "11", "Wor": "7", "Position/Role/Duty": "AM (C)"}, {"Age": "18", "Name": "Chris Lee", "Position": "M (LC), ST (C)", "Left Foot": "Fairly Strong", "Right Foot": "Very Strong", "Acc": "13", "Aer": "2", "Agg": "10", "Agi": "10", "Ant": "7", "Bal": "12", "Bra": "6", "Cmd": "3", "Com": "3", "Cmp": "9", "Cnt": "4", "Cor": "3", "Cro": "4", "Dec": "12", "Det": "4", "Dri": "7", "Ecc": "1", "Fin": "11", "Fir": "8", "Fla": "12", "Fre": "2", "Han": "2", "Hea": "4", "Jum": "9", "Kic": "1", "Ldr": "13", "Lon": "5", "L Th": "1", "Mar": "2", "Nat": "14", "OtB": "8", "1v1": "3", "Pac": "11", "Pas": "8", "Pen": "3", "Pos": "7", "Pun": "3", "Ref": "2", "TRO": "3", "Sta": "12", "Str": "8", "Tck": "3", "Tea": "12", "Tec": "11", "Thr": "1", "Vis": "3", "Wor": "12", "Position/Role/Duty": ""}, {"Age": "19", "Name": "Derek Morrison", "Position": "AM (RL)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "13", "Aer": "3", "Agg": "6", "Agi": "12", "Ant": "5", "Bal": "14", "Bra": "5", "Cmd": "1", "Com": "3", "Cmp": "13", "Cnt": "7", "Cor": "3", "Cro": "9", "Dec": "7", "Det": "11", "Dri": "16", "Ecc": "1", "Fin": "7", "Fir": "7", "Fla": "10", "Fre": "5", "Han": "1", "Hea": "4", "Jum": "5", "Kic": "2", "Ldr": "9", "Lon": "5", "L Th": "2", "Mar": "4", "Nat": "12", "OtB": "12", "1v1": "1", "Pac": "12", "Pas": "7", "Pen": "3", "Pos": "3", "Pun": "3", "Ref": "1", "TRO": "1", "Sta": "13", "Str": "8", "Tck": "5", "Tea": "7", "Tec": "12", "Thr": "1", "Vis": "9", "Wor": "10", "Position/Role/Duty": ""}, {"Age": "17", "Name": "Joseph Nelson", "Position": "M (R)", "Left Foot": "Weak", "Right Foot": "Very Strong", "Acc": "14", "Aer": "2", "Agg": "13", "Agi": "14", "Ant": "7", "Bal": "14", "Bra": "8", "Cmd": "2", "Com": "3", "Cmp": "8", "Cnt": "6", "Cor": "6", "Cro": "11", "Dec": "6", "Det": "4", "Dri": "12", "Ecc": "1", "Fin": "7", "Fir": "10", "Fla": "4", "Fre": "5", "Han": "2", "Hea": "12", "Jum": "6", "Kic": "3", "Ldr": "11", "Lon": "5", "L Th": "2", "Mar": "4", "Nat": "9", "OtB": "5", "1v1": "3", "Pac": "14", "Pas": "7", "Pen": "5", "Pos": "1", "Pun": "1", "Ref": "1", "TRO": "1", "Sta": "7", "Str": "6", "Tck": "3", "Tea": "8", "Tec": "7", "Thr": "3", "Vis": "7", "Wor": "9", "Position/Role/Duty": "IF - Support"}, {"Age": "26", "Name": "Liam Lock", "Position": "M (C), ST (C)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "10", "Aer": "1", "Agg": "15", "Agi": "12", "Ant": "13", "Bal": "15", "Bra": "10", "Cmd": "1", "Com": "3", "Cmp": "14", "Cnt": "7", "Cor": "1", "Cro": "4", "Dec": "9", "Det": "14", "Dri": "12", "Ecc": "3", "Fin": "11", "Fir": "7", "Fla": "13", "Fre": "1", "Han": "3", "Hea": "7", "Jum": "12", "Kic": "3", "Ldr": "10", "Lon": "10", "L Th": "1", "Mar": "4", "Nat": "14", "OtB": "8", "1v1": "1", "Pac": "12", "Pas": "8", "Pen": "1", "Pos": "7", "Pun": "1", "Ref": "2", "TRO": "3", "Sta": "12", "Str": "11", "Tck": "8", "Tea": "15", "Tec": "14", "Thr": "1", "Vis": "8", "Wor": "13", "Position/Role/Duty": "AF - Attack"}, {"Age": "21", "Name": "Rubin Haskayne", "Position": "D/WB (R)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "13", "Aer": "1", "Agg": "11", "Agi": "12", "Ant": "8", "Bal": "14", "Bra": "6", "Cmd": "2", "Com": "3", "Cmp": "4", "Cnt": "13", "Cor": "5", "Cro": "9", "Dec": "11", "Det": "13", "Dri": "8", "Ecc": "2", "Fin": "3", "Fir": "6", "Fla": "5", "Fre": "5", "Han": "1", "Hea": "6", "Jum": "3", "Kic": "2", "Ldr": "4", "Lon": "1", "L Th": "6", "Mar": "7", "Nat": "17", "OtB": "6", "1v1": "2", "Pac": "14", "Pas": "10", "Pen": "1", "Pos": "9", "Pun": "2", "Ref": "2", "TRO": "1", "Sta": "16", "Str": "12", "Tck": "9", "Tea": "11", "Tec": "8", "Thr": "1", "Vis": "9", "Wor": "13", "Position/Role/Duty": ""}, {"Age": "18", "Name": "Leighton Haythornthwaite", "Position": "AM (R), ST (C)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "12", "Aer": "1", "Agg": "5", "Agi": "15", "Ant": "4", "Bal": "8", "Bra": "8", "Cmd": "1", "Com": "2", "Cmp": "9", "Cnt": "2", "Cor": "4", "Cro": "6", "Dec": "3", "Det": "4", "Dri": "14", "Ecc": "1", "Fin": "8", "Fir": "13", "Fla": "13", "Fre": "2", "Han": "2", "Hea": "12", "Jum": "2", "Kic": "3", "Ldr": "10", "Lon": "4", "L Th": "1", "Mar": "1", "Nat": "13", "OtB": "7", "1v1": "2", "Pac": "13", "Pas": "7", "Pen": "1", "Pos": "2", "Pun": "1", "Ref": "2", "TRO": "3", "Sta": "13", "Str": "7", "Tck": "1", "Tea": "11", "Tec": "12", "Thr": "1", "Vis": "6", "Wor": "12", "Position/Role/Duty": "AF - Attack"}, {"Age": "17", "Name": "Leon Hirst", "Position": "WB (L), DM, M (C)", "Left Foot": "Very Strong", "Right Foot": "Fairly Strong", "Acc": "8", "Aer": "3", "Agg": "9", "Agi": "8", "Ant": "10", "Bal": "14", "Bra": "9", "Cmd": "3", "Com": "2", "Cmp": "8", "Cnt": "9", "Cor": "4", "Cro": "5", "Dec": "10", "Det": "6", "Dri": "6", "Ecc": "4", "Fin": "3", "Fir": "7", "Fla": "4", "Fre": "5", "Han": "2", "Hea": "4", "Jum": "10", "Kic": "1", "Ldr": "14", "Lon": "4", "L Th": "1", "Mar": "6", "Nat": "10", "OtB": "6", "1v1": "3", "Pac": "8", "Pas": "11", "Pen": "4", "Pos": "11", "Pun": "2", "Ref": "2", "TRO": "3", "Sta": "10", "Str": "10", "Tck": "12", "Tea": "15", "Tec": "10", "Thr": "3", "Vis": "8", "Wor": "11", "Position/Role/Duty": "DM - Support"}, {"Age": "19", "Name": "Caspar Macready", "Position": "M (R), AM (RL), ST (C)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "15", "Aer": "3", "Agg": "12", "Agi": "15", "Ant": "5", "Bal": "11", "Bra": "12", "Cmd": "3", "Com": "2", "Cmp": "12", "Cnt": "5", "Cor": "4", "Cro": "6", "Dec": "5", "Det": "4", "Dri": "11", "Ecc": "3", "Fin": "7", "Fir": "10", "Fla": "13", "Fre": "1", "Han": "4", "Hea": "4", "Jum": "7", "Kic": "2", "Ldr": "6", "Lon": "8", "L Th": "1", "Mar": "2", "Nat": "17", "OtB": "9", "1v1": "2", "Pac": "13", "Pas": "8", "Pen": "3", "Pos": "1", "Pun": "2", "Ref": "1", "TRO": "2", "Sta": "14", "Str": "7", "Tck": "1", "Tea": "7", "Tec": "14", "Thr": "1", "Vis": "9", "Wor": "13", "Position/Role/Duty": ""}, {"Age": "19", "Name": "Dion Pett", "Position": "AM (RL), ST (C)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "16", "Aer": "3", "Agg": "13", "Agi": "12", "Ant": "7", "Bal": "14", "Bra": "6", "Cmd": "2", "Com": "3", "Cmp": "10", "Cnt": "5", "Cor": "3", "Cro": "11", "Dec": "5", "Det": "7", "Dri": "8", "Ecc": "2", "Fin": "10", "Fir": "7", "Fla": "12", "Fre": "2", "Han": "1", "Hea": "5", "Jum": "7", "Kic": "2", "Ldr": "5", "Lon": "6", "L Th": "1", "Mar": "2", "Nat": "12", "OtB": "7", "1v1": "2", "Pac": "13", "Pas": "10", "Pen": "1", "Pos": "3", "Pun": "2", "Ref": "1", "TRO": "2", "Sta": "12", "Str": "10", "Tck": "1", "Tea": "5", "Tec": "12", "Thr": "2", "Vis": "3", "Wor": "8", "Position/Role/Duty": "IF - Support"}, {"Age": "17", "Name": "Jamie Griffith", "Position": "D (LC), M (C)", "Left Foot": "Fairly Strong", "Right Foot": "Very Strong", "Acc": "10", "Aer": "1", "Agg": "11", "Agi": "8", "Ant": "11", "Bal": "8", "Bra": "11", "Cmd": "2", "Com": "2", "Cmp": "7", "Cnt": "12", "Cor": "4", "Cro": "7", "Dec": "9", "Det": "16", "Dri": "3", "Ecc": "1", "Fin": "3", "Fir": "9", "Fla": "4", "Fre": "4", "Han": "1", "Hea": "8", "Jum": "15", "Kic": "3", "Ldr": "10", "Lon": "3", "L Th": "5", "Mar": "8", "Nat": "12", "OtB": "4", "1v1": "1", "Pac": "10", "Pas": "7", "Pen": "4", "Pos": "11", "Pun": "3", "Ref": "3", "TRO": "2", "Sta": "10", "Str": "9", "Tck": "12", "Tea": "7", "Tec": "7", "Thr": "2", "Vis": "7", "Wor": "10", "Position/Role/Duty": "FB - Attack"}, {"Age": "19", "Name": "Jim Clarke", "Position": "AM (C)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "10", "Aer": "2", "Agg": "11", "Agi": "11", "Ant": "10", "Bal": "12", "Bra": "7", "Cmd": "3", "Com": "2", "Cmp": "7", "Cnt": "6", "Cor": "8", "Cro": "7", "Dec": "9", "Det": "13", "Dri": "7", "Ecc": "3", "Fin": "8", "Fir": "13", "Fla": "19", "Fre": "8", "Han": "2", "Hea": "8", "Jum": "7", "Kic": "3", "Ldr": "3", "Lon": "8", "L Th": "4", "Mar": "5", "Nat": "7", "OtB": "12", "1v1": "1", "Pac": "12", "Pas": "9", "Pen": "5", "Pos": "5", "Pun": "3", "Ref": "1", "TRO": "1", "Sta": "10", "Str": "7", "Tck": "4", "Tea": "9", "Tec": "8", "Thr": "1", "Vis": "10", "Wor": "13", "Position/Role/Duty": "AM - Attack"}, {"Age": "17", "Name": "Patrick Carson", "Position": "WB (R), AM (RL)", "Left Foot": "Very Strong", "Right Foot": "Reasonable", "Acc": "12", "Aer": "3", "Agg": "10", "Agi": "12", "Ant": "6", "Bal": "15", "Bra": "7", "Cmd": "3", "Com": "1", "Cmp": "7", "Cnt": "4", "Cor": "6", "Cro": "11", "Dec": "7", "Det": "9", "Dri": "9", "Ecc": "2", "Fin": "8", "Fir": "8", "Fla": "12", "Fre": "10", "Han": "1", "Hea": "8", "Jum": "7", "Kic": "2", "Ldr": "12", "Lon": "6", "L Th": "1", "Mar": "1", "Nat": "10", "OtB": "9", "1v1": "1", "Pac": "12", "Pas": "8", "Pen": "2", "Pos": "4", "Pun": "3", "Ref": "2", "TRO": "2", "Sta": "10", "Str": "6", "Tck": "4", "Tea": "11", "Tec": "11", "Thr": "1", "Vis": "5", "Wor": "8", "Position/Role/Duty": "IF - Support"}, {"Age": "17", "Name": "Corey Fulwood", "Position": "M (L), AM (R)", "Left Foot": "Very Strong", "Right Foot": "Reasonable", "Acc": "13", "Aer": "3", "Agg": "12", "Agi": "9", "Ant": "8", "Bal": "16", "Bra": "9", "Cmd": "1", "Com": "4", "Cmp": "8", "Cnt": "5", "Cor": "3", "Cro": "7", "Dec": "7", "Det": "4", "Dri": "12", "Ecc": "2", "Fin": "7", "Fir": "10", "Fla": "12", "Fre": "5", "Han": "3", "Hea": "6", "Jum": "13", "Kic": "3", "Ldr": "13", "Lon": "6", "L Th": "5", "Mar": "5", "Nat": "6", "OtB": "7", "1v1": "1", "Pac": "13", "Pas": "6", "Pen": "3", "Pos": "5", "Pun": "4", "Ref": "2", "TRO": "3", "Sta": "12", "Str": "9", "Tck": "3", "Tea": "9", "Tec": "12", "Thr": "1", "Vis": "7", "Wor": "13", "Position/Role/Duty": "IF - Support"}, {"Age": "17", "Name": "Toby Lea", "Position": "M (R), AM (RL)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "13", "Aer": "1", "Agg": "11", "Agi": "13", "Ant": "5", "Bal": "9", "Bra": "6", "Cmd": "1", "Com": "3", "Cmp": "9", "Cnt": "3", "Cor": "4", "Cro": "8", "Dec": "6", "Det": "12", "Dri": "6", "Ecc": "3", "Fin": "6", "Fir": "7", "Fla": "12", "Fre": "8", "Han": "3", "Hea": "8", "Jum": "2", "Kic": "3", "Ldr": "1", "Lon": "3", "L Th": "3", "Mar": "3", "Nat": "13", "OtB": "7", "1v1": "2", "Pac": "15", "Pas": "9", "Pen": "3", "Pos": "4", "Pun": "1", "Ref": "1", "TRO": "2", "Sta": "10", "Str": "5", "Tck": "2", "Tea": "8", "Tec": "12", "Thr": "3", "Vis": "3", "Wor": "12", "Position/Role/Duty": "IF - Support"}, {"Age": "19", "Name": "Kian Broaders", "Position": "D (C), DM, M (C)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "11", "Aer": "2", "Agg": "8", "Agi": "10", "Ant": "10", "Bal": "16", "Bra": "18", "Cmd": "3", "Com": "2", "Cmp": "5", "Cnt": "8", "Cor": "2", "Cro": "3", "Dec": "9", "Det": "8", "Dri": "7", "Ecc": "1", "Fin": "4", "Fir": "10", "Fla": "7", "Fre": "4", "Han": "1", "Hea": "10", "Jum": "8", "Kic": "4", "Ldr": "9", "Lon": "6", "L Th": "1", "Mar": "9", "Nat": "10", "OtB": "5", "1v1": "2", "Pac": "13", "Pas": "12", "Pen": "3", "Pos": "8", "Pun": "1", "Ref": "4", "TRO": "3", "Sta": "14", "Str": "15", "Tck": "12", "Tea": "6", "Tec": "13", "Thr": "3", "Vis": "10", "Wor": "10", "Position/Role/Duty": ""}, {"Age": "18", "Name": "Louis Adams", "Position": "D (RL)", "Left Foot": "Very Strong", "Right Foot": "Reasonable", "Acc": "11", "Aer": "2", "Agg": "15", "Agi": "12", "Ant": "8", "Bal": "10", "Bra": "18", "Cmd": "1", "Com": "1", "Cmp": "6", "Cnt": "11", "Cor": "4", "Cro": "10", "Dec": "11", "Det": "13", "Dri": "8", "Ecc": "2", "Fin": "5", "Fir": "8", "Fla": "7", "Fre": "2", "Han": "1", "Hea": "7", "Jum": "8", "Kic": "2", "Ldr": "8", "Lon": "5", "L Th": "4", "Mar": "11", "Nat": "13", "OtB": "7", "1v1": "1", "Pac": "11", "Pas": "8", "Pen": "1", "Pos": "12", "Pun": "4", "Ref": "3", "TRO": "1", "Sta": "15", "Str": "9", "Tck": "13", "Tea": "14", "Tec": "9", "Thr": "2", "Vis": "5", "Wor": "10", "Position/Role/Duty": "FB - Attack"}, {"Age": "18", "Name": "Moses Duncan", "Position": "D (RLC), M (R)", "Left Foot": "Fairly Strong", "Right Foot": "Very Strong", "Acc": "10", "Aer": "3", "Agg": "12", "Agi": "9", "Ant": "8", "Bal": "14", "Bra": "8", "Cmd": "1", "Com": "2", "Cmp": "8", "Cnt": "9", "Cor": "4", "Cro": "6", "Dec": "11", "Det": "10", "Dri": "5", "Ecc": "1", "Fin": "4", "Fir": "7", "Fla": "7", "Fre": "4", "Han": "2", "Hea": "13", "Jum": "11", "Kic": "1", "Ldr": "9", "Lon": "2", "L Th": "5", "Mar": "6", "Nat": "12", "OtB": "5", "1v1": "1", "Pac": "7", "Pas": "7", "Pen": "1", "Pos": "11", "Pun": "4", "Ref": "3", "TRO": "3", "Sta": "10", "Str": "6", "Tck": "11", "Tea": "16", "Tec": "7", "Thr": "1", "Vis": "5", "Wor": "11", "Position/Role/Duty": "FB - Attack"}, {"Age": "17", "Name": "Baylee Troup", "Position": "DM, M (C), AM (L)", "Left Foot": "Very Strong", "Right Foot": "Reasonable", "Acc": "12", "Aer": "3", "Agg": "11", "Agi": "12", "Ant": "10", "Bal": "10", "Bra": "15", "Cmd": "4", "Com": "3", "Cmp": "8", "Cnt": "8", "Cor": "7", "Cro": "7", "Dec": "10", "Det": "8", "Dri": "6", "Ecc": "2", "Fin": "12", "Fir": "8", "Fla": "13", "Fre": "3", "Han": "2", "Hea": "2", "Jum": "6", "Kic": "1", "Ldr": "5", "Lon": "7", "L Th": "2", "Mar": "6", "Nat": "7", "OtB": "9", "1v1": "3", "Pac": "12", "Pas": "10", "Pen": "6", "Pos": "7", "Pun": "2", "Ref": "3", "TRO": "3", "Sta": "15", "Str": "13", "Tck": "11", "Tea": "11", "Tec": "12", "Thr": "1", "Vis": "8", "Wor": "12", "Position/Role/Duty": "DM - Support"}, {"Age": "17", "Name": "Romaric Cunniff", "Position": "D/M (R)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "9", "Aer": "2", "Agg": "11", "Agi": "11", "Ant": "9", "Bal": "15", "Bra": "18", "Cmd": "1", "Com": "2", "Cmp": "6", "Cnt": "8", "Cor": "2", "Cro": "7", "Dec": "9", "Det": "9", "Dri": "5", "Ecc": "1", "Fin": "3", "Fir": "9", "Fla": "12", "Fre": "3", "Han": "2", "Hea": "5", "Jum": "4", "Kic": "3", "Ldr": "5", "Lon": "5", "L Th": "6", "Mar": "9", "Nat": "12", "OtB": "5", "1v1": "2", "Pac": "11", "Pas": "7", "Pen": "4", "Pos": "6", "Pun": "2", "Ref": "1", "TRO": "3", "Sta": "13", "Str": "9", "Tck": "12", "Tea": "18", "Tec": "9", "Thr": "1", "Vis": "6", "Wor": "17", "Position/Role/Duty": "FB - Attack"}, {"Age": "17", "Name": "Dom Coll", "Position": "D (L)", "Left Foot": "Very Strong", "Right Foot": "Reasonable", "Acc": "13", "Aer": "1", "Agg": "9", "Agi": "12", "Ant": "6", "Bal": "14", "Bra": "9", "Cmd": "2", "Com": "3", "Cmp": "5", "Cnt": "6", "Cor": "3", "Cro": "8", "Dec": "13", "Det": "12", "Dri": "9", "Ecc": "2", "Fin": "3", "Fir": "7", "Fla": "9", "Fre": "2", "Han": "1", "Hea": "5", "Jum": "5", "Kic": "2", "Ldr": "5", "Lon": "2", "L Th": "4", "Mar": "8", "Nat": "11", "OtB": "7", "1v1": "4", "Pac": "12", "Pas": "7", "Pen": "3", "Pos": "7", "Pun": "2", "Ref": "1", "TRO": "1", "Sta": "14", "Str": "8", "Tck": "13", "Tea": "12", "Tec": "9", "Thr": "3", "Vis": "4", "Wor": "9", "Position/Role/Duty": "FB - Attack"}, {"Age": "18", "Name": "George Miller", "Position": "AM (C)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "8", "Aer": "4", "Agg": "11", "Agi": "11", "Ant": "7", "Bal": "14", "Bra": "9", "Cmd": "3", "Com": "3", "Cmp": "10", "Cnt": "6", "Cor": "6", "Cro": "6", "Dec": "9", "Det": "15", "Dri": "11", "Ecc": "3", "Fin": "11", "Fir": "11", "Fla": "13", "Fre": "4", "Han": "1", "Hea": "12", "Jum": "8", "Kic": "3", "Ldr": "4", "Lon": "8", "L Th": "3", "Mar": "4", "Nat": "16", "OtB": "8", "1v1": "2", "Pac": "11", "Pas": "13", "Pen": "10", "Pos": "7", "Pun": "3", "Ref": "1", "TRO": "3", "Sta": "9", "Str": "8", "Tck": "6", "Tea": "14", "Tec": "15", "Thr": "1", "Vis": "8", "Wor": "11", "Position/Role/Duty": "AM - Attack"}, {"Age": "19", "Name": "Bevon Lee", "Position": "M/AM (C), ST (C)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "10", "Aer": "1", "Agg": "8", "Agi": "13", "Ant": "8", "Bal": "10", "Bra": "6", "Cmd": "1", "Com": "3", "Cmp": "12", "Cnt": "5", "Cor": "6", "Cro": "6", "Dec": "8", "Det": "14", "Dri": "9", "Ecc": "2", "Fin": "8", "Fir": "11", "Fla": "13", "Fre": "3", "Han": "3", "Hea": "6", "Jum": "12", "Kic": "1", "Ldr": "8", "Lon": "8", "L Th": "1", "Mar": "2", "Nat": "15", "OtB": "10", "1v1": "2", "Pac": "10", "Pas": "14", "Pen": "5", "Pos": "3", "Pun": "1", "Ref": "2", "TRO": "3", "Sta": "10", "Str": "10", "Tck": "6", "Tea": "12", "Tec": "12", "Thr": "2", "Vis": "13", "Wor": "10", "Position/Role/Duty": ""}, {"Age": "16", "Name": "Waynedel Alleyne", "Position": "AM (RL), ST (C)", "Left Foot": "Strong", "Right Foot": "Very Strong", "Acc": "13", "Aer": "1", "Agg": "17", "Agi": "12", "Ant": "7", "Bal": "14", "Bra": "12", "Cmd": "4", "Com": "1", "Cmp": "9", "Cnt": "6", "Cor": "7", "Cro": "7", "Dec": "6", "Det": "13", "Dri": "13", "Ecc": "1", "Fin": "10", "Fir": "11", "Fla": "14", "Fre": "11", "Han": "1", "Hea": "4", "Jum": "3", "Kic": "3", "Ldr": "6", "Lon": "6", "L Th": "5", "Mar": "2", "Nat": "11", "OtB": "9", "1v1": "1", "Pac": "10", "Pas": "9", "Pen": "6", "Pos": "5", "Pun": "1", "Ref": "3", "TRO": "3", "Sta": "10", "Str": "7", "Tck": "5", "Tea": "7", "Tec": "14", "Thr": "1", "Vis": "7", "Wor": "5", "Position/Role/Duty": "IF - Support"}, {"Age": "16", "Name": "Jimmy Barry", "Position": "AM (L)", "Left Foot": "Very Strong", "Right Foot": "Weak", "Acc": "13", "Aer": "2", "Agg": "6", "Agi": "14", "Ant": "4", "Bal": "7", "Bra": "7", "Cmd": "2", "Com": "1", "Cmp": "7", "Cnt": "2", "Cor": "4", "Cro": "6", "Dec": "4", "Det": "4", "Dri": "13", "Ecc": "2", "Fin": "5", "Fir": "8", "Fla": "9", "Fre": "3", "Han": "1", "Hea": "8", "Jum": "3", "Kic": "1", "Ldr": "12", "Lon": "4", "L Th": "3", "Mar": "1", "Nat": "12", "OtB": "5", "1v1": "3", "Pac": "14", "Pas": "9", "Pen": "1", "Pos": "2", "Pun": "2", "Ref": "2", "TRO": "2", "Sta": "10", "Str": "5", "Tck": "5", "Tea": "16", "Tec": "7", "Thr": "2", "Vis": "5", "Wor": "12", "Position/Role/Duty": "IF - Support"}, {"Age": "16", "Name": "Marcus Jones", "Position": "M (L), AM (RL)", "Left Foot": "Very Strong", "Right Foot": "Reasonable", "Acc": "16", "Aer": "3", "Agg": "8", "Agi": "13", "Ant": "9", "Bal": "9", "Bra": "8", "Cmd": "2", "Com": "1", "Cmp": "9", "Cnt": "6", "Cor": "9", "Cro": "11", "Dec": "11", "Det": "3", "Dri": "6", "Ecc": "3", "Fin": "9", "Fir": "9", "Fla": "12", "Fre": "11", "Han": "1", "Hea": "3", "Jum": "6", "Kic": "3", "Ldr": "6", "Lon": "5", "L Th": "4", "Mar": "3", "Nat": "11", "OtB": "7", "1v1": "1", "Pac": "12", "Pas": "9", "Pen": "4", "Pos": "2", "Pun": "3", "Ref": "2", "TRO": "4", "Sta": "10", "Str": "5", "Tck": "4", "Tea": "9", "Tec": "14", "Thr": "1", "Vis": "8", "Wor": "13", "Position/Role/Duty": "IF - Support"}, {"Age": "16", "Name": "Jamie Gillon", "Position": "D (C)", "Left Foot": "Weak", "Right Foot": "Very Strong", "Acc": "7", "Aer": "3", "Agg": "8", "Agi": "10", "Ant": "6", "Bal": "6", "Bra": "13", "Cmd": "2", "Com": "3", "Cmp": "5", "Cnt": "10", "Cor": "1", "Cro": "3", "Dec": "9", "Det": "3", "Dri": "2", "Ecc": "3", "Fin": "1", "Fir": "6", "Fla": "4", "Fre": "1", "Han": "2", "Hea": "4", "Jum": "11", "Kic": "1", "Ldr": "1", "Lon": "2", "L Th": "3", "Mar": "13", "Nat": "13", "OtB": "3", "1v1": "3", "Pac": "9", "Pas": "5", "Pen": "3", "Pos": "7", "Pun": "2", "Ref": "3", "TRO": "4", "Sta": "9", "Str": "10", "Tck": "12", "Tea": "15", "Tec": "6", "Thr": "1", "Vis": "3", "Wor": "12", "Position/Role/Duty": "BPD - Defend"}, {"Age": "16", "Name": "Alfie Barlow", "Position": "M (RC), AM (C)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "9", "Aer": "3", "Agg": "9", "Agi": "9", "Ant": "9", "Bal": "12", "Bra": "18", "Cmd": "4", "Com": "3", "Cmp": "7", "Cnt": "8", "Cor": "5", "Cro": "9", "Dec": "8", "Det": "4", "Dri": "6", "Ecc": "4", "Fin": "5", "Fir": "9", "Fla": "9", "Fre": "8", "Han": "2", "Hea": "7", "Jum": "7", "Kic": "3", "Ldr": "14", "Lon": "4", "L Th": "1", "Mar": "4", "Nat": "12", "OtB": "5", "1v1": "2", "Pac": "7", "Pas": "6", "Pen": "5", "Pos": "5", "Pun": "3", "Ref": "1", "TRO": "2", "Sta": "13", "Str": "6", "Tck": "7", "Tea": "12", "Tec": "8", "Thr": "3", "Vis": "8", "Wor": "15", "Position/Role/Duty": "AM - Attack"}, {"Age": "17", "Name": "Richard Naylor", "Position": "M/AM (C), ST (C)", "Left Foot": "Fairly Strong", "Right Foot": "Very Strong", "Acc": "8", "Aer": "3", "Agg": "8", "Agi": "7", "Ant": "9", "Bal": "13", "Bra": "8", "Cmd": "3", "Com": "1", "Cmp": "8", "Cnt": "3", "Cor": "6", "Cro": "6", "Dec": "11", "Det": "12", "Dri": "5", "Ecc": "3", "Fin": "10", "Fir": "8", "Fla": "8", "Fre": "3", "Han": "1", "Hea": "5", "Jum": "10", "Kic": "3", "Ldr": "5", "Lon": "6", "L Th": "2", "Mar": "5", "Nat": "12", "OtB": "9", "1v1": "3", "Pac": "9", "Pas": "4", "Pen": "3", "Pos": "3", "Pun": "1", "Ref": "2", "TRO": "1", "Sta": "11", "Str": "4", "Tck": "4", "Tea": "13", "Tec": "9", "Thr": "3", "Vis": "3", "Wor": "8", "Position/Role/Duty": "AF - Attack"}, {"Age": "16", "Name": "Ian Connolly", "Position": "D (L)", "Left Foot": "Very Strong", "Right Foot": "Reasonable", "Acc": "11", "Aer": "1", "Agg": "17", "Agi": "12", "Ant": "5", "Bal": "12", "Bra": "7", "Cmd": "2", "Com": "1", "Cmp": "7", "Cnt": "10", "Cor": "6", "Cro": "6", "Dec": "11", "Det": "5", "Dri": "6", "Ecc": "1", "Fin": "1", "Fir": "7", "Fla": "6", "Fre": "2", "Han": "3", "Hea": "6", "Jum": "4", "Kic": "3", "Ldr": "4", "Lon": "4", "L Th": "5", "Mar": "6", "Nat": "9", "OtB": "4", "1v1": "4", "Pac": "10", "Pas": "6", "Pen": "2", "Pos": "5", "Pun": "1", "Ref": "3", "TRO": "2", "Sta": "12", "Str": "7", "Tck": "11", "Tea": "6", "Tec": "6", "Thr": "2", "Vis": "5", "Wor": "10", "Position/Role/Duty": "FB - Attack"}, {"Age": "17", "Name": "Diego Roccia", "Position": "AM (RLC)", "Left Foot": "Strong", "Right Foot": "Very Strong", "Acc": "12", "Aer": "3", "Agg": "7", "Agi": "10", "Ant": "6", "Bal": "8", "Bra": "17", "Cmd": "2", "Com": "1", "Cmp": "6", "Cnt": "7", "Cor": "5", "Cro": "6", "Dec": "10", "Det": "12", "Dri": "9", "Ecc": "3", "Fin": "10", "Fir": "8", "Fla": "13", "Fre": "4", "Han": "3", "Hea": "5", "Jum": "6", "Kic": "1", "Ldr": "5", "Lon": "6", "L Th": "1", "Mar": "5", "Nat": "14", "OtB": "7", "1v1": "2", "Pac": "9", "Pas": "7", "Pen": "4", "Pos": "5", "Pun": "1", "Ref": "3", "TRO": "3", "Sta": "12", "Str": "6", "Tck": "5", "Tea": "13", "Tec": "14", "Thr": "4", "Vis": "7", "Wor": "9", "Position/Role/Duty": "AM - Attack"}, {"Age": "16", "Name": "David Seddon", "Position": "AM (RLC), ST (C)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "7", "Aer": "2", "Agg": "5", "Agi": "12", "Ant": "8", "Bal": "13", "Bra": "6", "Cmd": "2", "Com": "1", "Cmp": "10", "Cnt": "6", "Cor": "7", "Cro": "7", "Dec": "10", "Det": "16", "Dri": "7", "Ecc": "1", "Fin": "8", "Fir": "8", "Fla": "12", "Fre": "8", "Han": "4", "Hea": "5", "Jum": "10", "Kic": "3", "Ldr": "7", "Lon": "6", "L Th": "8", "Mar": "1", "Nat": "15", "OtB": "7", "1v1": "1", "Pac": "10", "Pas": "9", "Pen": "6", "Pos": "3", "Pun": "4", "Ref": "1", "TRO": "1", "Sta": "7", "Str": "7", "Tck": "5", "Tea": "13", "Tec": "13", "Thr": "4", "Vis": "5", "Wor": "8", "Position/Role/Duty": "AM - Attack"}, {"Age": "16", "Name": "Ray Johnston", "Position": "DM, M/AM (C)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "11", "Aer": "2", "Agg": "15", "Agi": "8", "Ant": "9", "Bal": "10", "Bra": "5", "Cmd": "2", "Com": "1", "Cmp": "12", "Cnt": "9", "Cor": "7", "Cro": "7", "Dec": "12", "Det": "6", "Dri": "12", "Ecc": "1", "Fin": "8", "Fir": "11", "Fla": "14", "Fre": "3", "Han": "1", "Hea": "4", "Jum": "9", "Kic": "2", "Ldr": "1", "Lon": "8", "L Th": "4", "Mar": "8", "Nat": "16", "OtB": "10", "1v1": "3", "Pac": "9", "Pas": "12", "Pen": "8", "Pos": "9", "Pun": "3", "Ref": "1", "TRO": "3", "Sta": "8", "Str": "6", "Tck": "10", "Tea": "16", "Tec": "15", "Thr": "3", "Vis": "10", "Wor": "12", "Position/Role/Duty": "AM - Attack"}, {"Age": "16", "Name": "Kirk Tweed", "Position": "M (C), AM (RL), ST (C)", "Left Foot": "Fairly Strong", "Right Foot": "Very Strong", "Acc": "13", "Aer": "4", "Agg": "11", "Agi": "11", "Ant": "12", "Bal": "13", "Bra": "8", "Cmd": "2", "Com": "3", "Cmp": "8", "Cnt": "6", "Cor": "6", "Cro": "6", "Dec": "7", "Det": "15", "Dri": "7", "Ecc": "3", "Fin": "6", "Fir": "6", "Fla": "16", "Fre": "5", "Han": "2", "Hea": "8", "Jum": "6", "Kic": "2", "Ldr": "7", "Lon": "10", "L Th": "1", "Mar": "4", "Nat": "17", "OtB": "8", "1v1": "3", "Pac": "12", "Pas": "12", "Pen": "7", "Pos": "8", "Pun": "3", "Ref": "1", "TRO": "3", "Sta": "13", "Str": "6", "Tck": "6", "Tea": "15", "Tec": "13", "Thr": "1", "Vis": "9", "Wor": "13", "Position/Role/Duty": "IF - Support"}, {"Age": "16", "Name": "Ross Kelly", "Position": "GK", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "8", "Aer": "10", "Agg": "8", "Agi": "16", "Ant": "12", "Bal": "11", "Bra": "6", "Cmd": "11", "Com": "7", "Cmp": "5", "Cnt": "6", "Cor": "4", "Cro": "3", "Dec": "14", "Det": "14", "Dri": "2", "Ecc": "2", "Fin": "2", "Fir": "3", "Fla": "3", "Fre": "5", "Han": "14", "Hea": "1", "Jum": "9", "Kic": "8", "Ldr": "8", "Lon": "3", "L Th": "2", "Mar": "1", "Nat": "13", "OtB": "1", "1v1": "13", "Pac": "10", "Pas": "7", "Pen": "2", "Pos": "13", "Pun": "17", "Ref": "12", "TRO": "11", "Sta": "6", "Str": "4", "Tck": "3", "Tea": "3", "Tec": "8", "Thr": "8", "Vis": "5", "Wor": "6", "Position/Role/Duty": "SK - Defend"}, {"Age": "18", "Name": "Brian Harrington", "Position": "ST (C)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "8", "Aer": "3", "Agg": "10", "Agi": "9", "Ant": "10", "Bal": "16", "Bra": "10", "Cmd": "3", "Com": "1", "Cmp": "13", "Cnt": "4", "Cor": "2", "Cro": "6", "Dec": "10", "Det": "4", "Dri": "10", "Ecc": "1", "Fin": "14", "Fir": "8", "Fla": "11", "Fre": "3", "Han": "3", "Hea": "9", "Jum": "10", "Kic": "2", "Ldr": "1", "Lon": "6", "L Th": "2", "Mar": "2", "Nat": "9", "OtB": "7", "1v1": "1", "Pac": "9", "Pas": "10", "Pen": "8", "Pos": "3", "Pun": "1", "Ref": "2", "TRO": "2", "Sta": "9", "Str": "9", "Tck": "1", "Tea": "10", "Tec": "11", "Thr": "2", "Vis": "8", "Wor": "9", "Position/Role/Duty": "AF - Attack"}, {"Age": "18", "Name": "Sam Deen", "Position": "D/WB (R)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "11", "Aer": "4", "Agg": "9", "Agi": "10", "Ant": "10", "Bal": "11", "Bra": "12", "Cmd": "1", "Com": "2", "Cmp": "9", "Cnt": "9", "Cor": "7", "Cro": "12", "Dec": "9", "Det": "14", "Dri": "7", "Ecc": "2", "Fin": "5", "Fir": "12", "Fla": "7", "Fre": "4", "Han": "3", "Hea": "8", "Jum": "12", "Kic": "3", "Ldr": "8", "Lon": "7", "L Th": "8", "Mar": "8", "Nat": "12", "OtB": "6", "1v1": "1", "Pac": "8", "Pas": "8", "Pen": "5", "Pos": "12", "Pun": "4", "Ref": "3", "TRO": "2", "Sta": "10", "Str": "16", "Tck": "12", "Tea": "12", "Tec": "12", "Thr": "3", "Vis": "8", "Wor": "12", "Position/Role/Duty": "FB - Attack"}, {"Age": "18", "Name": "Echedey", "Position": "D (LC)", "Left Foot": "Very Strong", "Right Foot": "Fairly Strong", "Acc": "12", "Aer": "3", "Agg": "9", "Agi": "10", "Ant": "10", "Bal": "15", "Bra": "11", "Cmd": "3", "Com": "2", "Cmp": "4", "Cnt": "10", "Cor": "1", "Cro": "6", "Dec": "13", "Det": "10", "Dri": "5", "Ecc": "2", "Fin": "1", "Fir": "8", "Fla": "5", "Fre": "1", "Han": "2", "Hea": "7", "Jum": "7", "Kic": "2", "Ldr": "12", "Lon": "2", "L Th": "3", "Mar": "6", "Nat": "16", "OtB": "4", "1v1": "1", "Pac": "9", "Pas": "5", "Pen": "2", "Pos": "4", "Pun": "2", "Ref": "1", "TRO": "1", "Sta": "11", "Str": "8", "Tck": "7", "Tea": "10", "Tec": "10", "Thr": "3", "Vis": "4", "Wor": "11", "Position/Role/Duty": "FB - Attack"}, {"Age": "17", "Name": "Mason Collins", "Position": "DM, M (C)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "13", "Aer": "1", "Agg": "11", "Agi": "10", "Ant": "7", "Bal": "8", "Bra": "5", "Cmd": "1", "Com": "3", "Cmp": "8", "Cnt": "7", "Cor": "3", "Cro": "1", "Dec": "6", "Det": "4", "Dri": "4", "Ecc": "4", "Fin": "4", "Fir": "14", "Fla": "5", "Fre": "3", "Han": "3", "Hea": "3", "Jum": "4", "Kic": "1", "Ldr": "3", "Lon": "4", "L Th": "1", "Mar": "5", "Nat": "11", "OtB": "7", "1v1": "1", "Pac": "11", "Pas": "9", "Pen": "3", "Pos": "7", "Pun": "1", "Ref": "1", "TRO": "2", "Sta": "10", "Str": "9", "Tck": "9", "Tea": "11", "Tec": "14", "Thr": "2", "Vis": "9", "Wor": "13", "Position/Role/Duty": "DM - Support"}, {"Age": "18", "Name": "Jay Ford", "Position": "GK", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "6", "Aer": "5", "Agg": "9", "Agi": "13", "Ant": "6", "Bal": "7", "Bra": "9", "Cmd": "11", "Com": "7", "Cmp": "4", "Cnt": "9", "Cor": "1", "Cro": "2", "Dec": "12", "Det": "14", "Dri": "2", "Ecc": "2", "Fin": "2", "Fir": "2", "Fla": "2", "Fre": "4", "Han": "9", "Hea": "1", "Jum": "9", "Kic": "5", "Ldr": "13", "Lon": "2", "L Th": "1", "Mar": "2", "Nat": "14", "OtB": "3", "1v1": "10", "Pac": "11", "Pas": "4", "Pen": "2", "Pos": "11", "Pun": "8", "Ref": "11", "TRO": "6", "Sta": "5", "Str": "6", "Tck": "1", "Tea": "13", "Tec": "6", "Thr": "6", "Vis": "10", "Wor": "7", "Position/Role/Duty": "SK - Defend"}, {"Age": "18", "Name": "Jakob Johansen", "Position": "AM (RL), ST (C)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "11", "Aer": "1", "Agg": "8", "Agi": "15", "Ant": "7", "Bal": "14", "Bra": "9", "Cmd": "1", "Com": "1", "Cmp": "9", "Cnt": "3", "Cor": "2", "Cro": "9", "Dec": "5", "Det": "7", "Dri": "10", "Ecc": "3", "Fin": "8", "Fir": "10", "Fla": "12", "Fre": "1", "Han": "3", "Hea": "3", "Jum": "7", "Kic": "3", "Ldr": "8", "Lon": "6", "L Th": "1", "Mar": "3", "Nat": "11", "OtB": "11", "1v1": "3", "Pac": "15", "Pas": "8", "Pen": "3", "Pos": "1", "Pun": "3", "Ref": "3", "TRO": "3", "Sta": "13", "Str": "7", "Tck": "2", "Tea": "13", "Tec": "12", "Thr": "2", "Vis": "8", "Wor": "10", "Position/Role/Duty": "IF - Support"}, {"Age": "19", "Name": "George Williams", "Position": "D (RC)", "Left Foot": "Reasonable", "Right Foot": "Very Strong", "Acc": "12", "Aer": "1", "Agg": "8", "Agi": "7", "Ant": "5", "Bal": "13", "Bra": "10", "Cmd": "1", "Com": "1", "Cmp": "6", "Cnt": "10", "Cor": "1", "Cro": "4", "Dec": "11", "Det": "4", "Dri": "3", "Ecc": "3", "Fin": "2", "Fir": "5", "Fla": "4", "Fre": "1", "Han": "3", "Hea": "7", "Jum": "12", "Kic": "2", "Ldr": "1", "Lon": "2", "L Th": "3", "Mar": "12", "Nat": "15", "OtB": "2", "1v1": "2", "Pac": "11", "Pas": "5", "Pen": "1", "Pos": "12", "Pun": "1", "Ref": "3", "TRO": "3", "Sta": "12", "Str": "9", "Tck": "12", "Tea": "8", "Tec": "7", "Thr": "3", "Vis": "5", "Wor": "12", "Position/Role/Duty": "BPD - Defend"}];
+const ATTRS = SCORING.attrs;
+const ROLES = SCORING.roles;
+
+/* Full attribute names for the notice / tooltips */
+const ATTR_FULL = {Acc:"Acceleration",Aer:"Aerial Reach (GK)",Agg:"Aggression",Agi:"Agility",Ant:"Anticipation",Bal:"Balance",Bra:"Bravery",Cmd:"Command of Area (GK)",Com:"Communication (GK)",Cmp:"Composure",Cnt:"Concentration",Cor:"Corners",Cro:"Crossing",Dec:"Decisions",Det:"Determination",Dri:"Dribbling",Ecc:"Eccentricity (GK)",Fin:"Finishing",Fir:"First Touch",Fla:"Flair",Fre:"Free Kicks",Han:"Handling (GK)",Hea:"Heading",Jum:"Jumping Reach",Kic:"Kicking (GK)",Ldr:"Leadership",Lon:"Long Shots","L Th":"Long Throws",Mar:"Marking",Nat:"Natural Fitness",OtB:"Off the Ball","1v1":"One on One (GK)",Pac:"Pace",Pas:"Passing",Pen:"Penalty Taking",Pos:"Positioning",Pun:"Punching (GK)",Ref:"Reflexes (GK)",TRO:"Rushing Out (GK)",Sta:"Stamina",Str:"Strength",Tck:"Tackling",Tea:"Teamwork",Tec:"Technique",Thr:"Throwing (GK)",Vis:"Vision",Wor:"Work Rate"};
+
+/* Highway Star 4-2-3-1 — 11 slots. x: 0(left)->100(right). y: 0(opp goal)->100(own goal) */
+const FORMATION = [
+  {id:"ST",  label:"ST",  role:"AF - Attack",   x:50, y:13, grp:"att", match:{ST:["C","R","L"]}},
+  {id:"AML", label:"AM L",role:"IF - Support",  x:17, y:33, grp:"att", match:{AM:["L"],M:["L"]}},
+  {id:"AMC", label:"AM",  role:"AM - Attack",   x:50, y:33, grp:"att", match:{AM:["C"]}},
+  {id:"AMR", label:"AM R",role:"IF - Support",  x:83, y:33, grp:"att", match:{AM:["R"],M:["R"]}},
+  {id:"DML", label:"DM L",role:"DM - Support",  x:35, y:55, grp:"mid", match:{DM:["C","L","R"],M:["C"]}},
+  {id:"DMR", label:"DM R",role:"DM - Support",  x:65, y:55, grp:"mid", match:{DM:["C","L","R"],M:["C"]}},
+  {id:"DL",  label:"D L", role:"FB - Attack",   x:12, y:76, grp:"def", match:{D:["L"],WB:["L"]}},
+  {id:"DCL", label:"D C", role:"BPD - Defend",  x:38, y:79, grp:"def", match:{D:["C"]}},
+  {id:"DCR", label:"D C", role:"BPD - Defend",  x:62, y:79, grp:"def", match:{D:["C"]}},
+  {id:"DR",  label:"D R", role:"FB - Attack",   x:88, y:76, grp:"def", match:{D:["R"],WB:["R"]}},
+  {id:"GK",  label:"GK",  role:"SK - Defend",   x:50, y:92, grp:"gk",  match:{GK:["C"]}},
+];
+
+/* ============================ STATE ============================ */
+const LS_KEY="fm_team_manager_v1";
+let STATE = load();
+
+function blankState(){
+  return { current:null, snapshots:[], overrides:{},
+           settings:{youthAge:21, releaseScore:9.0, youthKeep:9.5, benchSize:9} };
+}
+function load(){
+  try{ const s=JSON.parse(localStorage.getItem(LS_KEY)); if(s&&s.settings) return s; }catch(e){}
+  // first run -> seed
+  const st=blankState();
+  st.current={ label:"Seed squad", date:todayStr(), records:SEED };
+  return st;
+}
+function save(){ localStorage.setItem(LS_KEY, JSON.stringify(STATE)); }
+function todayStr(){ const d=new Date(); return d.toISOString().slice(0,10); }
+
+/* ============================ SCORING ENGINE ============================ */
+function num(v){ const n=parseFloat(v); return isFinite(n)?n:0; }
+function footScore(f){ return SCORING.footmap[(f||"").trim()] ?? 0; }
+
+/* normalize a raw FM record (column->string) into a clean player */
+function normalize(rec){
+  const get=k=>rec[k]!==undefined?rec[k]:"";
+  const attrs={};
+  ATTRS.forEach(a=> attrs[a]=num(get(a)));
+  const role = (get("Position/Role/Duty")||"").trim();
+  return {
+    name:(get("Name")||"").trim(),
+    age:num(get("Age")),
+    position:(get("Position")||"").trim(),
+    lf:(get("Left Foot")||"").trim(),
+    rf:(get("Right Foot")||"").trim(),
+    role: ROLES.includes(role)?role:"",
+    attrs
+  };
+}
+function players(){ return (STATE.current?.records||[]).map(normalize).filter(p=>p.name); }
+
+function scoreFor(p, role){
+  if(!SCORING.weights[role]) return 0;
+  let D = footScore(p.lf)+footScore(p.rf);
+  const w=SCORING.weights[role];
+  for(const a of ATTRS) D += (p.attrs[a]||0)*(w[a]||0);
+  return Math.round(D/SCORING.rolemax[role]*20*100)/100;
+}
+function bestRole(p){
+  let best=null,bs=-1;
+  for(const r of ROLES){ const s=scoreFor(p,r); if(s>bs){bs=s;best=r;} }
+  return {role:best, score:bs};
+}
+/* assigned role = manual override > export role > best-fit */
+function assignedRole(p){
+  if(STATE.overrides[p.name]&&ROLES.includes(STATE.overrides[p.name])) return STATE.overrides[p.name];
+  if(p.role) return p.role;
+  return bestRole(p).role;
+}
+
+/* ---- position parsing & eligibility ---- */
+function parsePos(str){
+  const map={};
+  (str||"").split(",").forEach(seg=>{
+    seg=seg.trim(); if(!seg) return;
+    const m=seg.match(/^([A-Za-z\/]+)\s*(?:\(([^)]*)\))?/);
+    if(!m) return;
+    const toks=m[1].split("/");
+    let sides=(m[2]||"").replace(/[^LRC]/g,"").split("");
+    if(sides.length===0) sides=["C"];
+    toks.forEach(t=>{ t=t.toUpperCase(); map[t]=map[t]||new Set(); sides.forEach(s=>map[t].add(s)); });
+  });
+  return map;
+}
+function eligible(p, slot){
+  const mp=parsePos(p.position);
+  for(const tok in slot.match){
+    if(mp[tok]){ for(const s of slot.match[tok]) if(mp[tok].has(s)) return true; }
+  }
+  return false;
+}
+
+/* ---- Best XI (greedy, prefers natural position) ---- */
+function bestXI(opts={}){
+  const ps=players();
+  const youthAge=STATE.settings.youthAge;
+  const pairs=[];
+  FORMATION.forEach(slot=>{
+    ps.forEach(p=>{
+      const s=scoreFor(p,slot.role);
+      const nat=eligible(p,slot);
+      let adj=s-(nat?0:4);
+      if(opts.youthBoost && p.age<=youthAge) adj+=opts.youthBoost;
+      pairs.push({slot,p,score:s,nat,adj});
+    });
+  });
+  pairs.sort((a,b)=>b.adj-a.adj);
+  const usedP=new Set(), filled={}, assign={};
+  for(const pr of pairs){
+    if(filled[pr.slot.id]||usedP.has(pr.p.name)) continue;
+    filled[pr.slot.id]=true; usedP.add(pr.p.name);
+    assign[pr.slot.id]={p:pr.p,score:pr.score,nat:pr.nat};
+  }
+  // bench: best remaining by best-role score
+  const bench=ps.filter(p=>!usedP.has(p.name))
+    .map(p=>({p,...bestRole(p)})).sort((a,b)=>b.score-a.score)
+    .slice(0,STATE.settings.benchSize);
+  return {assign,bench};
+}
+
+/* ============================ HELPERS / UI ============================ */
+function scoreColor(s){
+  if(s>=14)return"#2ea043"; if(s>=11)return"#3fb950"; if(s>=8)return"#d29922";
+  if(s>=5)return"#db6d28"; return"#da3633";
+}
+function scoreBadge(s){ return `<span class="score" style="background:${scoreColor(s)}">${s.toFixed(2)}</span>`; }
+function grpOf(role){
+  if(role.startsWith("SK"))return"gk";
+  if(role.startsWith("FB")||role.startsWith("BPD"))return"def";
+  if(role.startsWith("DM")||role.startsWith("IF")||role.startsWith("AM -"))return"mid";
+  return"att";
+}
+function rolePill(role){ const g=grpOf(role); return `<span class="pill ${g}">${role}</span>`; }
+function grpColor(g){ return g==="gk"?"var(--gk)":g==="def"?"var(--def)":g==="mid"?"var(--mid)":"var(--att)"; }
+function toast(m){ const t=document.getElementById("toast"); t.textContent=m; t.classList.remove("hidden"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.add("hidden"),2200); }
+function esc(s){ return (s+"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+/* ============================ TABS ============================ */
+const TABS=[
+  ["notice","📖 Notice"],
+  ["import","📥 Update data"],
+  ["squad","👥 Squad"],
+  ["xi","⚽ Best XI"],
+  ["youth","🌱 Youth & Training"],
+  ["release","🗑️ Release list"],
+  ["progress","📈 Progression"],
+  ["history","🗂️ History"],
+  ["tactics","🏆 Tactics"],
+];
+let TAB="squad";
+function renderTabs(){
+  document.getElementById("tabs").innerHTML=TABS.map(([k,l])=>
+    `<button class="${k===TAB?'active':''}" onclick="go('${k}')">${l}</button>`).join("");
+}
+function go(k){ TAB=k; renderTabs(); render(); window.scrollTo(0,0); }
+
+function render(){
+  const lbl=STATE.current?`${STATE.current.label} · ${STATE.current.date} · ${players().length} players`:"No data";
+  document.getElementById("seasonLabel").textContent=lbl;
+  const v=document.getElementById("view");
+  if(!STATE.current && TAB!=="import" && TAB!=="notice"){ v.innerHTML=emptyCard(); return; }
+  v.innerHTML=({notice:vNotice,import:vImport,squad:vSquad,xi:vXI,youth:vYouth,release:vRelease,progress:vProgress,history:vHistory,tactics:vTactics}[TAB]||vSquad)();
+  if(TAB==="squad") wireSquad();
+  if(TAB==="import") wireImport();
+}
+function emptyCard(){ return `<div class="card"><h2>No squad loaded</h2><p class="sub">Go to <b>📥 Update data</b> and import your <code>Untitled.html</code> export from Football Manager.</p><button class="btn primary" onclick="go('import')">Import now</button></div>`; }
+
+/* ---------- NOTICE ---------- */
+function vNotice(){
+  return `<div class="card notice">
+  <h2>📖 Notice & Definitions — read me first</h2>
+  <p class="sub">Everything here is built from <b>your own</b> Excel scoring model. Same weights, same numbers — Marcus Jones still scores 11.03.</p>
+
+  <h3>How to use it (the 6-month routine)</h3>
+  <ol>
+    <li>In FM, open your squad view that has all attributes + your <code>Position/Role/Duty</code> column.</li>
+    <li><b>Print Screen → Web page / Text</b> → it saves <code>Untitled.html</code>.</li>
+    <li>Open this app → <b>📥 Update data</b> → drop that file in (or paste it). Done — every tab recomputes.</li>
+    <li>Click <b>"Save as snapshot"</b> so this becomes a dated season point for Progression & History.</li>
+    <li>Phone: press <b>💾 Backup</b> on PC, send yourself the file, press <b>↩ Restore</b> on your phone.</li>
+  </ol>
+
+  <h3>What each tab is for</h3>
+  <div class="def-grid">
+    <div><b>👥 Squad</b> — every player scored 0–20 in their role. Sort, filter, change a role.</div>
+    <div><b>⚽ Best XI</b> — your strongest legal Highway Star 4-2-3-1, on the pitch + bench.</div>
+    <div><b>🌱 Youth & Training</b> — young players good enough to develop in the first team.</div>
+    <div><b>🗑️ Release list</b> — who to sell/release, with the reason.</div>
+    <div><b>📈 Progression</b> — attribute gains since a chosen older snapshot.</div>
+    <div><b>🗂️ History</b> — all your saved snapshots + score over time.</div>
+    <div><b>🏆 Tactics</b> — the full Highway Star 4-2-3-1 setup to stop losing.</div>
+  </div>
+
+  <h3>The Score (0–20) — what it means</h3>
+  <p>For a player in a role: <code>Score = ( feet + Σ attribute × role-weight ) ÷ role-max × 20</code>. It answers one question: <b>how well do this player's attributes fit this exact role?</b> It is a <i>fit</i> rating, not the player's potential.</p>
+  <div class="row" style="gap:8px;margin:8px 0">
+    ${[["14–20","Excellent",14],["11–14","Good / starter",11.5],["8–11","Squad / rotation",9],["5–8","Weak",6],["0–5","Poor",3]]
+      .map(([r,t,s])=>`<span>${scoreBadge(s)} <b>${t}</b> <span class="muted">${r}</span></span>`).join(" &nbsp; ")}
+  </div>
+
+  <h3>Your 7 roles (Highway Star 4-2-3-1)</h3>
+  <div class="def-grid">
+    ${ROLES.map(r=>`<div>${rolePill(r)} — max ${SCORING.rolemax[r]}</div>`).join("")}
+  </div>
+
+  <details style="margin-top:14px"><summary>Full attribute glossary (47)</summary>
+    <div class="def-grid" style="margin-top:8px">
+      ${ATTRS.map(a=>`<div><b>${a}</b> — ${ATTR_FULL[a]||a}</div>`).join("")}
+    </div>
+  </details>
+
+  <div class="tipbox"><b>Privacy:</b> all data lives only in this browser (localStorage) + the backup files you make. Nothing is uploaded anywhere.</div>
+  </div>`;
+}
+
+/* ---------- IMPORT ---------- */
+function vImport(){
+  return `<div class="card">
+    <h2>📥 Update data</h2>
+    <p class="sub">Drop or paste your Football Manager <code>Untitled.html</code> export. It must include the columns Name, Age, Position, attributes, and ideally your <code>Position/Role/Duty</code> column.</p>
+    <div id="drop" class="drop">📂 <b>Drop Untitled.html here</b><br><span class="muted">or click to choose a file</span></div>
+    <input type="file" id="impFile" accept=".html,.htm,.txt" class="hidden">
+    <h3>…or paste the HTML / table text</h3>
+    <textarea id="impText" placeholder="Paste the contents of Untitled.html here"></textarea>
+    <div class="row" style="margin-top:10px">
+      <input type="text" id="impLabel" placeholder="Label (e.g. Jan 2027, mid-season)" value="${esc(STATE.current?defaultNextLabel():'Season 1')}">
+      <button class="btn primary" onclick="doImport()">Load this data</button>
+      <button class="btn" onclick="saveSnapshot()">📌 Save current as snapshot</button>
+    </div>
+    <p class="sub" id="impMsg" style="margin-top:10px"></p>
+  </div>
+  <div class="card">
+    <h3>Snapshots saved: ${STATE.snapshots.length}</h3>
+    <p class="sub">Each snapshot is a dated copy used by Progression & History. Save one every time you import a new season.</p>
+  </div>`;
+}
+function defaultNextLabel(){ return "Update "+todayStr(); }
+function wireImport(){
+  const drop=document.getElementById("drop"), file=document.getElementById("impFile");
+  if(!drop) return;
+  drop.onclick=()=>file.click();
+  file.onchange=e=>{ const f=e.target.files[0]; if(f) f.text().then(t=>{document.getElementById("impText").value=t; toast("File loaded — click 'Load this data'");}); };
+  ["dragover","dragenter"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("hot");}));
+  ["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("hot");}));
+  drop.addEventListener("drop",e=>{ const f=e.dataTransfer.files[0]; if(f) f.text().then(t=>{document.getElementById("impText").value=t; toast("File loaded — click 'Load this data'");}); });
+}
+function parseFMHtml(text){
+  let recs=[];
+  try{
+    const doc=new DOMParser().parseFromString(text,"text/html");
+    const table=doc.querySelector("table");
+    if(table){
+      const ths=[...table.querySelectorAll("th")].map(t=>t.textContent.trim());
+      const trs=[...table.querySelectorAll("tr")];
+      trs.forEach(tr=>{
+        const tds=[...tr.querySelectorAll("td")];
+        if(!tds.length) return;
+        const rec={}; tds.forEach((td,i)=>{ if(ths[i]!==undefined) rec[ths[i]]=td.textContent.trim(); });
+        if(Object.keys(rec).length) recs.push(rec);
+      });
+    }
+  }catch(e){}
+  return recs;
+}
+function doImport(){
+  const text=document.getElementById("impText").value.trim();
+  const label=document.getElementById("impLabel").value.trim()||defaultNextLabel();
+  if(!text){ document.getElementById("impMsg").innerHTML="<span class='tag bad'>Paste or drop your export first.</span>"; return; }
+  const recs=parseFMHtml(text);
+  if(recs.length<1){ document.getElementById("impMsg").innerHTML="<span class='tag bad'>Couldn't find a player table. Make sure it's the FM 'Web page' export.</span>"; return; }
+  STATE.current={label, date:todayStr(), records:recs};
+  save();
+  toast(`Loaded ${recs.length} players`);
+  go("squad");
+}
+function saveSnapshot(){
+  if(!STATE.current){ toast("Nothing to save"); return; }
+  STATE.snapshots.push(JSON.parse(JSON.stringify({label:STATE.current.label,date:STATE.current.date,records:STATE.current.records})));
+  save(); toast("Snapshot saved ("+STATE.snapshots.length+")"); render();
+}
+
+/* ---------- SQUAD ---------- */
+let squadSort={key:"score",dir:-1}, squadFilter={role:"",q:""};
+function squadRows(){
+  let rows=players().map(p=>{ const r=assignedRole(p); return {p,role:r,score:scoreFor(p,r),best:bestRole(p)}; });
+  if(squadFilter.role) rows=rows.filter(r=>r.role===squadFilter.role);
+  if(squadFilter.q){ const q=squadFilter.q.toLowerCase(); rows=rows.filter(r=>r.p.name.toLowerCase().includes(q)); }
+  const k=squadSort.key, d=squadSort.dir;
+  rows.sort((a,b)=>{
+    let va,vb;
+    if(k==="name"){va=a.p.name;vb=b.p.name;return va<vb?-d:va>vb?d:0;}
+    if(k==="age"){va=a.p.age;vb=b.p.age;}
+    else if(k==="role"){va=a.role;vb=b.role;return va<vb?-d:va>vb?d:0;}
+    else if(k==="pos"){va=a.p.position;vb=b.p.position;return va<vb?-d:va>vb?d:0;}
+    else {va=a.score;vb=b.score;}
+    return (va-vb)*d;
+  });
+  return rows;
+}
+function vSquad(){
+  const rows=squadRows();
+  const opts=`<option value="">All roles</option>`+ROLES.map(r=>`<option ${squadFilter.role===r?'selected':''}>${r}</option>`).join("");
+  return `<div class="card">
+    <h2>👥 Squad — ${rows.length} players</h2>
+    <p class="sub">Score = fit in the assigned role. Change a role from the dropdown; the app remembers it. Best role is auto-suggested.</p>
+    <div class="row" style="margin-bottom:10px">
+      <input type="text" id="sq" placeholder="Search name…" value="${esc(squadFilter.q)}">
+      <select id="sr">${opts}</select>
+      <span class="spacer"></span>
+      <span class="muted">Avg best-XI score: <b id="avgx"></b></span>
+    </div>
+    <div class="tablewrap"><table>
+      <thead><tr>
+        <th data-k="name">Name</th><th data-k="age">Age</th><th data-k="pos">Position</th>
+        <th data-k="role">Assigned role</th><th data-k="score">Score</th><th>Best role</th><th>Change role</th>
+      </tr></thead>
+      <tbody>${rows.map(r=>`
+        <tr>
+          <td><b>${esc(r.p.name)}</b></td>
+          <td>${r.p.age||""}</td>
+          <td class="muted">${esc(r.p.position)}</td>
+          <td>${rolePill(r.role)}</td>
+          <td>${scoreBadge(r.score)}</td>
+          <td>${r.best.role!==r.role?`<span class="muted">${r.best.role.split(" ")[0]} ${r.best.score.toFixed(1)}</span>`:'<span class="tag good">best</span>'}</td>
+          <td><select data-name="${esc(r.p.name)}" class="roleSel">
+            <option value="">(auto)</option>
+            ${ROLES.map(x=>`<option ${r.role===x?'selected':''}>${x}</option>`).join("")}
+          </select></td>
+        </tr>`).join("")}</tbody>
+    </table></div>
+  </div>`;
+}
+function wireSquad(){
+  document.querySelectorAll("#view th[data-k]").forEach(th=>th.onclick=()=>{
+    const k=th.dataset.k; if(squadSort.key===k) squadSort.dir*=-1; else {squadSort.key=k;squadSort.dir=(k==="name"||k==="role"||k==="pos")?1:-1;}
+    render();
+  });
+  const sq=document.getElementById("sq"), sr=document.getElementById("sr");
+  sq.oninput=()=>{squadFilter.q=sq.value; const pos=sq.selectionStart; render(); const el=document.getElementById("sq"); el.focus(); el.setSelectionRange(pos,pos);};
+  sr.onchange=()=>{squadFilter.role=sr.value; render();};
+  document.querySelectorAll(".roleSel").forEach(s=>s.onchange=()=>{
+    const n=s.dataset.name; if(s.value) STATE.overrides[n]=s.value; else delete STATE.overrides[n];
+    save(); render();
+  });
+  const xi=bestXI(); const vals=Object.values(xi.assign).map(a=>a.score);
+  const avg=vals.length?(vals.reduce((x,y)=>x+y,0)/vals.length):0;
+  const el=document.getElementById("avgx"); if(el){el.textContent=avg.toFixed(2); el.style.color=scoreColor(avg);}
+}
+
+/* ---------- BEST XI ---------- */
+let xiYouth=false;
+function vXI(){
+  const {assign,bench}=bestXI(xiYouth?{youthBoost:2.5}:{});
+  const ya=STATE.settings.youthAge;
+  const slots=FORMATION.map(s=>{
+    const a=assign[s.id];
+    const col=grpColor(s.grp);
+    const nm=a?a.p.name.split(" ").slice(-1)[0]:"—";
+    const sc=a?a.score:0;
+    const warn=a&&!a.nat?'<span class="tag warn" style="font-size:8px">OOP</span>':'';
+    return `<div class="slot" style="left:${s.x}%;top:${s.y}%" title="${a?esc(a.p.name)+' · '+a.score.toFixed(2)+(a.nat?'':' (out of position)'):''}">
+      <div class="dot" style="background:${a?scoreColor(sc):'#555'}">${a?sc.toFixed(1):'–'}</div>
+      <div class="nm">${esc(nm)} ${warn}</div><div class="ro">${s.label}</div>
+    </div>`;
+  }).join("");
+  const vals=Object.values(assign).map(a=>a.score);
+  const avg=vals.length?vals.reduce((x,y)=>x+y,0)/vals.length:0;
+  const benchRows=bench.map(b=>`<tr><td><b>${esc(b.p.name)}</b></td><td>${b.p.age}</td><td class="muted">${esc(b.p.position)}</td><td>${rolePill(b.role)}</td><td>${scoreBadge(b.score)}</td></tr>`).join("");
+  // youth alternatives per slot
+  const ps=players();
+  const youthAlt=FORMATION.map(s=>{
+    const start=assign[s.id]?.p.name;
+    const cand=ps.filter(p=>p.age<=ya&&eligible(p,s)&&p.name!==start)
+      .map(p=>({p,score:scoreFor(p,s.role)})).sort((a,b)=>b.score-a.score)[0];
+    if(!cand) return "";
+    return `<tr><td>${s.label}</td><td><b>${esc(cand.p.name)}</b></td><td>${cand.p.age}</td><td>${scoreBadge(cand.score)}</td><td class="muted">${assign[s.id]?('vs '+assign[s.id].score.toFixed(1)+' starter'):''}</td></tr>`;
+  }).filter(Boolean).join("");
+
+  return `<div class="card">
+    <h2>⚽ Best XI — Highway Star 4-2-3-1</h2>
+    <p class="sub">Strongest legal line-up by role fit. <span class="tag warn">OOP</span> = best available but out of natural position (a hole to fix in the transfer market).</p>
+    <div class="row" style="margin-bottom:10px">
+      <label class="row" style="gap:6px"><input type="checkbox" id="yb" ${xiYouth?'checked':''}> Prioritise youth development (≤${ya}y get a boost)</label>
+      <span class="spacer"></span><span class="muted">Team rating: ${scoreBadge(avg)}</span>
+    </div>
+    <div class="pitchwrap">
+      <div>
+        <div class="pitch">
+          <div class="line center"></div><div class="line circle"></div>
+          <div class="line boxT"></div><div class="line boxB"></div>
+          ${slots}
+        </div>
+        <div class="legend">
+          <span><span class="dotleg" style="background:var(--att)"></span>Attack</span>
+          <span><span class="dotleg" style="background:var(--mid)"></span>Midfield</span>
+          <span><span class="dotleg" style="background:var(--def)"></span>Defence</span>
+          <span><span class="dotleg" style="background:var(--gk)"></span>Keeper</span>
+        </div>
+      </div>
+      <div>
+        <h3 style="margin-top:0">Bench (${bench.length})</h3>
+        <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>Pos</th><th>Best role</th><th>Score</th></tr></thead><tbody>${benchRows}</tbody></table></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>🌱 Best youth option per position (≤${ya}y)</h3>
+    <p class="sub">Rotate one of these in when the result is safe — minutes = development. "vs starter" shows the gap you're accepting.</p>
+    <div class="tablewrap"><table><thead><tr><th>Slot</th><th>Young player</th><th>Age</th><th>Role score</th><th>Gap</th></tr></thead><tbody>${youthAlt||'<tr><td colspan=5 class="muted">No youth players matching these positions.</td></tr>'}</tbody></table></div>
+  </div>`;
+}
+
+/* ---------- YOUTH ---------- */
+function vYouth(){
+  const ya=STATE.settings.youthAge, keep=STATE.settings.youthKeep;
+  const ps=players().filter(p=>p.age<=ya).map(p=>({p,...bestRole(p)})).sort((a,b)=>b.score-a.score);
+  const rows=ps.map(o=>{
+    let tag,txt;
+    if(o.score>=keep+2){tag="good";txt="First-team ready";}
+    else if(o.score>=keep){tag="info";txt="Promising — develop";}
+    else if(o.score>=keep-3){tag="warn";txt="Project / loan";}
+    else {tag="bad";txt="Low ceiling so far";}
+    return `<tr><td><b>${esc(o.p.name)}</b></td><td>${o.p.age}</td><td class="muted">${esc(o.p.position)}</td><td>${rolePill(o.role)}</td><td>${scoreBadge(o.score)}</td><td><span class="tag ${tag}">${txt}</span></td></tr>`;
+  }).join("");
+  return `<div class="card">
+    <h2>🌱 Youth & Training (age ≤ ${ya})</h2>
+    <p class="sub">Young players with an interesting overall to keep around the first team for development. Adjust the age cut-off in <b>🗂️ History → settings</b>.</p>
+    <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>Position</th><th>Best role</th><th>Score</th><th>Verdict</th></tr></thead><tbody>${rows||'<tr><td colspan=6 class="muted">No players at/under '+ya+'.</td></tr>'}</tbody></table></div>
+    <div class="tipbox"><b>Training tip:</b> a "Promising" youngster grows fastest with real minutes + an individual training focus on his role's key attributes (Pace, Acceleration, Dribbling, Off the Ball for wide/attacking roles). Give them cup games and the last 15 minutes of won matches.</div>
+  </div>`;
+}
+
+/* ---------- RELEASE ---------- */
+function vRelease(){
+  const rs=STATE.settings.releaseScore, ya=STATE.settings.youthAge;
+  const list=players().map(p=>({p,...bestRole(p)})).map(o=>{
+    let reason=null,tag="warn";
+    if(o.score<rs && o.p.age>=24){reason="Below "+rs+" fit and 24+ — won't improve enough.";tag="bad";}
+    else if(o.score<rs-2){reason="Very low fit ("+o.score.toFixed(1)+") in his best role.";tag="bad";}
+    else if(o.p.age>=32 && o.score<rs+2){reason="Ageing ("+o.p.age+") and only squad-level.";tag="warn";}
+    return reason?{...o,reason,tag}:null;
+  }).filter(Boolean).sort((a,b)=>a.score-b.score);
+  const rows=list.map(o=>`<tr><td><b>${esc(o.p.name)}</b></td><td>${o.p.age}</td><td class="muted">${esc(o.p.position)}</td><td>${rolePill(o.role)}</td><td>${scoreBadge(o.score)}</td><td><span class="tag ${o.tag}">${esc(o.reason)}</span></td></tr>`).join("");
+  return `<div class="card">
+    <h2>🗑️ Release / Sell list — ${list.length} flagged</h2>
+    <p class="sub">Advice, not orders. Threshold = fit below <b>${rs}</b>. Free up wages and squad slots for youth + targeted signings.</p>
+    <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>Position</th><th>Best role</th><th>Score</th><th>Why</th></tr></thead><tbody>${rows||'<tr><td colspan=6 class="muted">Nobody flagged — healthy squad.</td></tr>'}</tbody></table></div>
+    <div class="tipbox"><b>Note:</b> keep a low-scorer only if he's a cheap natural backup for a position you have no youth in. Never sell your only specialist for a slot.</div>
+  </div>`;
+}
+
+/* ---------- PROGRESSION ---------- */
+function vProgress(){
+  if(STATE.snapshots.length<1){
+    return `<div class="card"><h2>📈 Progression</h2><p class="sub">Save at least one snapshot to compare against. Go to <b>📥 Update data → Save current as snapshot</b>, then import a newer export later and come back here.</p></div>`;
+  }
+  const opts=STATE.snapshots.map((s,i)=>`<option value="${i}">${esc(s.label)} (${s.date})</option>`).join("");
+  return `<div class="card">
+    <h2>📈 Progression</h2>
+    <p class="sub">Attribute gains in <b>current data</b> vs an older snapshot, for the attributes that matter to each player's role.</p>
+    <div class="row"><label>Baseline snapshot: <select id="baseSel" onchange="renderProg()">${opts}</select></label></div>
+    <div id="progOut" style="margin-top:12px"></div>
+  </div>`;
+}
+function renderProg(){
+  const i=+document.getElementById("baseSel").value;
+  const base=STATE.snapshots[i]; if(!base) return;
+  const baseMap={}; base.records.map(normalize).forEach(p=>baseMap[p.name]=p);
+  const rows=players().map(p=>{
+    const b=baseMap[p.name]; if(!b) return null;
+    const role=assignedRole(p); const w=SCORING.weights[role]||{};
+    let gain=0, ups=[];
+    ATTRS.forEach(a=>{ if((w[a]||0)>0){ const d=(p.attrs[a]||0)-(b.attrs[a]||0); if(d!==0){gain+=d; if(d>0)ups.push(a+" +"+d);} } });
+    const sNow=scoreFor(p,role), sOld=scoreFor(b,role);
+    return {p,role,gain,sNow,sOld,ds:Math.round((sNow-sOld)*100)/100,ups};
+  }).filter(Boolean).sort((a,b)=>b.gain-a.gain);
+  document.getElementById("progOut").innerHTML=`<div class="tablewrap"><table>
+    <thead><tr><th>Name</th><th>Role</th><th>Score then→now</th><th>Δ score</th><th>Attr. points gained</th><th>Improved</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr>
+      <td><b>${esc(r.p.name)}</b></td><td>${rolePill(r.role)}</td>
+      <td class="muted">${r.sOld.toFixed(1)} → <b style="color:${scoreColor(r.sNow)}">${r.sNow.toFixed(1)}</b></td>
+      <td><span class="tag ${r.ds>0?'good':r.ds<0?'bad':'info'}">${r.ds>0?'+':''}${r.ds.toFixed(2)}</span></td>
+      <td><b style="color:${r.gain>0?'var(--lime)':r.gain<0?'#ff7b72':'var(--mut)'}">${r.gain>0?'+':''}${r.gain}</b></td>
+      <td class="muted" style="white-space:normal">${esc(r.ups.slice(0,8).join(", "))}</td>
+    </tr>`).join("")}</tbody></table></div>`;
+}
+
+/* ---------- HISTORY ---------- */
+function vHistory(){
+  const s=STATE.settings;
+  const snapRows=STATE.snapshots.map((sn,i)=>`<tr>
+    <td><b>${esc(sn.label)}</b></td><td>${sn.date}</td><td>${sn.records.length}</td>
+    <td><button class="btn sm" onclick="loadSnap(${i})">Load</button>
+        <button class="btn sm ghost" onclick="delSnap(${i})">Delete</button></td></tr>`).join("");
+  // score over time for a player
+  const allNames=[...new Set(STATE.snapshots.flatMap(sn=>sn.records.map(r=>r.Name)).concat(players().map(p=>p.name)))].filter(Boolean).sort();
+  return `<div class="card">
+    <h2>🗂️ History & Settings</h2>
+    <h3>Snapshots (${STATE.snapshots.length})</h3>
+    <div class="tablewrap"><table><thead><tr><th>Label</th><th>Date</th><th>Players</th><th>Actions</th></tr></thead><tbody>${snapRows||'<tr><td colspan=4 class="muted">No snapshots yet.</td></tr>'}</tbody></table></div>
+    <h3>Score over time</h3>
+    <div class="row"><label>Player: <select id="histPlayer" onchange="renderHist()"><option value="">— pick —</option>${allNames.map(n=>`<option>${esc(n)}</option>`).join("")}</select></label></div>
+    <div id="histOut" style="margin-top:10px"></div>
+    <hr>
+    <h3>⚙️ Settings</h3>
+    <div class="grid kpis">
+      <label class="kpi"><div class="l">Youth age ≤</div><input type="number" id="setYouth" value="${s.youthAge}" min="14" max="30"></label>
+      <label class="kpi"><div class="l">Release below</div><input type="number" id="setRel" value="${s.releaseScore}" step="0.5" min="0" max="20"></label>
+      <label class="kpi"><div class="l">Youth "keep" ≥</div><input type="number" id="setKeep" value="${s.youthKeep}" step="0.5" min="0" max="20"></label>
+      <label class="kpi"><div class="l">Bench size</div><input type="number" id="setBench" value="${s.benchSize}" min="3" max="12"></label>
+    </div>
+    <button class="btn primary" style="margin-top:10px" onclick="saveSettings()">Save settings</button>
+    <hr>
+    <h3>Danger zone</h3>
+    <button class="btn ghost" onclick="if(confirm('Reset everything to the seed squad?')){STATE=blankState();STATE.current={label:'Seed squad',date:todayStr(),records:SEED};save();go('squad');}">Reset app</button>
+  </div>`;
+}
+function loadSnap(i){ const sn=STATE.snapshots[i]; STATE.current={label:sn.label,date:sn.date,records:sn.records}; save(); toast("Loaded "+sn.label); go("squad"); }
+function delSnap(i){ if(confirm("Delete this snapshot?")){ STATE.snapshots.splice(i,1); save(); render(); } }
+function saveSettings(){
+  STATE.settings.youthAge=+document.getElementById("setYouth").value||21;
+  STATE.settings.releaseScore=+document.getElementById("setRel").value||9;
+  STATE.settings.youthKeep=+document.getElementById("setKeep").value||9.5;
+  STATE.settings.benchSize=+document.getElementById("setBench").value||9;
+  save(); toast("Settings saved"); render();
+}
+function renderHist(){
+  const n=document.getElementById("histPlayer").value; if(!n){document.getElementById("histOut").innerHTML="";return;}
+  const pts=[];
+  STATE.snapshots.forEach(sn=>{ const rec=sn.records.find(r=>r.Name===n); if(rec){const p=normalize(rec);const role=assignedRole(p);pts.push({label:sn.label,date:sn.date,score:scoreFor(p,role),role});} });
+  const cur=players().find(p=>p.name===n); if(cur){const role=assignedRole(cur);pts.push({label:STATE.current.label+" (current)",date:STATE.current.date,score:scoreFor(cur,role),role});}
+  if(!pts.length){document.getElementById("histOut").innerHTML="<p class='muted'>No data points.</p>";return;}
+  const max=20;
+  document.getElementById("histOut").innerHTML=`<div class="tablewrap"><table><thead><tr><th>Point</th><th>Date</th><th>Role</th><th>Score</th><th></th></tr></thead><tbody>${pts.map(p=>`<tr><td>${esc(p.label)}</td><td>${p.date}</td><td>${rolePill(p.role)}</td><td>${scoreBadge(p.score)}</td><td style="width:140px"><div class="barmini"><i style="width:${p.score/max*100}%;background:${scoreColor(p.score)}"></i></div></td></tr>`).join("")}</tbody></table></div>`;
+}
+
+/* ---------- TACTICS ---------- */
+function vTactics(){
+  return `<div class="card notice">
+    <h2>🏆 Highway Star 4-2-3-1 — stop losing</h2>
+    <p class="sub">Honest truth first: a formation alone never "beats" the FM match engine. Wins come from <b>role/duty balance + the right mentality + a few key instructions + matching your players' attributes</b>. Your squad already fits these 7 roles, so let's set it up to actually defend and create.</p>
+
+    <div class="tipbox"><b>The #1 reason 4-2-3-1 leaks goals:</b> the two wide AMs (your IFs) don't track back, leaving your full-backs 2v1. Fix = one winger on <b>Support</b>, full-backs not both flying forward, and a holding DM. Details below.</div>
+
+    <h3>Recommended roles & duties (balanced, possession-press)</h3>
+    <div class="tablewrap"><table><thead><tr><th>Position</th><th>Role — Duty</th><th>Why</th></tr></thead><tbody>
+      <tr><td>GK</td><td><b>Sweeper Keeper — Defend</b></td><td>Your SK role. Sweeps behind a high line, starts moves.</td></tr>
+      <tr><td>D R / D L</td><td><b>Full-back — Support</b> (one can be Attack)</td><td>Your FB role. <b>Support on both</b> if you concede on the counter; make the side away from your playmaker the Attack one.</td></tr>
+      <tr><td>D C ×2</td><td><b>Ball-Playing Def — Defend</b> + 1 <b>Central Def — Defend</b></td><td>One BPD to start play (your role), one no-nonsense CD for safety.</td></tr>
+      <tr><td>DM ×2</td><td><b>Defensive Mid — Defend</b> + <b>Deep-Lying Playmaker — Support</b></td><td>The DLP becomes your metronome; the DM shields the back four. This double pivot is what stops the bleeding.</td></tr>
+      <tr><td>AM R</td><td><b>Inside Forward — Attack</b></td><td>Cuts inside onto his stronger foot to shoot.</td></tr>
+      <tr><td>AM L</td><td><b>Inside Forward — Support</b></td><td>The tracking one. Keep ONE IF on Support to protect the full-back.</td></tr>
+      <tr><td>AM C</td><td><b>Attacking Mid — Attack</b> (or Advanced Playmaker — Support)</td><td>Your AM role; the creative hub between the lines.</td></tr>
+      <tr><td>ST</td><td><b>Advanced Forward — Attack</b> (Pressing Forward if you press)</td><td>Your AF role; runs the channels, finishes.</td></tr>
+    </tbody></table></div>
+
+    <h3>Team settings that win games in FM24</h3>
+    <ul>
+      <li><b>Mentality: Positive</b> (not Attacking). Attacking over-commits and gets countered — the classic "all I do is lose" trap.</li>
+      <li><b>In possession:</b> Shorter passing, Play out of defence, Work ball into box, Be more disciplined. Width = Fairly Wide.</li>
+      <li><b>In transition:</b> Counter-press (only with good Stamina/Work Rate), Distribute to centre-backs / full-backs.</li>
+      <li><b>Out of possession:</b> Higher line + Higher press <b>only if</b> your defenders have Pace ≥13 and Stamina is good; otherwise Standard line + Mid block. Trigger press = More Often. Use offside trap if your line is high.</li>
+    </ul>
+
+    <h3>The 5 things that actually beat the ME</h3>
+    <ol>
+      <li><b>Win the second balls:</b> double pivot DM+DLP gives you a man advantage in midfield. Most AI 4-2-3-1s get overrun here — you won't.</li>
+      <li><b>Don't over-attack:</b> Positive mentality + one IF on Support keeps your shape. Most losses are conceded counters, not lack of chances.</li>
+      <li><b>Match Pace:</b> your scoring model already prizes Pace/Acceleration for wide & forward roles — pick the high-score players the <b>Best XI</b> tab gives you. Slow IFs/full-backs get exposed.</li>
+      <li><b>Set-piece routines:</b> ~30% of FM goals are set pieces. Assign your best Jumping/Heading BPD & CD to attack near post; a tall AF to far post. Put your best Corners taker on corners.</li>
+      <li><b>In-match reactions:</b> losing at 60'? Push one FB and the support IF to Attack, mentality to Attacking. Winning? Drop to Cautious, both IFs to Support, waste time. React — don't set and forget.</li>
+    </ol>
+
+    <h3>Opposition instructions (quick wins)</h3>
+    <ul>
+      <li>Hard-tackle + close-down their playmaker (the highest-rated central player).</li>
+      <li>Show their wingers <b>onto their weaker foot</b> (down the line if right-footed on the right).</li>
+      <li>Against a lone striker, your spare CB steps out — your BPD is built for this.</li>
+    </ul>
+
+    <div class="tipbox"><b>Reality check:</b> if you're a small club, you will still lose some games — that's correct. The goal is to stop <i>throwing away</i> games. Use <b>Best XI</b> for selection, <b>Release list</b> to upgrade the weak links, and re-import every 6 months to watch your <b>Progression</b> climb.</div>
+  </div>`;
+}
+
+/* ============================ BACKUP / RESTORE ============================ */
+function backup(){
+  const blob=new Blob([JSON.stringify(STATE)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download="fm-team-manager-backup-"+todayStr()+".json"; a.click();
+  toast("Backup downloaded");
+}
+document.getElementById("restoreFile").onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  f.text().then(t=>{ try{ const s=JSON.parse(t); if(s.settings){STATE=s;save();toast("Restored");go("squad");} else toast("Not a valid backup"); }catch(err){toast("Bad file");} });
+};
+
+/* ============================ BOOT ============================ */
+renderTabs(); go("squad");
+</script>
+</body>
+</html>
