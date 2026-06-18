@@ -48,6 +48,10 @@ nav.tabs{display:flex;gap:4px;overflow-x:auto;padding:4px 12px 8px;max-width:118
 nav.tabs button{white-space:nowrap;background:transparent;border:none;color:var(--mut);padding:8px 13px;border-radius:9px;cursor:pointer;font-weight:700;font-size:13px}
 nav.tabs button.active{background:var(--bg3);color:#fff;box-shadow:inset 0 0 0 1px var(--line)}
 .navbadge{background:var(--brand);color:#04130d;border-radius:10px;padding:0 6px;font-size:10px;font-weight:800}
+nav.subtabs{display:none;gap:4px;overflow-x:auto;padding:0 12px 8px;max-width:1180px;margin:0 auto}
+nav.subtabs button{white-space:nowrap;background:transparent;border:1px solid var(--line);color:var(--mut);padding:5px 11px;border-radius:20px;cursor:pointer;font-weight:600;font-size:12px}
+nav.subtabs button.on{background:var(--brand);border-color:transparent;color:#04130d}
+nav.subtabs button:hover{color:var(--txt)}
 nav.tabs button:hover{color:var(--txt)}
 main{max-width:1180px;margin:0 auto;padding:18px 16px 90px}
 .card{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:16px}
@@ -147,6 +151,7 @@ code{background:var(--bg3);padding:1px 5px;border-radius:5px;font-size:12px}
     <input type="file" id="restoreFile" accept="application/json" class="hidden">
   </div>
   <nav class="tabs" id="tabs"></nav>
+  <nav class="subtabs" id="subtabs"></nav>
 </header>
 <main id="view"></main>
 <div id="modal"></div>
@@ -276,7 +281,18 @@ function esc(s){ return (s+"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">"
 function last(n){ return n.split(" ").slice(-1)[0]; }
 
 /* ============================ TABS ============================ */
-const TABS=[["dash","🏠 Dashboard"],["advice","🧭 Decisions"],["squad","👥 Squad"],["compare","⚖️ Compare"],["xi","⚽ Best XI"],["matchday","⚡ Matchday"],["season","📝 Season"],["setpiece","🎯 Set Pieces"],["tactics","🏆 Tactics"],["training","🏋️ Training"],["reports","📋 Reports"],["youth","🌟 Wonderkids"],["release","🗑️ Release"],["depth","📊 Depth"],["progress","📈 Progress"],["history","🗂️ More"],["notice","📖 Help"]];
+const GROUPS=[
+  {id:"home",label:"🏠 Home",views:[["dash","Dashboard"]]},
+  {id:"decisions",label:"🧭 Decisions",badge:true,views:[["advice","Decisions"]]},
+  {id:"squad",label:"👥 Squad",views:[["squad","List"],["compare","Compare"],["depth","Depth & succession"],["release","Surplus"]]},
+  {id:"team",label:"⚽ Team",views:[["xi","Best XI"],["setpiece","Set pieces"],["tactics","Tactics"],["matchday","Matchday"]]},
+  {id:"develop",label:"🌱 Develop",views:[["youth","Wonderkids"],["training","Training"],["reports","Reports"],["progress","Progress"]]},
+  {id:"season",label:"📝 Season",views:[["season","Season"]]},
+  {id:"data",label:"⚙️ Data",views:[["history","Data & settings"]]},
+  {id:"help",label:"📖 Help",views:[["notice","Help"]]},
+];
+function groupOf(view){ return GROUPS.find(g=>g.views.some(v=>v[0]===view)); }
+const lastView={};
 let TAB="dash";
 function adviceCount(){
   try{
@@ -290,8 +306,15 @@ function adviceCount(){
     return n;
   }catch(e){ return 0; }
 }
-function renderTabs(){ const ac=adviceCount(); document.getElementById("tabs").innerHTML=TABS.map(([k,l])=>{const lab=(k==="advice"&&ac>0)?`${l} <span class="navbadge">${ac}</span>`:l;return `<button class="${k===TAB?'active':''}" onclick="go('${k}')">${lab}</button>`;}).join(""); }
-function go(k){ TAB=k; renderTabs(); render(); window.scrollTo(0,0); }
+function renderTabs(){
+  const ac=adviceCount();
+  document.getElementById("tabs").innerHTML=GROUPS.map(g=>{const active=g.views.some(v=>v[0]===TAB);const lab=(g.badge&&ac>0)?`${g.label} <span class="navbadge">${ac}</span>`:g.label;return `<button class="${active?'active':''}" onclick="goGroup('${g.id}')">${lab}</button>`;}).join("");
+  const g=groupOf(TAB), st=document.getElementById("subtabs");
+  if(g&&g.views.length>1){ st.style.display="flex"; st.innerHTML=g.views.map(v=>`<button class="${v[0]===TAB?'on':''}" onclick="go('${v[0]}')">${v[1]}</button>`).join(""); }
+  else { st.style.display="none"; st.innerHTML=""; }
+}
+function goGroup(id){ const g=GROUPS.find(x=>x.id===id); go(lastView[id]||g.views[0][0]); }
+function go(k){ TAB=k; const g=groupOf(k); if(g)lastView[g.id]=k; renderTabs(); render(); window.scrollTo(0,0); }
 function render(){
   document.getElementById("refreshBtn").textContent = STATE.fmConnected ? "🔄 Refresh from FM" : "🔗 Connect FM";
   const v=document.getElementById("view");
@@ -316,7 +339,7 @@ function vDash(){
   const maxc=Math.max(1,...counts);
   return `<div class="card" style="background:linear-gradient(135deg,#0c2b20,#121821)">
     <h2>🏠 Squad Dashboard</h2>
-    <p class="sub">${esc(STATE.current.label)} · ${STATE.current.date} · last update ${daysAgo(STATE.current.date)} · model: <b>${scoreProfile()==='fmarena'?'FM-Arena (match-engine)':'My Excel'}</b> <span class="muted">(change in More → settings)</span></p>
+    <p class="sub">${esc(STATE.current.label)} · ${STATE.current.date} · last update ${daysAgo(STATE.current.date)} · model: <b>${scoreProfile()==='fmarena'?'FM-Arena (match-engine)':'My Excel'}</b> <span class="muted">(change in Data → settings)</span></p>
     <div class="grid kpis">
       <div class="kpi"><span class="ic">⭐</span><div class="n" style="color:${scoreColor(avg)}">${avg.toFixed(2)}</div><div class="l">Best XI rating</div></div>
       <div class="kpi"><span class="ic">👥</span><div class="n">${ps.length}</div><div class="l">Players</div></div>
@@ -548,7 +571,7 @@ function vYouth(){
     return `<tr onclick="openPlayer('${esc(o.p.name)}')"><td><b>${esc(o.p.name)}</b></td><td>${o.p.age}</td><td class="muted">${esc(o.fmRole||o.p.position)}</td><td>${rolePill(o.role)}</td><td>${scoreBadge(o.score)}</td><td><b style="color:${scoreColor(o.dev)}">${o.dev.toFixed(1)}</b></td><td><span class="tag ${tag}">${txt}</span>${hasPers?risk:''}</td></tr>`;
   }).join("");
   return `<div class="card"><h2>🌟 Wonderkids & development (≤ ${ya})</h2>
-    <p class="sub"><b>Potential</b> = a development-headroom proxy (FM hides true PA): current fit + youth + Determination + attitude. Higher = more room to grow into a star. Sorted by it. Change the age cut-off in <b>More → Settings</b>.</p>
+    <p class="sub"><b>Potential</b> = a development-headroom proxy (FM hides true PA): current fit + youth + Determination + attitude. Higher = more room to grow into a star. Sorted by it. Change the age cut-off in <b>Data → Settings</b>.</p>
     <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>FM best role / pos</th><th>My role</th><th>Now</th><th>Potential</th><th>Verdict</th></tr></thead><tbody>${rows||'<tr><td colspan=7 class="muted">No players ≤'+ya+'.</td></tr>'}</tbody></table></div>
     <div class="tipbox"><b>How to use it:</b> give your ⭐ Wonderkids real minutes + the role training from the <b>🏋️ Training</b> tab. ${hasPers?'A <span class="tag bad">attitude</span> tag (bad personality like Mercenary) means pair him with a pro mentor in <b>Reports → Personality</b> before he infects the dressing room.':'Add the <b>Personality</b> column to your export to flag attitude risks here.'}</div>
   </div>
@@ -617,7 +640,7 @@ function vDepth(){
 
 /* ---------- PROGRESSION ---------- */
 function vProgress(){
-  if(!STATE.snapshots.length) return `<div class="card"><h2>📈 Progression</h2><p class="sub">Save a snapshot first: <b>More → Save snapshot</b>. Then import a newer export later and compare here.</p></div>`;
+  if(!STATE.snapshots.length) return `<div class="card"><h2>📈 Progression</h2><p class="sub">Save a snapshot first: <b>Data → Save snapshot</b>. Then import a newer export later and compare here.</p></div>`;
   const opts=STATE.snapshots.map((s,i)=>`<option value="${i}">${esc(s.label)} (${s.date})</option>`).join("");
   return `<div class="card"><h2>📈 Progression</h2><p class="sub">Attribute gains in <b>current data</b> vs an older snapshot, for the attributes that matter to each player's role.</p>
     <div class="row"><label>Baseline: <select id="baseSel" onchange="renderProg()">${opts}</select></label></div><div id="progOut" style="margin-top:12px"></div></div>`;
@@ -727,7 +750,7 @@ function vNotice(){
     <li>In FM open your squad view (all attributes + your <code>Position/Role/Duty</code> column).</li>
     <li>Print Screen → <b>Web page / Text</b> → saves <code>Untitled.html</code>.</li>
     <li>Header → <b>🔄 Refresh from FM</b> (after connecting once) or <b>📥 Import</b>. Everything recomputes.</li>
-    <li><b>More → 📌 Save snapshot</b> so Progression & History get a dated point.</li>
+    <li><b>Data → 📌 Save snapshot</b> so Progression & History get a dated point.</li>
     <li>Phone: <b>💾 Backup</b> on PC → send file → <b>↩</b> Restore on phone.</li>
   </ol>
   <div class="tipbox amber"><b>Why not fully automatic?</b> Browsers can't silently read your disk (security). "Connect FM" lets you pick <code>Untitled.html</code> once; after that it's a single click to reload it. On mobile, use Backup/Restore.</div>
@@ -743,37 +766,28 @@ function vNotice(){
   </tbody></table></div>
   <p class="sub">You never lose anything by adding columns — the app keeps the ones it already uses (Name, Age, Position, the 47 attributes, feet, Position/Role/Duty) and simply switches on the extras when present.</p>
   <h3>The score (0–20) — two models you can switch</h3>
-  <p>Set the model in <b>More → 🧪 Evaluation model</b>. Currently active: <b>${scoreProfile()==='fmarena'?'FM-Arena (match-engine tested)':'My Excel weightings'}</b>.</p>
+  <p>Set the model in <b>Data → 🧪 Evaluation model</b>. Currently active: <b>${scoreProfile()==='fmarena'?'FM-Arena (match-engine tested)':'My Excel weightings'}</b>.</p>
   <ul>
     <li><b>My Excel</b> — <code>(feet + Σ attribute × your role-weight) ÷ role-max × 20</code>. Your own football judgement of role-fit. Reproduces your spreadsheet exactly.</li>
     <li><b>FM-Arena</b> — <code>Σ(attribute × match-engine coefficient) ÷ Σ coefficients</code>, using attribute weights found by <b>regression-testing the actual FM24 match engine</b>. Their finding: the game's in-built "key attributes" are misleading — what truly decides matches is <b>Pace, Acceleration, Jumping Reach, Anticipation, Concentration</b> + a little Dribbling/Composure. Use this to pick who'll actually perform on the pitch.</li>
   </ul>
   <p class="sub">Tip: open <b>⚖️ Compare</b> or switch models and watch your <b>Best XI</b> reshuffle — players your Excel rates highly but who lack pace/physicality often drop under the FM-Arena model. The truth is usually somewhere between the two: trust FM-Arena for raw match impact, your Excel for role suitability.</p>
   <div class="row" style="gap:10px;margin:8px 0">${[["Excellent",14.5],["Good/starter",12],["Rotation",10],["Weak",7],["Poor",4]].map(([t,s])=>`<span>${scoreBadge(s)} <b>${t}</b></span>`).join(" ")}</div>
-  <h3>Every tab, what it's for (17)</h3>
+  <h3>8 sections (tap a section → sub-menu appears)</h3>
   <div class="def-grid">
-    <div><b>🏠 Dashboard</b> — squad health + what-to-do + age chart</div>
-    <div><b>🧭 Decisions</b> — your weekly checklist so you never miss a call</div>
-    <div><b>👥 Squad</b> — all players; search + attribute filters; tap for full card</div>
-    <div><b>⚖️ Compare</b> — two players side by side + verdict</div>
-    <div><b>⚽ Best XI</b> — 3 modes: Strongest / rest-tired / blood-youth</div>
-    <div><b>⚡ Matchday</b> — live in-match assistant, opponent game-plan, team talks</div>
+    <div><b>🏠 Home</b> — dashboard: squad health, what-to-do, age chart</div>
+    <div><b>🧭 Decisions</b> — your weekly checklist (with a badge of pending actions)</div>
+    <div><b>👥 Squad</b> — List (search + filters) · Compare · Depth & succession · Surplus</div>
+    <div><b>⚽ Team</b> — Best XI · Set pieces · Tactics · Matchday assistant</div>
+    <div><b>🌱 Develop</b> — Wonderkids · Training · Reports · Progress</div>
     <div><b>📝 Season</b> — objectives · fixtures · results & form · 🏆 honours</div>
-    <div><b>🎯 Set Pieces</b> — takers, aerial targets, captain</div>
-    <div><b>🏆 Tactics</b> — two ready 4-2-3-1 setups + ME tips</div>
-    <div><b>🏋️ Training</b> — individual training plan per player</div>
-    <div><b>📋 Reports</b> — Fitness · Form · Analytics(xG) · Finance · Personality+mentoring</div>
-    <div><b>🌟 Wonderkids</b> — youth ranked by potential + dev guide</div>
-    <div><b>🗑️ Release</b> — who's surplus</div>
-    <div><b>📊 Depth</b> — thin positions, retraining & succession plan</div>
-    <div><b>📈 Progress</b> — attribute gains vs a snapshot</div>
-    <div><b>🗂️ More</b> — import, snapshots, settings</div>
+    <div><b>⚙️ Data</b> — import, snapshots, settings, evaluation model, report</div>
     <div><b>📖 Help</b> — this page</div>
   </div>
   <h3>Tap a player → you get</h3>
   <p class="sub">FM best-role & bio chips · season stats · suggested squad status · development plan (youth) · 🕸️ role radar · 📈 attribute trends across snapshots · 🧮 what-if pin (try him in the XI) · fit in all 7 roles · all 47 attributes with bars · change his role. Header <b>🔍</b> jumps to any player from anywhere.</p>
   <h3>Reading & comfort</h3>
-  <p class="sub">Header <b>🔠</b> cycles text size. <b>More → 🎨 Appearance</b> switches light/dark + accent colour. The <b>🧭 Decisions</b> tab shows a badge with how many actions are waiting. <b>💾 Backup</b> downloads your data; <b>↩</b> restores it (move between PC & phone). <b>More → 🖨️ Printable report</b> makes a clean one-page PDF/print.</p>
+  <p class="sub">Header <b>🔠</b> cycles text size. <b>Data → 🎨 Appearance</b> switches light/dark + accent colour. The <b>🧭 Decisions</b> tab shows a badge with how many actions are waiting. <b>💾 Backup</b> downloads your data; <b>↩</b> restores it (move between PC & phone). <b>Data → 🖨️ Printable report</b> makes a clean one-page PDF/print.</p>
   <h3>📲 Install it like an app</h3>
   <p class="sub">On your phone open the live link, then <b>Add to Home Screen</b> (Share menu on iPhone, ⋮ menu on Android/Chrome). It installs as a full-screen app and works <b>offline</b> — your squad is cached on the device.</p>
   <details style="margin-top:14px"><summary>Attribute glossary (47)</summary><div class="def-grid" style="margin-top:8px">${ATTRS.map(a=>`<div><b>${a}</b> — ${ATTR_FULL[a]||a}</div>`).join("")}</div></details>
