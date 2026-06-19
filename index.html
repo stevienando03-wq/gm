@@ -461,7 +461,9 @@ function openPlayer(name){
   const facts=[fchip("FM best",KEYS.bestrole,v=>esc(v)+(rawOf(p,KEYS.bestpos)&&rawOf(p,KEYS.bestpos)!=="-"?" ("+esc(rawOf(p,KEYS.bestpos))+")":"")),fchip("Personality",KEYS.pers),fchip("Condition",KEYS.con),fchip("Morale",KEYS.mor),fchip("On loan from",KEYS.loanfrom),fchip("Value",KEYS.val,v=>C+money(parseMoney(v))),fchip("Wage",KEYS.wage,v=>C+money(parseMoney(v))),fchip("Expires",KEYS.exp),fchip("Contract",KEYS.ctype),fchip("Height",KEYS.height),fchip("Caps",["Caps"]),fchip("Homegrown",KEYS.hg)].filter(Boolean).join("");
   const availBanner=!p.avail?`<div class="tipbox amber" style="margin:6px 0 12px;border-color:#7a2a2a;background:#2a1313"><b style="color:#fb7185">🤕 Unavailable</b> — ${p.injury&&p.injury!=="-"?esc(p.injury)+(rawOf(p,KEYS.timeout)?" · out "+esc(rawOf(p,KEYS.timeout)):""):"not eligible"}. Excluded from the Best XI.</div>`:"";
   const ap=rawOf(p,KEYS.apps),gg=rawOf(p,KEYS.gls),as_=rawOf(p,KEYS.ast),rt=rawOf(p,KEYS.rat),xgv=rawOf(p,KEYS.xg);
-  const statLine=(ap||gg)?`<div class="tipbox" style="margin:4px 0 12px"><b>This season:</b> ${ap&&ap!=="-"?esc(ap)+" apps":""}${gg&&gg!=="-"?" · "+esc(gg)+" gls":""}${as_&&as_!=="-"?" · "+esc(as_)+" ast":""}${rt&&rt!=="-"?" · avg "+esc(rt):""}${xgv&&xgv!=="-"?" · xG "+esc(xgv):""}</div>`:"";
+  const yel=rawOf(p,KEYS.yel),red=rawOf(p,KEYS.red);
+  const disc=(yel&&yel!=="-"&&+yel>0)||(red&&red!=="-"&&+red>0)?` · ${yel&&+yel>0?"🟨"+yel:""}${red&&+red>0?" 🟥"+red:""}`:"";
+  const statLine=(ap||gg)?`<div class="tipbox" style="margin:4px 0 12px"><b>This season:</b> ${ap&&ap!=="-"?esc(ap)+" apps":""}${gg&&gg!=="-"?" · "+esc(gg)+" gls":""}${as_&&as_!=="-"?" · "+esc(as_)+" ast":""}${rt&&rt!=="-"?" · avg "+esc(rt):""}${xgv&&xgv!=="-"?" · xG "+esc(xgv):""}${disc}</div>`:"";
   document.getElementById("modal").innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal">
     <span class="x" onclick="closeModal()">✕</span>
     <h2 style="margin:0">${esc(p.name)}</h2>
