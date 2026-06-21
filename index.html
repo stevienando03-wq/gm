@@ -844,6 +844,7 @@ function vNotice(){
   <p class="sub">Header <b>🔠</b> cycles text size. <b>Data → 🎨 Appearance</b> switches light/dark + accent colour. The <b>🧭 Decisions</b> tab shows a badge with how many actions are waiting. <b>💾 Backup</b> downloads your data; <b>↩</b> restores it (move between PC & phone). <b>Data → 🖨️ Printable report</b> makes a clean one-page PDF/print.</p>
   <h3>📲 Install it like an app</h3>
   <p class="sub">On your phone open the live link, then <b>Add to Home Screen</b> (Share menu on iPhone, ⋮ menu on Android/Chrome). It installs as a full-screen app and works <b>offline</b> — your squad is cached on the device.</p>
+  <p class="sub"><b>📱 Swipe</b> left / right anywhere on a page to flick between the 8 sections. (Swiping <i>on a table or the pitch</i> scrolls that instead — as it should.)</p>
   <details style="margin-top:14px"><summary>Attribute glossary (47)</summary><div class="def-grid" style="margin-top:8px">${ATTRS.map(a=>`<div><b>${a}</b> — ${ATTR_FULL[a]||a}</div>`).join("")}</div></details>
   <div class="tipbox"><b>Privacy:</b> all data stays in this browser + your backup files. Nothing is uploaded.</div>
   <p class="muted" style="font-size:11px;margin-top:10px">Tips & development advice sourced from FM24 community guides (footballmanagerblog, sortitoutsi, FM Scout, Toxigon, GiveMeSport).</p>
@@ -875,7 +876,12 @@ function vSetpiece(){
     </div>
     <h3>🛬 Attacking set-piece targets (who to send into the box)</h3>
     ${spTable(aerial,set,o=>'Jump '+A(o.p,'Jum')+' · Head '+A(o.p,'Hea'))}
-    <div class="tipbox"><b>Routine:</b> put your top 2 aerial men on <b>Attack near post</b> & <b>Attack far post</b>, the 3rd to <b>Lurk outside area</b> for the knock-down. Keep your fastest forward (${esc(last(fast[0].p.name))}) <b>Stay forward</b> to punish a turnover.</div>
+    <h3>📐 Attacking corner — who goes where (set this in FM)</h3>
+    ${(()=>{const lon=pickTop(p=>A(p,"Lon")*0.7+A(p,"Tec")*0.3,1)[0];const rows=[
+      ["Near post — flick-on",aerial[0]],["Far post — attack ball",aerial[1]],["Penalty spot — attack ball",aerial[2]],
+      ["Edge of area — knock-downs / long shot",lon],["Stay forward (counter)",fast[0]],["Corner taker",corner[0]]
+    ];return `<div class="tablewrap"><table><tbody>${rows.map(r=>`<tr><td class="muted">${r[0]}</td><td onclick="openPlayer('${esc(r[1].p.name)}')" style="cursor:pointer"><b>${esc(r[1].p.name)}</b></td></tr>`).join("")}</tbody></table></div>`;})()}
+    <p class="sub">Keep <b>2 men back</b> (your slowest defenders) so a cleared corner doesn't become their counter. Mirror this for wide free kicks.</p>
     ${throwWeapon?`<div class="tipbox amber"><b>Long-throw weapon:</b> ${esc(lthrow[0].p.name)} has Long Throws ${lthrow[0].v} — set throw-ins near the box to <b>launch into the area</b> like an extra corner.</div>`:lthrow.length?`<p class="muted">Best long throw: ${esc(lthrow[0].p.name)} (${lthrow[0].v}) — usable but not a weapon.</p>`:''}
     <h3>©️ Captain candidates</h3>
     ${spTable(captain,set,o=>'Ldr '+A(o.p,'Ldr')+' · Det '+A(o.p,'Det'))}
@@ -1295,6 +1301,11 @@ function vAdvice(){
   cards.push(advCard("🤕 Out injured / unavailable","Already excluded from your XI — line up cover and don't rush their return.",
     injured.map(p=>advItem(p.name,(p.injury&&p.injury!=="-"?esc(p.injury):"ineligible")+(rawOf(p,KEYS.timeout)?" · out "+esc(rawOf(p,KEYS.timeout)):""),'<span class="tag bad">out</span>')).join("")));
 
+  // 0b) Suspension watch — players on a lot of yellows
+  const susp=ps.map(p=>({p,y:parseNumLoose(rawOf(p,KEYS.yel))})).filter(o=>o.y!=null&&o.y>=5).sort((a,b)=>b.y-a.y);
+  cards.push(advCard("🟨 Suspension watch","On a stack of yellows — one more booking can mean a ban (the exact threshold depends on the competition). Maybe rest them in a cup tie.",
+    susp.slice(0,8).map(o=>advItem(o.p.name,o.y+" yellows",`<span class="tag ${o.y>=8?'bad':'warn'}">${o.y>=8?'high risk':'careful'}</span>`)).join("")));
+
   // 1) Rest tired starters
   const tired=ps.filter(p=>starters.has(p.name)&&((condRank(rawOf(p,KEYS.con))||5)<=3||/high/i.test(rawOf(p,KEYS.fatigue)||"")));
   cards.push(advCard("🛌 Rest these starters","Tired or fatigued — start a deputy or they fade & risk injury.",
@@ -1462,6 +1473,28 @@ document.getElementById("restoreFile").onchange=e=>{const f=e.target.files[0];if
 
 /* ============================ BOOT ============================ */
 renderTabs(); applyTextScale(); go("dash");
+/* ============================ SWIPE NAV (mobile) ============================ */
+/* Flick left/right to move between the 8 sections — but NOT when the swipe
+   starts on something that scrolls horizontally (tables, pitch, nav, inputs, modal). */
+let _tsx=0,_tsy=0,_swIgnore=true;
+const SW_IGNORE=".tablewrap, nav, .seg, .pitch, input, textarea, select, .overlay, .chartbar";
+function swipeNav(dir){
+  const g=groupOf(TAB); if(!g)return;
+  const i=GROUPS.indexOf(g), ni=i+dir;
+  if(ni<0||ni>=GROUPS.length)return;
+  const ng=GROUPS[ni]; go(lastView[ng.id]||ng.views[0][0]); toast(ng.label);
+}
+document.addEventListener("touchstart",e=>{
+  if(e.touches.length!==1){_swIgnore=true;return;}
+  const t=e.touches[0]; _tsx=t.clientX; _tsy=t.clientY;
+  _swIgnore = !!(e.target.closest&&e.target.closest(SW_IGNORE)) || !!document.querySelector(".overlay");
+},{passive:true});
+document.addEventListener("touchend",e=>{
+  if(_swIgnore)return;
+  const t=e.changedTouches[0], dx=t.clientX-_tsx, dy=t.clientY-_tsy;
+  if(Math.abs(dx)>70 && Math.abs(dx)>Math.abs(dy)*1.8) swipeNav(dx<0?1:-1);
+},{passive:true});
+
 /* PWA — offline + installable */
 if("serviceWorker" in navigator){ window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{})); }
 </script>
