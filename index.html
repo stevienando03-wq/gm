@@ -228,7 +228,7 @@ const DEPTH_GROUPS = [
 /* ============================ STATE ============================ */
 const LS_KEY="fm_team_manager_v2";
 let STATE = load();
-function blankState(){ return { current:null, snapshots:[], overrides:{}, honours:[], settings:{youthAge:21,releaseScore:9.0,youthKeep:9.5,benchSize:9,textScale:1,theme:"dark",accent:"emerald",scoreProfile:"excel"}, fmConnected:false, season:{results:[],fixtures:[],league:{}} }; }
+function blankState(){ return { current:null, snapshots:[], overrides:{}, honours:[], settings:{youthAge:21,releaseScore:9.0,youthKeep:9.5,benchSize:9,textScale:1,theme:"dark",accent:"emerald",scoreProfile:"fmarena",modelV2:true}, fmConnected:false, season:{results:[],fixtures:[],league:{}} }; }
 const ACCENTS={emerald:["#10b981","#059669"],blue:["#3b82f6","#2563eb"],purple:["#8b5cf6","#7c3aed"],red:["#f43f5e","#e11d48"],amber:["#f59e0b","#d97706"]};
 function applyTheme(){
   const s=STATE.settings; const root=document.documentElement;
@@ -239,7 +239,7 @@ function applyTheme(){
 function applyTextScale(){ try{ document.documentElement.style.zoom=(STATE.settings.textScale||1); }catch(e){} applyTheme(); }
 function cycleText(){ const cur=STATE.settings.textScale||1; STATE.settings.textScale=cur>=1.25?1:Math.round((cur+0.12)*100)/100; save(); applyTextScale(); toast("Text size "+Math.round(STATE.settings.textScale*100)+"%"); }
 function load(){
-  try{ const s=JSON.parse(localStorage.getItem(LS_KEY)); if(s&&s.settings){ s.season=s.season||{results:[]}; s.season.fixtures=s.season.fixtures||[]; s.season.league=s.season.league||{}; s.honours=s.honours||[]; s.settings.theme=s.settings.theme||"dark"; s.settings.accent=s.settings.accent||"emerald"; s.settings.scoreProfile=s.settings.scoreProfile||"excel"; return s; } }catch(e){}
+  try{ const s=JSON.parse(localStorage.getItem(LS_KEY)); if(s&&s.settings){ s.season=s.season||{results:[]}; s.season.fixtures=s.season.fixtures||[]; s.season.league=s.season.league||{}; s.honours=s.honours||[]; s.settings.theme=s.settings.theme||"dark"; s.settings.accent=s.settings.accent||"emerald"; s.settings.scoreProfile=s.settings.scoreProfile||"excel"; if(!s.settings.modelV2){ s.settings.scoreProfile="fmarena"; s.settings.modelV2=true; } return s; } }catch(e){}
   try{ const o=JSON.parse(localStorage.getItem("fm_team_manager_v1")); if(o&&o.settings){o.fmConnected=false;o.season=o.season||{results:[]};return o;} }catch(e){}
   const st=blankState(); st.current={label:"Seed squad",date:todayStr(),records:SEED}; return st;
 }
@@ -358,6 +358,28 @@ function render(){
   if(!STATE.current){ v.innerHTML=`<div class="card"><h2>No squad loaded</h2><p class="sub">Import your <code>Untitled.html</code> FM export to begin.</p><button class="btn primary" onclick="openImport()">Import now</button></div>`; return; }
   v.innerHTML=({dash:vDash,coach:vCoach,tips:vTips,advice:vAdvice,squad:vSquad,compare:vCompare,xi:vXI,matchday:vMatchday,season:vSeason,setpiece:vSetpiece,reports:vReports,training:vTraining,youth:vYouth,release:vRelease,depth:vDepth,progress:vProgress,tactics:vTactics,history:vHistory,notice:vNotice}[TAB]||vDash)();
   if(TAB==="squad") wireSquad();
+  makeSortable();
+}
+/* Generic click-to-sort for any table in the view (skips the Squad table, which sorts itself) */
+function cellSortVal(td){ const t=(td.textContent||"").trim(); if(t===""||t==="—"||t==="–")return {n:-Infinity,t:""}; const cleaned=t.replace(/[^0-9.\-]/g,""); const hasDigit=/[0-9]/.test(t); const n=parseFloat(cleaned); return (hasDigit&&!isNaN(n))?{n,t}:{n:null,t:t.toLowerCase()}; }
+function makeSortable(){
+  document.querySelectorAll("#view .tablewrap table").forEach(table=>{
+    const thead=table.tHead; if(!thead||!thead.rows.length||!table.tBodies.length) return;
+    const hcells=[...thead.rows[0].cells];
+    hcells.forEach((th,i)=>{
+      if(th.dataset.k||th.dataset.sortable) return; // squad headers handle their own sorting
+      th.dataset.sortable="1"; th.style.cursor="pointer"; if(!/↕|▲|▼/.test(th.textContent)) th.insertAdjacentHTML("beforeend"," <span style='opacity:.35'>↕</span>");
+      th.title="Click to sort";
+      th.onclick=()=>{
+        const tbody=table.tBodies[0]; const rows=[...tbody.rows].filter(r=>r.cells.length===hcells.length);
+        const cur=th.dataset.dir==="1"?1:th.dataset.dir==="-1"?-1:0; const dir=cur===1?-1:1;
+        hcells.forEach(x=>{x.dataset.dir="";x.querySelectorAll("span").forEach(s=>{if(/↕|▲|▼/.test(s.textContent))s.textContent="↕",s.style.opacity=".35";});});
+        th.dataset.dir=dir; const arrow=th.querySelector("span"); if(arrow){arrow.textContent=dir===1?"▲":"▼";arrow.style.opacity="1";}
+        rows.sort((a,b)=>{const av=cellSortVal(a.cells[i]),bv=cellSortVal(b.cells[i]); if(av.n!==null&&bv.n!==null)return (av.n-bv.n)*dir; return (""+av.t).localeCompare(""+bv.t)*dir;});
+        rows.forEach(r=>tbody.appendChild(r));
+      };
+    });
+  });
 }
 
 /* ---------- DASHBOARD ---------- */
