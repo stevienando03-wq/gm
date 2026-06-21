@@ -1234,18 +1234,37 @@ function vSetpiece(){
     </div>
     <h3>🛬 Attacking set-piece targets (who to send into the box)</h3>
     ${spTable(aerial,set,o=>'Jump '+A(o.p,'Jum')+' · Head '+A(o.p,'Hea'))}
-    <h3>📐 Attacking corner — who goes where (set this in FM)</h3>
-    ${(()=>{const lon=pickTop(p=>A(p,"Lon")*0.7+A(p,"Tec")*0.3,1)[0];const rows=[
-      ["Near post — flick-on",aerial[0]],["Far post — attack ball",aerial[1]],["Penalty spot — attack ball",aerial[2]],
-      ["Edge of area — knock-downs / long shot",lon],["Stay forward (counter)",fast[0]],["Corner taker",corner[0]]
-    ];return `<div class="tablewrap"><table><tbody>${rows.map(r=>`<tr><td class="muted">${r[0]}</td><td onclick="openPlayer('${jsq(r[1].p.name)}')" style="cursor:pointer"><b>${esc(r[1].p.name)}</b></td></tr>`).join("")}</tbody></table></div>`;})()}
-    <p class="sub">Keep <b>2 men back</b> (your slowest defenders) so a cleared corner doesn't become their counter. Mirror this for wide free kicks.</p>
+    <h3>📐 Attacking corner — who goes where (2 options each + why)</h3>
+    ${(()=>{
+      const lonList=pickTop(p=>A(p,"Lon")*0.7+A(p,"Tec")*0.3,3);
+      const opt2=(list,fmt)=>list.filter(Boolean).slice(0,2).map((o,i)=>`${i>0?' <span class="muted">or</span> ':''}<b onclick="openPlayer('${jsq(o.p.name)}')" style="cursor:pointer;color:var(--brand)">${esc(last(o.p.name))}</b> <span class="muted">(${fmt(o)})</span>`).join("")||'<span class="muted">—</span>';
+      const rows=[
+        ["Near post — flick-on", opt2(aerial.slice(0,2),o=>'Jump '+A(o.p,'Jum')+' · Head '+A(o.p,'Hea')), "Best in the air — flicks the inswinger on at the near post (the AI is slow to react here)"],
+        ["Far post — attack ball", opt2(aerial.slice(1,3),o=>'Jump '+A(o.p,'Jum')+' · Head '+A(o.p,'Hea')), "Second aerial threat gobbles up the flick-on at the back stick"],
+        ["Penalty spot — attack ball", opt2(aerial.slice(2,4),o=>'Jump '+A(o.p,'Jum')+' · Str '+A(o.p,'Str')), "Third tall/strong man attacks the central drop zone"],
+        ["Edge of area — knock-down / long shot", opt2(lonList,o=>'Long '+A(o.p,'Lon')+' · Tec '+A(o.p,'Tec')), "Hits the loose ball or rebound on sight before the defence clears"],
+        ["Stay forward (counter)", opt2(fast,o=>'Pace '+A(o.p,'Pac')+' · Acc '+A(o.p,'Acc')), "Your fastest man — a cleared corner becomes YOUR break, and it deters them over-committing"],
+        ["Corner taker", opt2(corner,o=>'Cor '+A(o.p,'Cor')+' · Tec '+A(o.p,'Tec')), "Best delivery — inswing to the near post; the 2nd is your backup taker (set it so the GK never takes one)"],
+        ["Mark keeper", opt2(aerial.filter(o=>A(o.p,'Str')>=11).slice(0,2),o=>'Str '+A(o.p,'Str')), "A strong body blocks the keeper from claiming the inswinger"]
+      ];
+      return `<div class="tablewrap"><table><thead><tr><th>Job</th><th>Options</th><th>Why</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="muted">${r[0]}</td><td>${r[1]}</td><td class="muted" style="white-space:normal;font-size:12px">${r[2]}</td></tr>`).join("")}</tbody></table></div>`;})()}
+    <p class="sub">Keep <b>2 men back</b> (your slowest defenders) so a cleared corner doesn't become their counter. Mirror this for wide free kicks. <b>SHORT-corner option</b> (better for your pace): taker short + a full-back <i>Come short</i> to drag a marker out, then cut-back to the edge man for a shot.</p>
     ${throwWeapon?`<div class="tipbox amber"><b>Long-throw weapon:</b> ${esc(lthrow[0].p.name)} has Long Throws ${lthrow[0].v} — set throw-ins near the box to <b>launch into the area</b> like an extra corner.</div>`:lthrow.length?`<p class="muted">Best long throw: ${esc(lthrow[0].p.name)} (${lthrow[0].v}) — usable but not a weapon.</p>`:''}
     <h3>©️ Captain candidates</h3>
     ${spTable(captain,set,o=>'Ldr '+A(o.p,'Ldr')+' · Det '+A(o.p,'Det'))}
     <div class="tipbox"><b>Pick:</b> make <b>${esc(captain[0].p.name)}</b> captain and <b>${esc(captain[1]?captain[1].p.name:'—')}</b> vice — leadership lifts the whole team's Determination on the pitch.</div>
-    <h3>🛡️ Defending a corner — who does what</h3>
-    ${(()=>{const defenders=players().filter(p=>/D|GK/.test(p.position)).map(p=>({p,a:A(p,"Jum")*0.5+A(p,"Hea")*0.35+A(p,"Str")*0.15})).sort((a,b)=>b.a-a.a);const markers=defenders.slice(0,3);const tall=defenders.slice(0,2);const rows=[["Man-mark their biggest threats",markers.map(o=>last(o.p.name)).join(", ")],["Attack the ball / clear (best headers)",tall.map(o=>last(o.p.name)).join(", ")],["Stay forward for the counter",last(fast[0].p.name)],["Mark short / edge of area",defenders.length>3?last(defenders[3].p.name):"a midfielder"]];return `<div class="tablewrap"><table><tbody>${rows.map(r=>`<tr><td class="muted">${r[0]}</td><td><b>${esc(r[1])}</b></td></tr>`).join("")}</tbody></table></div>`;})()}
+    <h3>🛡️ Defending a corner — who does what (options + why)</h3>
+    ${(()=>{
+      const defenders=players().filter(p=>/D|GK/.test(p.position)).map(p=>({p,a:A(p,"Jum")*0.5+A(p,"Hea")*0.35+A(p,"Str")*0.15})).sort((a,b)=>b.a-a.a);
+      const fb=players().filter(p=>{const m=parsePos(p.position);return (m.D&&(m.D.has("L")||m.D.has("R")))||m.WB;});
+      const nm=arr=>arr.filter(Boolean).map(o=>`<b onclick="openPlayer('${jsq((o.p||o).name)}')" style="cursor:pointer">${esc(last((o.p||o).name))}</b>`).join(" <span class='muted'>·</span> ")||'<span class="muted">—</span>';
+      const rows=[
+        ["Man-mark their tall threats", nm(defenders.slice(0,3)), "Your best aerial defenders track their danger men one-on-one"],
+        ["Mark near & far post", nm(fb.slice(0,2).length?fb.slice(0,2):defenders.slice(3,5)), "Stick your full-backs on the posts — turns the corner into a dead end and they're not your aerial men anyway"],
+        ["Stay forward (counter)", nm([fast[0]]), "Keep ONE fast man up — a clearance becomes your break; only one, you need bodies back"],
+        ["Edge of area (second balls)", nm([defenders[3]||defenders[2]]), "Picks up knock-downs and blocks long-range shots"]
+      ];
+      return `<div class="tablewrap"><table><thead><tr><th>Job</th><th>Options</th><th>Why</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="muted">${r[0]}</td><td>${r[1]}</td><td class="muted" style="white-space:normal;font-size:12px">${r[2]}</td></tr>`).join("")}</tbody></table></div>`;})()}
     <div class="tipbox"><b>Setup:</b> use a <b>mix of zonal + man-marking</b> if your defenders' Heading is below 12 (young defenders struggle purely man-to-man). Always keep your fastest man (${esc(last(fast[0].p.name))}) up top so a cleared corner becomes <i>your</i> counter.</div>
   </div>
   <div class="card notice">
@@ -1284,6 +1303,8 @@ function vSetpiece(){
 const MENT=['Very Defensive','Defensive','Cautious','Balanced','Positive','Attacking','Very Attacking'];
 let MD={min:75, sit:'losing1', opp:'similar', men:'even'};
 let oppArch="possession";
+let mdBase="tuned"; // which tactic he's actually playing — the assistant advises CHANGES from this
+const MD_BASE={ tuned:{label:"🏎️ Tuned Highway Star",anchor:3,note:"Balanced, mid-block, Counter on"}, survival:{label:"🪂 Deep-block bus",anchor:2,note:"Cautious, low block, Regroup"}, meta:{label:"⚔️ Full Gegenpress",anchor:5,note:"Attacking, high press, Counter-Press"} };
 function setMD(k,v){ MD[k]=v; render(); }
 function mdAdvice(){
   const {min,sit,opp,men}=MD;
@@ -1301,6 +1322,8 @@ function mdAdvice(){
   // man advantage
   if(men==='up') idx+=1;
   if(men==='down') idx-=2;
+  // shift everything by your BASE tactic (a deep-block side plays a notch lower; a gegenpress side a notch higher)
+  idx += (MD_BASE[mdBase].anchor - 3);
   // floors/ceilings: if losing and late, never go below Positive
   if((sit==='losing1'||sit==='losingBig') && late) idx=Math.max(idx,5);
   if((sit==='winning1'||sit==='winningBig') && late) idx=Math.min(idx,3);
@@ -1377,8 +1400,10 @@ function vMatchday(){
   return `<div class="card">
     <h2>⚡ In-Match Assistant</h2>
     <p class="sub">Set the situation and get exactly what to change — mentality, instructions and the sub to make. Use it live while the match is paused.</p>
-    <p class="sub" style="margin-top:-6px"><b>Base tactic assumed:</b> 🏎️ Tuned Highway Star (Balanced, mid-block, Counter on) from <b>Team → Tactics</b>. The advice below is the <i>change</i> to make from that baseline as the game-state shifts.</p>
-    ${explain("A live decision tool: tell it the minute, scoreline, opponent strength and red cards, and it tells you what to change right now.","Drag the minute, tap your scoreline. The green 'Do this now' card gives a mentality + in/out-of-possession tweaks + the exact named sub (who on, who off, why), adapted to the opponent type you set below. It assumes you START from the Tuned Highway Star.","In-match management wins more points than your starting tactic — reacting correctly at 60-75' is where games are won and lost.")}
+    ${explain("A live decision tool: tell it your base tactic + the minute, scoreline, opponent strength and red cards, and it tells you what to change right now.","Pick the tactic you actually started with (below) — the advice is the CHANGE to make from it. The green 'Do this now' card gives a mentality + in/out-of-possession tweaks + the exact named sub (who on, who off, why), adapted to the opponent type.","In-match management wins more points than your starting tactic — reacting correctly at 60-75' is where games are won and lost.")}
+    <h3>🎮 Your base tactic (what you kicked off with)</h3>
+    <div class="seg">${[['tuned','🏎️ Tuned'],['survival','🪂 Deep-block'],['meta','⚔️ Gegenpress']].map(([v,l])=>`<button class="${mdBase===v?'on':''}" onclick="mdBase='${v}';render()">${l}</button>`).join("")}</div>
+    <p class="sub" style="margin-top:4px">Advising changes from <b>${MD_BASE[mdBase].label}</b> <span class="muted">(${MD_BASE[mdBase].note})</span>. ${mdBase==='survival'?'Everything is a notch more cautious.':mdBase==='meta'?'Everything is a notch more aggressive.':''}</p>
     <h3 style="margin-top:6px">Minute: <b style="color:var(--brand)">${MD.min}'</b></h3>
     <input type="range" min="0" max="95" value="${MD.min}" style="width:100%" oninput="MD.min=+this.value;render()">
     <h3>Score situation</h3><div class="seg">${seg('sit',[['winningBig','🟢 Winning 2+'],['winning1','🟢 Winning by 1'],['drawing','🟡 Drawing'],['losing1','🔴 Losing by 1'],['losingBig','🔴 Losing 2+']])}</div>
