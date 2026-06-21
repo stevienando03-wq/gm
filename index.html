@@ -360,6 +360,7 @@ function render(){
   if(!STATE.current){ v.innerHTML=`<div class="card"><h2>No squad loaded</h2><p class="sub">Import your <code>Untitled.html</code> FM export to begin.</p><button class="btn primary" onclick="openImport()">Import now</button></div>`; return; }
   v.innerHTML=({dash:vDash,coach:vCoach,tips:vTips,advice:vAdvice,squad:vSquad,compare:vCompare,xi:vXI,matchday:vMatchday,season:vSeason,setpiece:vSetpiece,reports:vReports,training:vTraining,youth:vYouth,release:vRelease,depth:vDepth,progress:vProgress,tactics:vTactics,history:vHistory,notice:vNotice}[TAB]||vDash)();
   if(TAB==="squad") wireSquad();
+  if(TAB==="training") wireTraining();
   makeSortable();
 }
 /* Generic click-to-sort for any table in the view (skips the Squad table, which sorts itself) */
@@ -685,8 +686,11 @@ function openPlayer(name){
     <div class="row" style="margin-bottom:12px">
       <label class="muted">Assigned role:
         <select onchange="setRole('${jsq(p.name)}',this.value)">
-          <option value="">(auto best)</option>${ROLES.map(r=>`<option ${role===r?'selected':''}>${r}</option>`).join("")}
+          <option value="__best__">★ Best fit: ${bestRole(p).role} (${bestRole(p).score.toFixed(1)})</option>
+          <option value="" ${!STATE.overrides[p.name]?'selected':''}>FM-export role${p.role?` (${esc(p.role)})`:" (none → uses best)"}</option>
+          ${ROLES.map(r=>`<option value="${r}" ${STATE.overrides[p.name]===r?'selected':''}>${r}</option>`).join("")}
         </select></label>
+      <span class="muted" style="font-size:11px">Playing as <b>${role}</b></span>
     </div>
     ${progHtml}
     <h3>🎯 Recommended training</h3>
@@ -708,7 +712,7 @@ function openPlayer(name){
   </div></div>`;
 }
 function closeModal(){ document.getElementById("modal").innerHTML=""; }
-function setRole(name,val){ if(val)STATE.overrides[name]=val; else delete STATE.overrides[name]; save(); openPlayer(name); }
+function setRole(name,val){ if(val==="__best__"){ const p=players().find(x=>x.name===name); val=p?bestRole(p).role:""; } if(val)STATE.overrides[name]=val; else delete STATE.overrides[name]; save(); openPlayer(name); }
 function optimizeRoles(){ players().forEach(p=>{STATE.overrides[p.name]=bestRole(p).role;}); save(); toast("Every player set to his best-fit role"); render(); }
 function resetRoles(){ STATE.overrides={}; save(); toast("Roles reset to your FM export"); render(); }
 function pinPlayer(sid,name){ if(xiPins[sid]===name) delete xiPins[sid]; else xiPins[sid]=name; closeModal(); go("xi"); }
@@ -723,7 +727,7 @@ function vXI(){
   const strong=bestXI(); const strongSet=new Set(Object.values(strong.assign).map(a=>a.p.name));
   const usedSet=new Set(Object.values(assign).map(a=>a.p.name));
   const rested=xiMode==="rotate"?Object.values(strong.assign).map(a=>a.p).filter(p=>!usedSet.has(p.name)):[];
-  const slots=FORMATION.map(s=>{const a=assign[s.id];const nm=a?last(a.p.name):"—";const sc=a?a.score:0;const warn=a&&!a.nat?'<span class="tag warn" style="font-size:10px;padding:1px 4px">OOP</span>':'';const pin=a&&a.pinned?'📌':'';return `<div class="slot" style="left:${s.x}%;top:${s.y}%" onclick="${a?`openPlayer('${jsq(a.p.name)}')`:''}"><div class="dot" style="background:${a?scoreColor(sc):'#445'};${a&&a.pinned?'outline:2px solid var(--gold);outline-offset:1px':''}">${a?sc.toFixed(1):'–'}</div><div class="nm">${pin}${esc(nm)} ${warn}</div><div class="ro">${s.label}</div></div>`;}).join("");
+  const slots=FORMATION.map(s=>{const a=assign[s.id];const nm=a?last(a.p.name):"—";const sc=a?a.score:0;const warn=a&&!a.nat?'<span class="tag warn" style="font-size:10px;padding:1px 4px">OOP</span>':'';const pin=a&&a.pinned?'📌':'';const pot=a?potOf(a.p):0;return `<div class="slot" style="left:${s.x}%;top:${s.y}%" onclick="${a?`openPlayer('${jsq(a.p.name)}')`:''}"><div class="dot" style="background:${a?scoreColor(sc):'#445'};${a&&a.pinned?'outline:2px solid var(--gold);outline-offset:1px':''}">${a?sc.toFixed(1):'–'}</div><div class="nm">${pin}${esc(nm)} ${warn}</div><div class="ro">${s.label}${a?` · <span style="color:${scoreColor(pot)}">↗${pot.toFixed(1)}</span>`:""}</div></div>`;}).join("");
   const vals=Object.values(assign).map(a=>a.score);const avg=vals.length?vals.reduce((x,y)=>x+y,0)/vals.length:0;
   const nPins=Object.keys(xiPins).length;
   let pinBanner="";
@@ -753,12 +757,16 @@ function vXI(){
 }
 
 /* ---------- TRAINING ---------- */
+let trainingQ="";
+function wireTraining(){ const i=document.getElementById("trq"); if(!i)return; i.oninput=()=>{trainingQ=i.value;const pos=i.selectionStart;render();const el=document.getElementById("trq");if(el){el.focus();el.setSelectionRange(pos,pos);}}; }
 function vTraining(){
-  const rows=players().map(p=>{const tr=trainingFor(p);return{p,tr,score:scoreFor(p,tr.role)};}).sort((a,b)=>b.score-a.score);
+  let rows=players().map(p=>{const tr=trainingFor(p);return{p,tr,score:scoreFor(p,tr.role)};}).sort((a,b)=>b.score-a.score);
+  if(trainingQ){const q=trainingQ.toLowerCase();rows=rows.filter(r=>r.p.name.toLowerCase().includes(q));}
   return `<div class="card">
     <h2>🎯 Training plan</h2>
     <p class="sub">For each player: the FM <b>individual role training</b> to set, plus an <b>additional focus</b> targeting his weakest important attributes for that role. Tap a row for the full breakdown.</p>
     ${explain("A per-player training plan: which Individual Training role to set in FM, and which extra focus area will fix his biggest gaps.","'Role training' = set it on his Training screen. 'Additional focus' = the attribute group he's weakest in for his role. 'Weak in role' lists the specific low attributes.","Targeted training turns raw academy kids into useful players — your only no-transfer way to get better.")}
+    <div class="row" style="margin-bottom:10px"><input type="text" id="trq" placeholder="🔍 Search a player…" value="${esc(trainingQ)}" style="flex:1;min-width:160px"></div>
     <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>Role training (FM)</th><th>Additional focus</th><th>Weak in role</th></tr></thead>
       <tbody>${rows.map(r=>`<tr onclick="openPlayer('${jsq(r.p.name)}')">
         <td><b>${esc(r.p.name)}</b></td><td>${r.p.age}</td>
@@ -1198,18 +1206,12 @@ function matchdaySubs(idx){
   const wideOff=entries.filter(e=>["AML","AMR","AMC","ST"].includes(e.sid)).map(e=>e.p).sort((x,y)=>cr(x)-cr(y))[0];
   const dmOff=entries.filter(e=>["DML","DMR"].includes(e.sid)).map(e=>e.p).sort((x,y)=>cr(x)-cr(y))[0];
   const ln=(on,off,why)=>on?`<div style="margin:4px 0">⬆️ <b onclick="openPlayer('${jsq(on.name)}')" style="cursor:pointer;color:var(--brand)">${esc(on.name)}</b> <span class="muted">(pace ${A(on,"Pac")}, ${esc(rawOf(on,KEYS.con)||"fresh")})</span>${off?` &nbsp;⬇️ for <b onclick="openPlayer('${jsq(off.name)}')" style="cursor:pointer">${esc(last(off.name))}</b>`:""} — <span class="muted">${why}</span></div>`:"";
-  if(idx>=6){ // throw everything at it
-    return ln(byAtk[0], dmOff||tiredOff, "your best impact sub — fresh legs to chase the game"+atkWhy)
-      + ln(byAtk[1]&&byAtk[1]!==byAtk[0]?byAtk[1]:null, tiredOff!==dmOff?tiredOff:entries.map(e=>e.p).sort((x,y)=>cr(x)-cr(y))[1], "second attacker — go 4-2-4, sacrifice a holder, flood the box");
-  }
-  if(idx===5){ // chasing one goal
-    return ln(byAtk[0], dmOff||tiredOff, "fresh goal threat for the last 25-30 mins"+atkWhy);
-  }
-  if(idx<=2){ // protect the lead
-    return ln(byDef[0], wideOff||tiredOff, "shore it up — "+oppWhy+" on for a tiring attacker to see it out")
-      + (byDef[1]&&cr(tiredOff)<=2?ln(byDef[1], tiredOff, "second defensive change if a starter is gassed/red-zone"):"");
-  }
-  return ln(byFresh[0], tiredOff, "like-for-like refresh of your most tired starter — keeps intensity up & cuts injury risk");
+  // give several options so it works whatever your actual XI is
+  const opts=(list,off,why,n)=>{ const seen=new Set(); const picks=list.filter(p=>{if(seen.has(p.name))return false;seen.add(p.name);return true;}).slice(0,n||3); if(!picks.length)return "<span class='muted'>No fresh outfield option on the bench.</span>"; return picks.map((p,i)=>ln(p, i===0?off:null, i===0?why:"or — alternative if he's not in your XI / already on")).join(""); };
+  if(idx>=6) return opts(byAtk, dmOff||tiredOff, "your best impact sub — fresh legs to chase the game"+atkWhy, 3)+`<div class="muted" style="font-size:11px;margin-top:4px">…and go 4-2-4: sacrifice a holder, flood the box.</div>`;
+  if(idx===5) return opts(byAtk, dmOff||tiredOff, "fresh goal threat for the last 25-30 mins"+atkWhy, 3);
+  if(idx<=2) return opts(byDef, wideOff||tiredOff, "shore it up — "+oppWhy+" on for a tiring attacker to see it out", 3);
+  return opts(byFresh, tiredOff, "like-for-like refresh of your most tired starter — keeps intensity up & cuts injury risk", 3);
 }
 function vMatchday(){
   const a=mdAdvice();
