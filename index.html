@@ -288,7 +288,9 @@ function trainingFor(p){
 
 /* ============================ UI HELPERS ============================ */
 function scoreColor(s){ if(s>=14)return"#22c55e"; if(s>=12)return"#4ade80"; if(s>=10)return"#a3e635"; if(s>=8)return"#fbbf24"; if(s>=6)return"#fb923c"; return"#f43f5e"; }
-function scoreBadge(s){ return `<span class="score" title="Role-fit 0–20 · ${scoreProfile()==='fmarena'?'FM-Arena (match-engine)':'My Excel'} model — higher = better fit" style="background:${scoreColor(s)}">${(+s).toFixed(2)}</span>`; }
+function potOf(p){ const cur=bestRole(p).score; return Math.round(Math.max(cur, devProxy(p,cur))*100)/100; }
+function potBadge(p){ const v=potOf(p); const c=scoreColor(v); return `<span title="Potential ceiling (estimate — FM hides true PA): how high he could realistically grow" style="display:inline-block;min-width:30px;text-align:center;font-weight:700;font-size:11px;color:${c};border:1px solid ${c}66;border-radius:6px;padding:1px 4px;margin-left:4px">↗${v.toFixed(1)}</span>`; }
+function scoreBadge(s,p){ const base=`<span class="score" title="Role-fit 0–20 · ${scoreProfile()==='fmarena'?'FM-Arena (match-engine)':'My Excel'} model — higher = better fit" style="background:${scoreColor(s)}">${(+s).toFixed(2)}</span>`; return p?base+potBadge(p):base; }
 function scoreLegend(){ return `<div class="row" style="gap:10px;font-size:11px;margin:0 0 10px;color:var(--mut)">Scale: ${[["Excellent",15],["Starter",12],["Squad",9.5],["Weak",6.5],["Poor",3]].map(([l,s])=>`<span>${scoreBadge(s)} ${l}</span>`).join("")}</div>`; }
 function welcomeModal(){
   document.getElementById("modal").innerHTML=`<div class="overlay" onclick="if(event.target===this)dismissWelcome()"><div class="modal" style="max-width:560px">
@@ -412,9 +414,9 @@ function vDash(){
     <div class="card">
       <h3 style="margin-top:0">🧭 What to do now</h3>
       ${weak.length?`<div class="tipbox amber"><b>Weak positions (promote a youth / recall a loanee / retrain):</b><br>${weak.map(o=>`${o.g.label} — only <b>${o.good}</b> good option${o.good==1?'':'s'}`).join("<br>")}</div>`:`<div class="tipbox"><b>Squad depth looks healthy</b> across all positions. ✅</div>`}
-      ${topRel.length?`<p class="muted" style="margin:8px 0 4px">Consider moving on:</p>${topRel.map(o=>`<div class="row" style="justify-content:space-between"><span><b>${esc(o.p.name)}</b> <span class="muted">${o.p.age}y</span></span>${scoreBadge(o.score)}</div>`).join("")}`:""}
+      ${topRel.length?`<p class="muted" style="margin:8px 0 4px">Consider moving on:</p>${topRel.map(o=>`<div class="row" style="justify-content:space-between"><span><b>${esc(o.p.name)}</b> <span class="muted">${o.p.age}y</span></span>${scoreBadge(o.score,o.p)}</div>`).join("")}`:""}
       <p class="muted" style="margin:10px 0 4px">Brightest youth:</p>
-      ${topYouth.map(o=>`<div class="row" style="justify-content:space-between"><span><b>${esc(o.p.name)}</b> <span class="muted">${o.p.age}y · ${o.role.split(" ")[0]}</span></span>${scoreBadge(o.score)}</div>`).join("")}
+      ${topYouth.map(o=>`<div class="row" style="justify-content:space-between"><span><b>${esc(o.p.name)}</b> <span class="muted">${o.p.age}y · ${o.role.split(" ")[0]}</span></span>${scoreBadge(o.score,o.p)}</div>`).join("")}
     </div>
     <div class="card">
       <h3 style="margin-top:0">📊 Age profile</h3>
@@ -490,7 +492,7 @@ function vCoach(){
 
   <div class="card"><h3 style="margin-top:0">4. The kids — your whole project</h3>
     <p>This is a youth save, so development <b>is</b> the objective. Your brightest prospects:</p>
-    ${topYouth.map(o=>`<div class="row" style="justify-content:space-between;cursor:pointer" onclick="openPlayer('${jsq(o.p.name)}')"><span><b>${esc(o.p.name)}</b> <span class="muted">${o.p.age}y · ${o.role.split(" ")[0]}</span></span>${scoreBadge(o.score)}</div>`).join("")}
+    ${topYouth.map(o=>`<div class="row" style="justify-content:space-between;cursor:pointer" onclick="openPlayer('${jsq(o.p.name)}')"><span><b>${esc(o.p.name)}</b> <span class="muted">${o.p.age}y · ${o.role.split(" ")[0]}</span></span>${scoreBadge(o.score,o.p)}</div>`).join("")}
     <div class="tipbox" style="margin-top:8px"><b>How I'd grow them:</b> real minutes (start in cups, loan the blocked ones), individual <b>role training</b> at <b>Medium intensity</b>, and put any bad-attitude kids with a senior pro mentor. Don't rush them into the XI before they're ready. <span class="muted">(sourced: FM24 youth-development consensus)</span></div>
   </div>
 
@@ -598,7 +600,7 @@ function vSquad(){
   return `<div class="card">
     <h2>👥 Squad — ${rows.length} players</h2>
     <p class="sub">Tap any player for full attributes, role fit, radar & training. Score = fit in the assigned role.</p>
-    ${explain("Your whole squad, each player scored 0–20 for how well his attributes fit his assigned role.","Colours go red→green with the score: 14+ excellent, 11–14 starter, 8–11 squad, under 8 weak. 'Best' shows his strongest role if it differs. 🤕 = injured, 🔁 = on loan. Use the filters to find e.g. everyone with Pace ≥ 15.","It tells you who's actually good in the role you play them — the foundation for picking your XI and spotting players in the wrong position.")}
+    ${explain("Your whole squad, each player scored 0–20 for how well his attributes fit his assigned role.","Colours go red→green with the score: 14+ excellent, 11–14 starter, 8–11 squad, under 8 weak. The <b>↗</b> chip next to each score is his <b>potential ceiling</b> (how high he could realistically grow — equals his current score for players who won't develop further). 'Best' shows his strongest role if it differs. 🤕 = injured, 🔁 = on loan.","It tells you who's actually good in the role you play them — the foundation for picking your XI and spotting players in the wrong position.")}
     ${scoreLegend()}
     <div class="row" style="margin-bottom:10px">
       <input type="text" id="sq" placeholder="🔍 Search name…" value="${esc(squadFilter.q)}">
@@ -616,7 +618,7 @@ function vSquad(){
       <thead><tr><th data-k="name">Name</th><th data-k="age">Age</th><th data-k="pos">Position</th><th data-k="role">Role</th><th data-k="score">Score</th><th>Best</th></tr></thead>
       <tbody>${rows.map(r=>`<tr onclick="openPlayer('${jsq(r.p.name)}')">
         <td><b>${esc(r.p.name)}</b>${r.p.injury&&r.p.injury!=="-"?' <span title="'+esc(r.p.injury)+'">🤕</span>':""}${r.p.loanFrom&&r.p.loanFrom!=="-"?' <span title="On loan from '+esc(r.p.loanFrom)+'">🔁</span>':""}</td><td>${r.p.age||""}</td><td class="muted">${esc(r.p.position)}</td>
-        <td>${rolePill(r.role)}</td><td>${scoreBadge(r.score)}</td>
+        <td>${rolePill(r.role)}</td><td>${scoreBadge(r.score,r.p)}</td>
         <td>${r.best.role!==r.role?`<span class="muted">${r.best.role.split(" ")[0]} ${r.best.score.toFixed(1)}</span>`:'<span class="tag good">best fit</span>'}</td>
       </tr>`).join("")}</tbody>
     </table></div>
@@ -675,7 +677,7 @@ function openPlayer(name){
   document.getElementById("modal").innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal">
     <span class="x" onclick="closeModal()">✕</span>
     <h2 style="margin:0">${esc(p.name)}</h2>
-    <p class="sub">${p.age} y · ${esc(p.position)} · L:${esc(p.lf)||"–"} R:${esc(p.rf)||"–"} &nbsp; ${rolePill(role)} ${scoreBadge(scoreFor(p,role))}</p>
+    <p class="sub">${p.age} y · ${esc(p.position)} · L:${esc(p.lf)||"–"} R:${esc(p.rf)||"–"} &nbsp; ${rolePill(role)} ${scoreBadge(scoreFor(p,role),p)}</p>
     ${availBanner}
     ${facts?`<div class="fchips">${facts}</div>`:""}
     ${(()=>{const [st,t]=recommendStatus(p);return `<p style="margin:0 0 12px"><span class="tag ${t}">Suggested squad status: ${st}</span></p>`;})()}
@@ -727,7 +729,7 @@ function vXI(){
   let pinBanner="";
   if(nPins){ const opt=bestXI(Object.assign({ignorePins:true},xiMode==="youth"?{youthBoost:2.5}:xiMode==="rotate"?{rotate:true}:{})); const ov=Object.values(opt.assign).map(a=>a.score); const optAvg=ov.length?ov.reduce((x,y)=>x+y,0)/ov.length:0; const d=avg-optAvg;
     pinBanner=`<div class="tipbox amber"><b>🧮 What-if active:</b> ${nPins} player(s) pinned (📌). Rating <b>${avg.toFixed(2)}</b> vs optimal ${optAvg.toFixed(2)} (<b style="color:${d>=0?'#34d399':'#fb7185'}">${d>=0?'+':''}${d.toFixed(2)}</b>). <button class="btn sm ghost" onclick="clearPins()">Clear experiment</button></div>`; }
-  const benchRows=bench.map(b=>`<tr onclick="openPlayer('${jsq(b.p.name)}')"><td><b>${esc(b.p.name)}</b></td><td>${b.p.age}</td><td class="muted">${esc(b.p.position)}</td><td>${rolePill(b.role)}</td><td>${scoreBadge(b.score)}</td></tr>`).join("");
+  const benchRows=bench.map(b=>`<tr onclick="openPlayer('${jsq(b.p.name)}')"><td><b>${esc(b.p.name)}</b></td><td>${b.p.age}</td><td class="muted">${esc(b.p.position)}</td><td>${rolePill(b.role)}</td><td>${scoreBadge(b.score,b.p)}</td></tr>`).join("");
   const youthAlt=FORMATION.map(s=>{const start=assign[s.id]?.p.name;const c=ps.filter(p=>p.age<=ya&&eligible(p,s)&&p.name!==start).map(p=>({p,score:scoreFor(p,s.role)})).sort((a,b)=>b.score-a.score)[0];if(!c)return"";return `<tr onclick="openPlayer('${jsq(c.p.name)}')"><td>${s.label}</td><td><b>${esc(c.p.name)}</b></td><td>${c.p.age}</td><td>${scoreBadge(c.score)}</td><td class="muted">${assign[s.id]?('−'+(assign[s.id].score-c.score).toFixed(1)+' vs starter'):''}</td></tr>`;}).filter(Boolean).join("");
   const modeDesc={strong:"Your strongest legal line-up by role fit.",rotate:"Tired & fatigued players benched for the next match — keeps your stars fresh.",youth:"Prospects (≤"+ya+"y) get a boost so you can blood them while staying competitive."};
   return `<div class="card">
@@ -819,7 +821,7 @@ function releaseList(){
 }
 function vRelease(){
   const list=releaseList();
-  const rows=list.map(o=>`<tr onclick="openPlayer('${jsq(o.p.name)}')"><td><b>${esc(o.p.name)}</b></td><td>${o.p.age}</td><td class="muted">${esc(o.p.position)}</td><td>${rolePill(o.role)}</td><td>${scoreBadge(o.score)}</td><td><span class="tag ${o.tag}">${esc(o.reason)}</span></td></tr>`).join("");
+  const rows=list.map(o=>`<tr onclick="openPlayer('${jsq(o.p.name)}')"><td><b>${esc(o.p.name)}</b></td><td>${o.p.age}</td><td class="muted">${esc(o.p.position)}</td><td>${rolePill(o.role)}</td><td>${scoreBadge(o.score,o.p)}</td><td><span class="tag ${o.tag}">${esc(o.reason)}</span></td></tr>`).join("");
   return `<div class="card"><h2>🗑️ Release / Sell — ${list.length} flagged</h2><p class="sub">Advice, not orders. Threshold = best-role fit below <b>${STATE.settings.releaseScore}</b>. Free wages & slots for youth and targeted signings.</p>
     ${explain("Players who look surplus — too low-rated for their age to be worth a squad slot.","Each row gives the reason (too weak, or ageing and only squad-level). It's a suggestion, not an order.","Clearing deadwood frees wages and minutes for youngsters — in a youth save, loan or release rather than let them block a kid's path.")}
     <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>Position</th><th>Best role</th><th>Score</th><th>Why</th></tr></thead><tbody>${rows||'<tr><td colspan=6 class="muted">Nobody flagged — healthy squad.</td></tr>'}</tbody></table></div>
@@ -1405,7 +1407,7 @@ function repFinance(){
       <div><h3 style="margin-top:0">💎 Most valuable</h3>${valuable.map((r,i)=>`<div class="row" style="justify-content:space-between;cursor:pointer" onclick="openPlayer('${jsq(r.p.name)}')"><span>${i+1}. <b>${esc(r.p.name)}</b></span><b>${C}${money(r.val)}</b></div>`).join("")||'<p class="muted">No value data.</p>'}</div>
       <div><h3 style="margin-top:0">💰 Sell for profit <span class="muted" style="font-size:11px">(valuable but low fit)</span></h3>${profit.length?profit.map(r=>`<div class="row" style="justify-content:space-between;cursor:pointer" onclick="openPlayer('${jsq(r.p.name)}')"><span><b>${esc(r.p.name)}</b> <span class="muted">fit ${r.score.toFixed(1)}</span></span><b>${C}${money(r.val)}</b></div>`).join(""):'<p class="muted">None — your value matches your quality.</p>'}</div>
     </div>
-    <h3>⏳ Contracts expiring soonest (renew or cash in)</h3>${expSoon.length?`<div class="tablewrap"><table><thead><tr><th>Name</th><th>Expires</th><th>Best role</th><th>Fit</th><th>Value</th></tr></thead><tbody>${expSoon.map(r=>`<tr onclick="openPlayer('${jsq(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td class="muted">${esc(r.exp)}</td><td>${rolePill(bestRole(r.p).role)}</td><td>${scoreBadge(r.score)}</td><td>${r.val?C+money(r.val):'—'}</td></tr>`).join("")}</tbody></table></div><p class="sub" style="margin-top:6px">Players whose deals expire by ${minY+1}. Renew your good ones now; let low-fit ones run down or sell.</p>`:'<p class="muted">No contract dates found.</p>'}`;
+    <h3>⏳ Contracts expiring soonest (renew or cash in)</h3>${expSoon.length?`<div class="tablewrap"><table><thead><tr><th>Name</th><th>Expires</th><th>Best role</th><th>Fit</th><th>Value</th></tr></thead><tbody>${expSoon.map(r=>`<tr onclick="openPlayer('${jsq(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td class="muted">${esc(r.exp)}</td><td>${rolePill(bestRole(r.p).role)}</td><td>${scoreBadge(r.score,r.p)}</td><td>${r.val?C+money(r.val):'—'}</td></tr>`).join("")}</tbody></table></div><p class="sub" style="margin-top:6px">Players whose deals expire by ${minY+1}. Renew your good ones now; let low-fit ones run down or sell.</p>`:'<p class="muted">No contract dates found.</p>'}`;
 }
 function buildMentorGroups(){
   if(!hasCol(KEYS.pers)) return "";
@@ -1493,9 +1495,9 @@ function vCompare(){
       <select onchange="cmpA=this.value;render()">${opt(cmpA)}</select><span class="muted" style="text-align:center">vs</span><select onchange="cmpB=this.value;render()">${opt(cmpB)}</select>
     </div>
     <div style="display:grid;grid-template-columns:1fr 50px 1fr;gap:8px;text-align:center;margin-bottom:8px">
-      <div><b>${esc(pa.name)}</b><br><span class="muted">${pa.age}y · ${esc(pa.position)}</span><br>${scoreBadge(fA.score)} <span class="muted">${fA.role.split(" ")[0]}</span></div>
+      <div><b>${esc(pa.name)}</b><br><span class="muted">${pa.age}y · ${esc(pa.position)}</span><br>${scoreBadge(fA.score,pa)} <span class="muted">${fA.role.split(" ")[0]}</span></div>
       <div></div>
-      <div><b>${esc(pb.name)}</b><br><span class="muted">${pb.age}y · ${esc(pb.position)}</span><br>${scoreBadge(fB.score)} <span class="muted">${fB.role.split(" ")[0]}</span></div>
+      <div><b>${esc(pb.name)}</b><br><span class="muted">${pb.age}y · ${esc(pb.position)}</span><br>${scoreBadge(fB.score,pb)} <span class="muted">${fB.role.split(" ")[0]}</span></div>
     </div>
     <div class="tipbox"><b>Verdict:</b> ${verdict}</div>
     <h3>Role fit</h3><div class="tablewrap"><table><tbody>${roleRows}</tbody></table></div>
@@ -1657,7 +1659,7 @@ function vAdvice(){
   // 3) Promote to first team
   const promote=ps.filter(p=>!starters.has(p.name)).map(p=>({p,...bestRole(p)})).filter(o=>o.score>=12).sort((a,b)=>b.score-a.score).slice(0,5);
   cards.push(advCard("🚀 Promote to the XI","Good enough to start now but on the bench — raise their squad status & play them.",
-    promote.map(o=>advItem(o.p.name,o.p.age+"y · "+o.role.split(" ")[0],scoreBadge(o.score))).join("")));
+    promote.map(o=>advItem(o.p.name,o.p.age+"y · "+o.role.split(" ")[0],scoreBadge(o.score,o.p))).join("")));
 
   // 4) In/out of form
   const ratList=ps.map(p=>({p,rat:parseNumLoose(rawOf(p,KEYS.rat)),m:mins(p)})).filter(o=>o.rat!=null&&o.m&&o.m>=270);
@@ -1796,7 +1798,7 @@ function openSearch(){
     let list=players().map(p=>{const r=assignedRole(p);return{p,role:r,score:scoreFor(p,r)};});
     if(q) list=list.filter(o=>o.p.name.toLowerCase().includes(q));
     list.sort((a,b)=>b.score-a.score); list=list.slice(0,40);
-    res.innerHTML=list.map(o=>`<div class="row" style="justify-content:space-between;cursor:pointer;padding:8px 4px;border-bottom:1px solid var(--line)" onclick="closeModal();openPlayer('${jsq(o.p.name)}')"><span><b>${esc(o.p.name)}</b> <span class="muted">${o.p.age}y · ${esc(o.p.position)}</span></span>${scoreBadge(o.score)}</div>`).join("")||'<p class="muted">No match.</p>'; };
+    res.innerHTML=list.map(o=>`<div class="row" style="justify-content:space-between;cursor:pointer;padding:8px 4px;border-bottom:1px solid var(--line)" onclick="closeModal();openPlayer('${jsq(o.p.name)}')"><span><b>${esc(o.p.name)}</b> <span class="muted">${o.p.age}y · ${esc(o.p.position)}</span></span>${scoreBadge(o.score,o.p)}</div>`).join("")||'<p class="muted">No match.</p>'; };
   inp.oninput=draw; draw(); setTimeout(()=>inp.focus(),60);
 }
 function backup(){const blob=new Blob([JSON.stringify(STATE)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="gaffer-backup-"+todayStr()+".json";a.click();toast("Backup downloaded");}
