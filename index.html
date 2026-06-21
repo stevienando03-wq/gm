@@ -1100,6 +1100,34 @@ function mdAdvice(){
   if(men==='up') note += " ✅ Extra man: stretch the play wide and be patient — overload them.";
   return {m,idx,poss,def,subs,note};
 }
+function matchdaySubs(idx){
+  const xi=bestXI(); const entries=Object.entries(xi.assign).map(([sid,v])=>({sid,p:v.p}));
+  const starterNames=new Set(entries.map(e=>e.p.name));
+  const bench=players().filter(p=>p.avail && !starterNames.has(p.name));
+  if(!bench.length) return "<span class='muted'>No fresh players available on the bench — your hands are tied.</span>";
+  const cr=p=>condRank(rawOf(p,KEYS.con))||3;
+  const atk=p=>Math.max(scoreFor(p,"AF - Attack"),scoreFor(p,"IF - Support"),scoreFor(p,"AM - Attack"));
+  const def=p=>Math.max(scoreFor(p,"DM - Support"),scoreFor(p,"BPD - Defend"),scoreFor(p,"FB - Attack"));
+  const byAtk=bench.slice().sort((x,y)=>(atk(y)+A(y,"Pac")*0.4+cr(y)*0.5)-(atk(x)+A(x,"Pac")*0.4+cr(x)*0.5));
+  const byDef=bench.slice().sort((x,y)=>(def(y)+cr(y)*0.5)-(def(x)+cr(x)*0.5));
+  const byFresh=bench.slice().sort((x,y)=>cr(y)-cr(x));
+  const tiredOff=entries.map(e=>e.p).slice().sort((x,y)=>cr(x)-cr(y))[0];
+  const wideOff=entries.filter(e=>["AML","AMR","AMC","ST"].includes(e.sid)).map(e=>e.p).sort((x,y)=>cr(x)-cr(y))[0];
+  const dmOff=entries.filter(e=>["DML","DMR"].includes(e.sid)).map(e=>e.p).sort((x,y)=>cr(x)-cr(y))[0];
+  const ln=(on,off,why)=>on?`<div style="margin:4px 0">⬆️ <b onclick="openPlayer('${esc(on.name)}')" style="cursor:pointer;color:var(--brand)">${esc(on.name)}</b> <span class="muted">(pace ${A(on,"Pac")}, ${esc(rawOf(on,KEYS.con)||"fresh")})</span>${off?` &nbsp;⬇️ for <b onclick="openPlayer('${esc(off.name)}')" style="cursor:pointer">${esc(last(off.name))}</b>`:""} — <span class="muted">${why}</span></div>`:"";
+  if(idx>=6){ // throw everything at it
+    return ln(byAtk[0], dmOff||tiredOff, "your best impact sub — fresh legs + pace to chase the game")
+      + ln(byAtk[1]&&byAtk[1]!==byAtk[0]?byAtk[1]:null, tiredOff!==dmOff?tiredOff:entries.map(e=>e.p).sort((x,y)=>cr(x)-cr(y))[1], "second attacker — go 4-2-4, sacrifice a holder, flood the box");
+  }
+  if(idx===5){ // chasing one goal
+    return ln(byAtk[0], dmOff||tiredOff, "fresh pace & goal threat to run at tired defenders in the last 25-30 mins");
+  }
+  if(idx<=2){ // protect the lead
+    return ln(byDef[0], wideOff||tiredOff, "shore it up — a fresh defensive-minded player on for a tiring attacker to see it out")
+      + (byDef[1]&&cr(tiredOff)<=2?ln(byDef[1], tiredOff, "second defensive change if a starter is gassed/red-zone"):"");
+  }
+  return ln(byFresh[0], tiredOff, "like-for-like refresh of your most tired starter — keeps intensity up & cuts injury risk");
+}
 function vMatchday(){
   const a=mdAdvice();
   const seg=(k,opts)=>opts.map(([v,l])=>`<button class="${MD[k]===v?'on':''}" onclick="setMD('${k}','${v}')">${l}</button>`).join("");
@@ -1134,7 +1162,8 @@ function vMatchday(){
       <p style="margin:10px 0 4px"><b>🎚️ Mentality:</b> ${a.m}</p>
       <p style="margin:4px 0"><b>⚔️ In possession:</b> ${a.poss}</p>
       <p style="margin:4px 0"><b>🛡️ Out of possession:</b> ${a.def}</p>
-      <p style="margin:4px 0"><b>🔄 Substitution:</b> ${a.subs}</p>
+      <p style="margin:4px 0"><b>🔄 Sub approach:</b> ${a.subs}</p>
+      <div style="margin:4px 0 0"><b>👉 Bring on (from your bench):</b>${matchdaySubs(a.idx)}</div>
       <div class="tipbox" style="margin-top:10px">${a.note}</div>
     </div>
     ${tired.length?`<div class="tipbox amber"><b>Fitness watch:</b> these starters tire fast — plan to sub around 60-65': ${tired.join(", ")}.</div>`:''}
@@ -1142,7 +1171,27 @@ function vMatchday(){
   <div class="card">
     <h2>🆚 Game plan vs opponent</h2>
     <p class="sub">Pick how your opponent plays → how to stop them <i>and</i> how to hurt them.</p>
-    <div class="row"><label>Opponent style: <select onchange="oppArch=this.value;render()">${Object.keys(archLabels).map(k=>`<option value="${k}" ${oppArch===k?'selected':''}>${archLabels[k]}</option>`).join("")}</select></label></div>
+    <details><summary>🔎 How do I find out their game plan? (where to look + how to classify)</summary>
+      <div style="margin-top:8px">
+        <p class="sub" style="margin:0 0 6px"><b>Before the match — 2 minutes in the menus:</b></p>
+        <ul class="notice">
+          <li><b>Read the Opposition Report</b> in your inbox (arrives ~1 week to 2 days before). It literally describes their style, formation, danger men & how they play.</li>
+          <li><b>Data Hub → Next Opponent → Stat Pack:</b> look at <b>possession %</b> (high = they keep the ball → "Possession"), <b>crosses & headers</b> (high = "Target man"), <b>their top-rated player & his position</b>, and which <b>flank</b> they attack.</li>
+          <li><b>Scout their best XI / tactic screen</b> if you can: their formation and roles tell you most of it.</li>
+        </ul>
+        <p class="sub" style="margin:8px 0 6px"><b>During the match:</b> Tactics &amp; Subs → <b>Analysis → cog → Show Opposition Analysis</b> for their average positions + a heat map. Aim your counters at the space a bombing full-back leaves, or a slow centre-back.</p>
+        <p class="sub" style="margin:8px 0 6px"><b>Quick classifier — match what you see to the dropdown:</b></p>
+        <div class="tablewrap"><table><tbody>
+          <tr><td>Keep the ball, GK & CBs pass it out, high possession %</td><td><b>→ Possession</b></td></tr>
+          <tr><td>Sit deep, few touches, break fast with pace</td><td><b>→ Counter-attacking</b></td></tr>
+          <tr><td>Tall striker, lots of crosses & long balls, win headers</td><td><b>→ Target man</b></td></tr>
+          <tr><td>Two quick wide men, attacks come down the flanks</td><td><b>→ Fast wingers</b></td></tr>
+          <tr><td>One star creator (a No.10/advanced playmaker) runs everything</td><td><b>→ Star number 10</b></td></tr>
+        </tbody></table></div>
+        <p class="sub" style="margin:8px 0 0"><b>Why it matters:</b> the right Opposition Instruction shuts down their main weapon for free — e.g. tight-mark a slow playmaker, but <i>never</i> tight-mark a fast winger (close down + show onto his weak foot instead, or he skins you). Wrong OIs backfire. <span class="muted">(passion4fm, FM Stag)</span></p>
+      </div>
+    </details>
+    <div class="row" style="margin-top:8px"><label>Opponent style: <select onchange="oppArch=this.value;render()">${Object.keys(archLabels).map(k=>`<option value="${k}" ${oppArch===k?'selected':''}>${archLabels[k]}</option>`).join("")}</select></label></div>
     <h3>🛡️ Shut them down (opposition instructions)</h3>
     <ul class="notice">${OI[oppArch].map(i=>`<li>${i}</li>`).join("")}</ul>
     <h3>⚔️ Hurt them (your approach)</h3>
