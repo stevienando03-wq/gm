@@ -197,8 +197,23 @@ const ATTR_GROUPS = {
   Physical:["Acc","Agi","Bal","Jum","Nat","Pac","Sta","Str"],
   Goalkeeping:["Aer","Cmd","Com","Ecc","Han","Kic","1v1","Pun","Ref","TRO","Thr"]
 };
-const ATTR_FOCUS = {Acc:"Quickness",Pac:"Quickness",Agi:"Quickness",Str:"Strength",Bal:"Strength",Jum:"Aerial",Hea:"Aerial",Bra:"Aerial",Aer:"Aerial",Sta:"Endurance",Wor:"Endurance",Nat:"Endurance",Mar:"Defending",Tck:"Defending",Pos:"Defending",OtB:"Attacking Movement",Ant:"Attacking Movement",Fin:"Shooting",Lon:"Shooting",Pen:"Shooting",Dri:"Ball Control",Fir:"Ball Control",Tec:"Ball Control",Pas:"Passing & Creativity",Vis:"Passing & Creativity",Cro:"Passing & Creativity",Fla:"Passing & Creativity",Cor:"Set Pieces",Fre:"Set Pieces","L Th":"Set Pieces",Dec:"Composure & Concentration",Cnt:"Composure & Concentration",Cmp:"Composure & Concentration",Det:"Composure & Concentration",Tea:"Composure & Concentration",Ldr:"Composure & Concentration",Han:"Goalkeeping",Ref:"Goalkeeping","1v1":"Goalkeeping",Cmd:"Goalkeeping",Com:"Goalkeeping",Kic:"Goalkeeping",Pun:"Goalkeeping",TRO:"Goalkeeping",Thr:"Goalkeeping",Ecc:"Goalkeeping"};
-const ROLE_FM = {"SK - Defend":"Sweeper Keeper – Defend","FB - Attack":"Full Back / Wing Back – Attack","BPD - Defend":"Ball Playing Defender – Defend","DM - Support":"Defensive Mid / Deep-Lying Playmaker – Support","IF - Support":"Inside Forward – Support","AM - Attack":"Attacking Midfielder – Attack","AF - Attack":"Advanced Forward – Attack"};
+/* EXACT FM24 'Additional Focus' names → the attribute each one trains. (Verified: guidetofm, fmwonderkid, FM-Arena.)
+   Attributes with NO additional focus (Anticipation, Concentration, Decisions, Vision, Work Rate, Aggression,
+   Bravery, Determination, Flair, Teamwork) only improve via ROLE training + match experience — handled in trainingFor. */
+const ATTR_FOCUS = {
+  Acc:"Quickness",Pac:"Quickness",                         // Physical
+  Agi:"Agility",Bal:"Balance",Jum:"Jumping Reach",Sta:"Stamina",Str:"Strength",Nat:"Stamina",
+  Cro:"Crossing",Dri:"Dribbling",Fin:"Finishing",Hea:"Heading",Lon:"Long Shots",OtB:"Off the Ball", // Attacking
+  Fir:"First Touch",Pas:"Passing",Tec:"Technique",         // Ball Distribution
+  Mar:"Marking",Pos:"Positioning",Tck:"Tackling",          // Defending
+  Cmp:"Composure",Ldr:"Leadership",                        // Mentality
+  Cor:"Corners",Fre:"Free Kick Taking","L Th":"Long Throws",Pen:"Penalty Taking", // Set Pieces
+  Aer:"Reactions (GK)",Ref:"Reactions (GK)","1v1":"Reactions (GK)",Pun:"Reactions (GK)", // Goalkeeping
+  Cmd:"Tactical (GK)",Com:"Tactical (GK)",Han:"Technique (GK)",Kic:"Distribution (GK)",Thr:"Distribution (GK)",TRO:"Sweeping (GK)"
+};
+const NO_FOCUS_ATTRS = new Set(["Ant","Cnt","Dec","Vis","Wor","Agg","Bra","Det","Fla","Tea","Ecc"]);
+/* EXACT FM24 individual-training ROLE names (the training picker shows the ROLE only; the duty is inherited from your tactic) */
+const ROLE_FM = {"SK - Defend":"Sweeper Keeper","FB - Attack":"Full Back","BPD - Defend":"Ball Playing Defender","DM - Support":"Defensive Midfielder","IF - Support":"Inside Forward","AM - Attack":"Attacking Midfielder","AF - Attack":"Advanced Forward"};
 
 const FORMATION = [
   {id:"ST", label:"ST", role:"AF - Attack",  x:50, y:13, grp:"att", pos:"Striker",       match:{ST:["C","R","L"]}},
@@ -278,12 +293,19 @@ function bestXI(opts={}){
 }
 function trainingFor(p){
   const role=assignedRole(p), w=SCORING.weights[role]||{};
+  // weakest important attributes for the role, ordered by how much they cost (weight × deficit)
   const items=ATTRS.filter(a=>(w[a]||0)>=0.4).map(a=>({a,w:w[a],v:p.attrs[a]||0,gap:(w[a]||0)*Math.max(0,15-(p.attrs[a]||0))}));
   items.sort((x,y)=>y.gap-x.gap);
-  const weak=items.filter(i=>i.v<13).slice(0,4);
-  const fc={}; weak.forEach(i=>{const f=ATTR_FOCUS[i.a]||"General";(fc[f]=fc[f]||[]).push(i.a);});
-  const focuses=Object.entries(fc).sort((a,b)=>b[1].length-a[1].length);
-  return {role,fmRole:ROLE_FM[role]||role,weak,focuses};
+  const weak=items.filter(i=>i.v<13).slice(0,5);
+  // PRIMARY focus = the exact FM24 Additional Focus for the single most-costly weak attribute that HAS a focus
+  const trainable=weak.filter(i=>ATTR_FOCUS[i.a] && !NO_FOCUS_ATTRS.has(i.a));
+  const primary = trainable.length ? {focus:ATTR_FOCUS[trainable[0].a], attr:trainable[0].a} : null;
+  // secondary distinct focuses (deduped, in priority order)
+  const seen=new Set(primary?[primary.focus]:[]); const secondary=[];
+  trainable.slice(1).forEach(i=>{const f=ATTR_FOCUS[i.a]; if(!seen.has(f)){seen.add(f);secondary.push({focus:f,attr:i.a});}});
+  // weak attributes that have NO additional focus (only role training + minutes fix them)
+  const noFocus = weak.filter(i=>NO_FOCUS_ATTRS.has(i.a)).map(i=>i.a);
+  return {role, fmRole:ROLE_FM[role]||role, weak, primary, secondary, noFocus};
 }
 
 /* ============================ UI HELPERS ============================ */
@@ -483,7 +505,7 @@ function vCoach(){
   ${rec?`<div class="card"><h3 style="margin-top:0">2. How I'd set you up — and why</h3>
     <p><b>${rec.style}.</b> ${rec.why}</p>
     <p><b>Mentality:</b> ${rec.ment}. <b>Key instructions:</b> ${rec.instr.join(" · ")}.</p>
-    <div class="tipbox amber"><b>Why this and not all-out attack?</b> A formation alone never beats the match engine. With ${pr.engine<11?'tired young legs':'this squad'}, over-committing gets you countered — that's how small clubs throw away games. Solid shape first, then break with your ${pr.pace>=13?'pace':'best players'}. Closest ready-made setup: <b>Team → Tactics → ${rec.fits==='meta'?'⚔️ Meta Gegenpress':'🛡️ Youth-Safe'}</b>.</div>
+    <div class="tipbox amber"><b>Why this and not all-out attack?</b> A formation alone never beats the match engine. With ${pr.engine<11?'tired young legs':'this squad'}, over-committing gets you countered — that's how small clubs throw away games. Solid shape first, then break with your ${pr.pace>=13?'pace':'best players'}. Closest ready-made setup: <b>Team → Tactics → ${rec.fits==='meta'?'⚔️ Full Gegenpress':'🏎️ Tuned Highway Star'}</b>. <span class="muted">(Your Highway Star is the #3 tested 4-2-3-1 in FM — keep the shape, tune the press.)</span></div>
   </div>`:''}
 
   <div class="card"><h3 style="margin-top:0">3. The XI & rotation</h3>
@@ -695,8 +717,10 @@ function openPlayer(name){
     ${progHtml}
     <h3>🎯 Recommended training</h3>
     <div class="tipbox">
-      <b>Individual role training:</b> ${esc(tr.fmRole)}<br>
-      ${tr.focuses.length?`<b>Additional focus:</b> ${tr.focuses.map(f=>`${esc(f[0])} <span class="muted">(${f[1].join(", ")})</span>`).join(" · ")}`:`<b>Already strong</b> for this role — keep general role training.`}
+      <b>Individual Training role:</b> <b style="color:var(--brand)">${esc(tr.fmRole)}</b> <span class="muted">(the picker shows the role only — duty comes from your tactic)</span><br>
+      ${tr.primary?`<b>Additional Focus (set this one):</b> <b style="color:var(--brand)">${esc(tr.primary.focus)}</b> <span class="muted">— his weakest key attribute is ${tr.primary.attr} ${p.attrs[tr.primary.attr]||0}</span>`:`<b>Already strong</b> on the trainable attributes for this role — keep general role training.`}
+      ${tr.secondary&&tr.secondary.length?`<br><span class="muted">Next focuses after that: ${tr.secondary.map(s=>esc(s.focus)).join(", ")}</span>`:""}
+      ${tr.noFocus&&tr.noFocus.length?`<br><span class="muted">⚠️ ${tr.noFocus.join(", ")} have no Additional Focus in FM — they only improve through role training + real match minutes.</span>`:""}
     </div>
     ${p.age<=STATE.settings.youthAge?`<h3>🎓 Development plan</h3><div class="tipbox">${devPlan(p).map(s=>`<div style="margin:4px 0"><b>${s[0]}</b> — ${s[1]}</div>`).join("")}</div>`:""}
     <h3>🕸️ Role profile <span class="muted" style="font-size:12px;font-weight:400">— his 8 key attributes for ${esc(role)}</span></h3>
@@ -771,7 +795,7 @@ function vTraining(){
       <tbody>${rows.map(r=>`<tr onclick="openPlayer('${jsq(r.p.name)}')">
         <td><b>${esc(r.p.name)}</b></td><td>${r.p.age}</td>
         <td class="muted">${esc(r.tr.fmRole)}</td>
-        <td>${r.tr.focuses.length?r.tr.focuses.map(f=>`<span class="tag info">${esc(f[0])}</span>`).join(" "):'<span class="tag good">strong</span>'}</td>
+        <td>${r.tr.primary?`<span class="tag info" title="set this Additional Focus in FM">${esc(r.tr.primary.focus)}</span>${r.tr.secondary.length?' <span class="muted" style="font-size:11px">+ '+r.tr.secondary.map(s=>esc(s.focus)).join(", ")+'</span>':''}`:'<span class="tag good">strong</span>'}</td>
         <td class="muted" style="white-space:normal">${r.tr.weak.length?r.tr.weak.map(w=>`${w.a} ${w.v}`).join(", "):'—'}</td>
       </tr>`).join("")}</tbody></table></div>
     <div class="tipbox"><b>How to apply in FM:</b> Player → <b>Training</b> tab → set <b>Individual Training → Role</b> to the one shown, and add the <b>Additional Focus</b> for ~6 weeks, then re-check here after your next import. Young players gain fastest with focus + real minutes.</div>
@@ -781,12 +805,27 @@ function vTraining(){
 /* ---------- YOUTH ---------- */
 function persIsGood(s){ return s&&GOOD_PERS.some(g=>s.toLowerCase().includes(g)); }
 function persIsBad(s){ return s&&BAD_PERS.some(g=>s.toLowerCase().includes(g)); }
-function devProxy(p,best){ // headroom proxy (FM hides true PA): current fit + youth + determination + attitude
-  const det=A(p,'Det');
-  let d=best + (21-p.age)*0.35 + (det-11)*0.12;
-  const pers=rawOf(p,KEYS.pers);
-  if(persIsGood(pers)) d+=0.6; if(persIsBad(pers)) d-=0.9;
-  return d;
+/* Personality → hidden Professionalism proxy (0–10). Source: SI-mechanics test (fmstats/fmscout):
+   Professionalism is the #1 driver of how much PA a player reaches — far above Determination. */
+function persScore(pers){
+  if(!pers) return 5; const s=pers.toLowerCase();
+  if(/model professional|model citizen|perfectionist|resolute|^professional|spirited perfectionist/.test(s)) return 10;
+  if(/professional|driven|ambitious|determined|devoted|fairly professional|iron|born leader|charismatic/.test(s)) return 8;
+  if(/spirited|balanced|light-hearted|jovial|fairly determined/.test(s)) return 5;
+  if(/easily discouraged|casual|temperamental|slack|unambitious|mercenary|low determination|realist/.test(s)) return 2;
+  return 5;
+}
+/* Refined potential ceiling (research-weighted; FM hides true PA so this is an estimate).
+   Weights: Professionalism(personality) >> Determination > current ability, all gated by AGE. */
+function devProxy(p,best){
+  const age=p.age;
+  const Afac = age<=17?10: age===18?9: age===19?8: age===20?6: age===21?4: age===22?3: age===23?2:1; // 0–10 age window
+  const P=persScore(rawOf(p,KEYS.pers));      // 0–10 professionalism proxy
+  const D=Math.max(0,Math.min(20,A(p,'Det')))/2; // 0–10
+  const C=Math.max(0,Math.min(20,best))/2;    // 0–10 current-ability proxy
+  const quality=(0.55*P + 0.30*D + 0.15*C)/10; // 0–1
+  const headroom = quality * (Afac/10) * 7;    // up to ~7 pts of growth for an ideal 16-17yo
+  return Math.round((best + headroom)*100)/100;
 }
 function vYouth(){
   const ya=STATE.settings.youthAge,keep=STATE.settings.youthKeep;
@@ -802,7 +841,7 @@ function vYouth(){
     return `<tr onclick="openPlayer('${jsq(o.p.name)}')"><td><b>${esc(o.p.name)}</b></td><td>${o.p.age}</td><td class="muted">${esc(o.fmRole||o.p.position)}</td><td>${rolePill(o.role)}</td><td>${scoreBadge(o.score)}</td><td><b style="color:${scoreColor(o.dev)}">${o.dev.toFixed(1)}</b></td><td><span class="tag ${tag}">${txt}</span>${hasPers?risk:''}</td></tr>`;
   }).join("");
   return `<div class="card"><h2>🌟 Wonderkids & development (≤ ${ya})</h2>
-    <p class="sub"><b>Ceiling est.</b> = a development-headroom estimate (FM hides true PA, so this is NOT FM's Potential): current fit + youth + Determination + attitude. Higher = more room to grow. Sorted by it. Change the age cut-off in <b>Data → Settings</b>.</p>
+    <p class="sub"><b>Ceiling est.</b> = research-weighted growth estimate (FM hides true PA, so NOT FM's Potential). Driven mainly by <b>Personality</b> (proxy for hidden Professionalism — the #1 growth factor per SI-mechanics testing), then <b>Determination</b>, then current ability, all <b>gated by age</b> (a 16yo keeps almost all his headroom; a 24yo almost none). Higher = more room to grow. Change the age cut-off in <b>Data → Settings</b>.</p>
     ${explain("Your young players (≤ the age cut-off) ranked by how much they could still grow.","'Now' = current role-fit; 'Ceiling est.' = my growth estimate (FM hides real Potential). Verdict tags: ⭐ wonderkid, high ceiling, decent, limited. An 'attitude' tag = bad personality to mentor.","It tells you which kids to invest minutes and training in — the players who'll carry this save long-term.")}
     <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>FM best role / pos</th><th>My role</th><th>Now</th><th>Ceiling est.</th><th>Verdict</th></tr></thead><tbody>${rows||'<tr><td colspan=7 class="muted">No players ≤'+ya+'.</td></tr>'}</tbody></table></div>
     <div class="tipbox"><b>How to use it:</b> give your ⭐ Wonderkids real minutes + the role training from the <b>🏋️ Training</b> tab. ${hasPers?'A <span class="tag bad">attitude</span> tag (bad personality like Mercenary) means pair him with a pro mentor in <b>Reports → Personality</b> before he infects the dressing room.':'Add the <b>Personality</b> column to your export to flag attitude risks here.'}</div>
@@ -888,7 +927,7 @@ function renderProg(){
 }
 
 /* ---------- TACTICS (two tactics) ---------- */
-let tacticSel="survival";
+let tacticSel="tuned";
 function squadProfile(){
   const xi=bestXI(); const A=Object.values(xi.assign).map(a=>a.p);
   const ps=A.length>=8?A:players().filter(p=>p.avail);
@@ -916,7 +955,7 @@ function styleRec(pr){
   else if(hi(pr.technical)&&!hi(pr.pace)){ style="🎽 Patient possession"; ment="Positive"; why="Technical but slow — keep the ball, move them around, don't get caught in foot races."; instr=["Shorter passing, work into the box","Lower tempo, play out of defence","Higher line to compress space (only if defenders cope)"]; }
   else if(hi(pr.defense)&&pr.pace<12&&pr.technical<12){ style="🛡️ Solid counter (park-and-break)"; ment="Cautious → Positive"; why="Your strength is defending — stay compact, frustrate them, nick it on the break & set pieces."; instr=["Lower line, deeper block, stay compact","Counter, distribute to the flanks","Make set pieces a weapon"]; }
   else { style="⚖️ Balanced 4-2-3-1"; ment="Positive"; why="No standout strength yet — keep it balanced, solid shape, and develop the squad."; instr=["Shorter passing, work into the box","Mid-block, press more often (not 'much')","Keep one IF on Support to protect the full-back"]; }
-  return {style,why,ment,instr,fits:hi(pr.pace)&&pr.engine>=12?"meta":"safe"};
+  return {style,why,ment,instr,fits:hi(pr.pace)&&pr.engine>=12?"meta":"tuned"};
 }
 function vTactics(){
   const pr=squadProfile();
@@ -929,16 +968,16 @@ function vTactics(){
       <p class="sub">The experts agree: <b>build the tactic around what your players are good at</b>. Here's your squad's profile (from your likely XI) and the style that fits.</p>
       <div class="flex2"><div>${bar("Pace",pr.pace)}${bar("Aerial",pr.aerial)}${bar("Technical",pr.technical)}</div><div>${bar("Engine",pr.engine)}${bar("Defending",pr.defense)}${bar("Creativity",pr.creativity)}</div></div>
       <div class="tipbox" style="margin-top:10px"><b>${rec.style}</b> — ${rec.why}<br><b>Mentality:</b> ${rec.ment}<br><b>Do:</b> ${rec.instr.join(" · ")}</div>
-      <p class="sub">Closest ready-made setup below: <b>${rec.fits==="meta"?"⚔️ Meta Gegenpress":"🛡️ Youth-Safe"}</b>. <span class="muted">(givemesport / Toxigon: play to your strengths)</span></p>
+      <p class="sub">Closest ready-made setup below: <b>${rec.fits==="meta"?"⚔️ Full Gegenpress":"🏎️ Highway Star — tuned for you"}</b>. <span class="muted">(FM-Arena tactic testing + play-to-your-strengths)</span></p>
     </div>`;
   }
   const T={
-    safe:{
-      name:"Youth-Safe Highway Star", mood:"Recommended for YOUR squad", tone:"good",
-      blurb:"Built for a young, lower-league team that lacks the stamina/work-rate to press for 90'. Solid shape first, then break. This is what stops you throwing games away.",
-      mentality:"Positive",
-      rows:[["GK","Sweeper Keeper – Defend","Sweeps behind the line, starts moves"],["D R / D L","Full Back – Support","Both on Support — protects against counters"],["D C ×2","1 Ball-Playing Def – Defend + 1 Central Def – Defend","One builds play, one stays safe"],["DM ×2","Defensive Mid – Defend + Deep-Lying Playmaker – Support","The shield + the metronome. Stops the bleeding"],["AM R","Inside Forward – Attack","Cuts in on his stronger foot"],["AM L","Inside Forward – Support","The tracking one — protects your full-back"],["AM C","Attacking Mid – Attack","Creative hub between the lines"],["ST","Advanced Forward – Attack","Runs channels, finishes"]],
-      instr:["Mentality: <b>Positive</b> (never Attacking with tired kids)","In possession: Shorter passing, Play out of defence, Work ball into box, Fairly Wide","Transition: Counter, Distribute to centre-backs/full-backs","Out of possession: <b>Standard line + Mid-block</b>, Trigger press More Often (not 'much more')","Raise the line/press only once your defenders have Pace ≥13 and good Stamina"]
+    tuned:{
+      name:"Highway Star — tuned for your squad", mood:"RECOMMENDED · keeps the #3-ranked shape, fits your stamina", tone:"good",
+      blurb:"You already run the best-tested 4-2-3-1 in FM24 (Highway Star = #3 on the FM-Arena Hall of Fame, 62.2 pts — the top 4-2-3-1 there). Don't change the formation. The stock build just presses too hard for your ~7.8 work-rate. Keep the roles, keep your pace threat (Counter + Offside Trap), and dial the press DOWN so you don't gas out and concede late.",
+      mentality:"Balanced (not Positive — saves stamina & adds solidity)",
+      rows:[["GK","Sweeper Keeper – Defend","Mops up behind the line, starts the counter with quick distribution"],["D R / D L","Full Back – Attack","Provide the width (front line is narrow). Trim the overlap on the side your IF holds width"],["D C ×2","Ball-Playing Def – Defend + Central Def – Defend","One starts play, one is your no-nonsense anchor — safer for a leaky side"],["DM ×2","Defensive Mid – Support ×2","Double pivot = the backbone. Both screen the block; put your best stamina here"],["AM R","Inside Forward – Attack","Cuts inside onto his stronger foot — your goal threat from the cut-in"],["AM L","Inside Forward – Support","The tracking one — protects the full-back behind him"],["AM C","Attacking Mid – Attack","Creative hub arriving in the box behind the striker"],["ST","Advanced Forward – Attack","Fast — runs in behind onto counters; this is where your pace hurts the AI most"]],
+      instr:["Mentality: <b>Balanced</b> (Defensive vs the top sides, Positive only when chasing)","Out of possession: drop line + line of engagement from 'Higher' to <b>Standard / mid-block</b> — stop bleeding chances behind your slow-recovering line","Out of possession: pressing <b>Standard</b> (not 'More Urgent') — this is your #1 stamina saver","Transition: <b>KEEP Counter ON</b>, and turn <b>OFF Counter-Press</b> (use Regroup) — your squad can't sustain gegenpress","Keep <b>Offside Trap ON</b> + Advanced Forward — your pace punishes the AI's high line without pressing for 90'","In possession: More Direct + Pass Into Space (feed your runners), Standard/Lower tempo to save legs","Manage minutes: rotate the two IFs & full-backs, make subs ~60-65' before the work-rate cliff"]
     },
     meta:{
       name:"Meta Gegenpress 4-2-3-1", mood:"Community meta · big-squad mode", tone:"info",
@@ -948,8 +987,8 @@ function vTactics(){
       instr:["Mentality: <b>Attacking</b>","In possession: Short quick passing, Play out of defence, Underlap L+R, Fairly Narrow width, Slightly higher tempo, Focus down both flanks","Transition: <b>Counter-press</b> + <b>Counter</b>, GK <b>Roll it out</b>","Out of possession: <b>High press + Higher line</b>, Trigger press <b>Much more often</b>, Prevent short GK distribution, Get Stuck In, Invite Crosses"]
     },
     survival:{
-      name:"Survival — deep block & counter", mood:"BEST for 20th in the PL", tone:"bad",
-      blurb:"You're 20th and outgunned. This is the data-backed underdog setup: defend deep, protect your low-stamina legs, and murder teams on the counter with your pace. Don't press high — you'll gas out and concede late.",
+      name:"Deep-block bus — for the hard games", mood:"Use vs the top sides / away days", tone:"bad",
+      blurb:"The bus-parking fallback for games you expect to be under siege (top-6 away). Defend deep, soak it up, and nick one on the counter with your pace. The research's pure-survival pivot is Knap's 'SPEED KING 451 SW LP' (4-5-1 low-block, #14 on the FM-Arena Hall of Fame) — but you don't need to change formation; this deep-block version of your 4-2-3-1 does the same job.",
       mentality:"CAUTIOUS (Balanced only for home six-pointers)",
       rows:[["GK","Sweeper Keeper – Defend (plain GK-Defend vs the top 6)","Cuts the risk of aggressive sweeping behind a line you can't protect"],["D R / D L","Full Back – SUPPORT (both)","Downgrade from Attack — don't over-commit; pick your fastest"],["D C ×2","Ball-Playing Def – Defend + No-Nonsense/Central Def – Defend","Pick your two FASTEST CBs — pace covers the space a deep block concedes"],["DM ×2","Defensive Mid – Defend + Ball-Winning Mid – Defend","Double shield; put your best engine/stamina here"],["AM R / AM L","Inside Forward – Support + Winger – Support","One wide man MUST track back; favour 1v1 dribblers"],["AM C","Attacking Mid – SUPPORT","Downgrade from Attack to keep the block compact"],["ST","Advanced Forward – Attack","Fast & tall — runs in behind onto counters"]],
       instr:["Mentality: <b>Cautious</b> (your league default)","Out of possession: <b>Lower defensive line + Lower line of engagement</b>, <b>much less urgent</b> trigger press, <b>Regroup</b>, stay narrow / force outside, drop off more","Transition: <b>Counter</b> + Distribute Quickly","In possession: <b>Pass Into Space</b>, slightly higher tempo, more direct, fairly narrow, overlaps OFF","Subs: rotate fast attackers off ~60-65'; build a 2nd even-lower-intensity version for 3-4 of every 5 games"]
@@ -958,9 +997,9 @@ function vTactics(){
   const t=T[tacticSel];
   return `${analyzer}<div class="card">
     <h2>🏆 Tactics — stop losing</h2>
-    <p class="sub">A formation alone never beats the match engine. Role/duty balance + mentality + matching your players' attributes does. Ready-made setups for your Highway Star 4-2-3-1:</p>
-    ${explain("Three complete tactic presets (roles, duties, mentality, instructions) you can copy straight into FM.","🪂 Survival is your default (deep block + counter, best for 20th). 🛡️ Youth-Safe is a balanced middle ground. ⚔️ Meta Gegenpress is high-press — only once your squad has the stamina. The 🧬 analyser above each tells you which fits your players.","The right shape for YOUR players is the single biggest lever on results — this gives you a tested one to copy, not guesswork.")}
-    <div class="seg"><button class="${tacticSel=='survival'?'on':''}" onclick="tacticSel='survival';render()">🪂 Survival (best for you)</button><button class="${tacticSel=='safe'?'on':''}" onclick="tacticSel='safe';render()">🛡️ Youth-Safe</button><button class="${tacticSel=='meta'?'on':''}" onclick="tacticSel='meta';render()">⚔️ Meta Gegenpress</button></div>
+    <div class="tipbox"><b>Good news, verified:</b> your <b>Highway Star 4-2-3-1 is the #3 tactic on the FM-Arena Hall of Fame (62.2 pts)</b> — the best-tested 4-2-3-1 in the whole database. <b>Don't change formation.</b> The only problem is the stock build presses too hard for your stamina — the presets below keep the elite shape and just tune the press. <span class="muted">(<a href="https://fm-arena.com/table/fm24-hall-of-fame/" target="_blank" rel="noopener">FM-Arena Hall of Fame ↗</a>)</span></div>
+    ${explain("Three complete tactic presets (roles, duties, mentality, instructions) you copy straight into FM — all on your proven Highway Star shape.","🏎️ Tuned is your default (elite shape, press dialled to your stamina). 🪂 Deep-block bus is for tough away days. ⚔️ Full Gegenpress is the stock high-press — only once your squad has the legs. The 🧬 analyser above tells you which fits your players.","You're already on the best-tested 4-2-3-1; the win is FITTING it to your fast, low-stamina squad, not changing it.")}
+    <div class="seg"><button class="${tacticSel=='tuned'?'on':''}" onclick="tacticSel='tuned';render()">🏎️ Tuned (recommended)</button><button class="${tacticSel=='survival'?'on':''}" onclick="tacticSel='survival';render()">🪂 Deep-block bus</button><button class="${tacticSel=='meta'?'on':''}" onclick="tacticSel='meta';render()">⚔️ Full Gegenpress</button></div>
     <div class="row" style="justify-content:space-between"><h3 style="margin:0">${t.name}</h3><span class="tag ${t.tone}">${t.mood}</span></div>
     <p class="sub" style="margin-top:6px">${t.blurb}</p>
     <p><b>Mentality:</b> ${t.mentality}</p>
@@ -1137,6 +1176,36 @@ function vSetpiece(){
     <h3>🛡️ Defending a corner — who does what</h3>
     ${(()=>{const defenders=players().filter(p=>/D|GK/.test(p.position)).map(p=>({p,a:A(p,"Jum")*0.5+A(p,"Hea")*0.35+A(p,"Str")*0.15})).sort((a,b)=>b.a-a.a);const markers=defenders.slice(0,3);const tall=defenders.slice(0,2);const rows=[["Man-mark their biggest threats",markers.map(o=>last(o.p.name)).join(", ")],["Attack the ball / clear (best headers)",tall.map(o=>last(o.p.name)).join(", ")],["Stay forward for the counter",last(fast[0].p.name)],["Mark short / edge of area",defenders.length>3?last(defenders[3].p.name):"a midfielder"]];return `<div class="tablewrap"><table><tbody>${rows.map(r=>`<tr><td class="muted">${r[0]}</td><td><b>${esc(r[1])}</b></td></tr>`).join("")}</tbody></table></div>`;})()}
     <div class="tipbox"><b>Setup:</b> use a <b>mix of zonal + man-marking</b> if your defenders' Heading is below 12 (young defenders struggle purely man-to-man). Always keep your fastest man (${esc(last(fast[0].p.name))}) up top so a cleared corner becomes <i>your</i> counter.</div>
+  </div>
+  <div class="card notice">
+    <h2>📐 Full set-piece playbook (exact FM24 options)</h2>
+    <p class="sub">Every set-piece type, the real in-game roles/instructions, and the best routine for a fast, modest-aerial side. Tap to expand.</p>
+    <details open><summary>🚩 Attacking corners</summary><div class="ex" style="margin-top:8px">
+      <p><b>Per-player jobs (corner pitch view):</b> Attack near post · Attack far post · Attack ball from edge of area · Lurk at near/far post · Lurk outside the area · Mark keeper · Come short · Stay back / Stay back if needed · Go forward.</p>
+      <p><b>Delivery (Set Piece Wizard):</b> aim <b>Near post / Far post / Centre</b>, and <b>Inswinging / Outswinging</b>. One routine auto-applies to both sides (swing-based, not left/right) — but swing can't override a taker's foot.</p>
+      <p><b>Best for you — TWO routines saved:</b> (1) <b>Near-post inswinger</b>: best Aerial Threat on <i>Attack near post</i> + a Box Threat near post + one <i>Lurk far post</i> for the flick-on + a strong man <i>Mark keeper</i>. The AI is slow on near-post flick-ons. (2) <b>SHORT corner</b> (better for your pace): taker short, a full-back <i>Come short</i> to drag a marker out, then cut-back to a <i>Creator</i> on the edge for a shot. Keep <b>extra Recovery Defenders back</b> (low work-rate) — send fewer bodies forward.</p>
+      <p class="muted">Maximise: Jumping Reach, Strength, Heading, Bravery (targets); Corners, Crossing, Technique (taker).</p>
+    </div></details>
+    <details><summary>🛡️ Defensive corners</summary><div class="ex" style="margin-top:8px">
+      <p><b>Marking system (1st question):</b> Zonal / <b>Hybrid</b> / Man-marking. <b>Hybrid is safest</b> for a modest side. Posts: guard <b>both posts</b>, near only, or none.</p>
+      <p><b>Per-player jobs:</b> Go back · Stay forward · Mark near post · Mark far post · Close down corner · Edge of area · Player mark · Mark tall player. Zonal six-yard zones: Near post / Near centre / Centre / Far centre / Far post.</p>
+      <p><b>Best for you:</b> Hybrid — <b>full-backs on the posts</b> (Mark near/far post), best aerials <i>Player mark</i> their danger men + zonal near & far post, one on <i>Edge of area</i> for second balls. Keep just <b>ONE fast forward Stay forward</b> for the counter (the rest Go back, given low work-rate).</p>
+      <p class="muted">Maximise: Jumping Reach, Strength, Marking, Concentration, Bravery.</p>
+    </div></details>
+    <details><summary>🎯 Free kicks — wide, direct & defensive</summary><div class="ex" style="margin-top:8px">
+      <p><b>Wide (crossing) FKs:</b> same jobs as corners (Attack near/far post, Lurk, Mark keeper) + a new <b>Defensive Line Height</b> slider — set it <b>lower</b> so a cleared FK isn't played in behind your tired defence. Treat a deep wide FK like a near-post inswinging corner.</p>
+      <p><b>Direct (central) FKs:</b> assign your highest <b>Free Kick Taking + Long Shots + Technique</b> player to shoot when central & in range; build a separate 'shooting-range' routine. Otherwise clip it to a near-post target. Always keep <b>2 Recovery Defenders</b> back.</p>
+      <p><b>Defending FKs:</b> FM24 'Wall if needed' lets the GK decide on the wall. Set defensive line <b>lower</b>, hybrid marking, full-backs on posts, one pacey forward up for the break.</p>
+    </div></details>
+    <details><summary>🤾 Throw-ins</summary><div class="ex" style="margin-top:8px">
+      <p>Set per third. <b>Defensive & middle third → Retain Possession</b> (don't gift the ball back). <b>Attacking third → Long Throw</b> ONLY if you have a genuine Long Throws specialist (set it up like a near-post corner: flick-on + far-post lurker); otherwise <b>Work the ball into the box</b> and use your pace down the line.</p>
+      ${throwWeapon?`<p><b>You have a long-throw weapon:</b> ${esc(lthrow[0].p.name)} (Long Throws ${lthrow[0].v}) — use the attacking-third long throw.</p>`:`<p class="muted">No long-throw specialist (best ${lthrow.length?esc(lthrow[0].p.name)+" "+lthrow[0].v:"—"}) — keep throws short.</p>`}
+    </div></details>
+    <details><summary>⚽ Penalties & shootouts</summary><div class="ex" style="margin-top:8px">
+      <p><b>In-match (Tactics → Penalties):</b> dedicated taker = highest <b>Penalty Taking + Finishing + Composure</b>. Enable <b>'change taker if a player has already missed'</b> as a safety net. Your best: <b>${esc(pen[0].p.name)}</b>.</p>
+      <p><b>Shootout order (separate list):</b> order by <b>Composure + Penalty Taking</b> and avoid pressure-prone personalities. Put your most composed man in the high-pressure 4th/5th slot; bury nervous youngsters in early slots.</p>
+    </div></details>
+    <p class="sub" style="margin-top:8px">Sources: official FM site, CharlieIntel, FMScout, theFFM, FMInside.</p>
   </div>`;
 }
 
@@ -1237,7 +1306,8 @@ function vMatchday(){
   return `<div class="card">
     <h2>⚡ In-Match Assistant</h2>
     <p class="sub">Set the situation and get exactly what to change — mentality, instructions and the sub to make. Use it live while the match is paused.</p>
-    ${explain("A live decision tool: tell it the minute, scoreline, opponent strength and red cards, and it tells you what to change right now.","Drag the minute, tap your scoreline. The green 'Do this now' card gives mentality + in/out-of-possession tweaks + the exact named sub (who on, who off, why). It even adapts the sub to the opponent type you set below.","In-match management wins more points than your starting tactic — reacting correctly at 60-75' is where games are won and lost.")}
+    <p class="sub" style="margin-top:-6px"><b>Base tactic assumed:</b> 🏎️ Tuned Highway Star (Balanced, mid-block, Counter on) from <b>Team → Tactics</b>. The advice below is the <i>change</i> to make from that baseline as the game-state shifts.</p>
+    ${explain("A live decision tool: tell it the minute, scoreline, opponent strength and red cards, and it tells you what to change right now.","Drag the minute, tap your scoreline. The green 'Do this now' card gives a mentality + in/out-of-possession tweaks + the exact named sub (who on, who off, why), adapted to the opponent type you set below. It assumes you START from the Tuned Highway Star.","In-match management wins more points than your starting tactic — reacting correctly at 60-75' is where games are won and lost.")}
     <h3 style="margin-top:6px">Minute: <b style="color:var(--brand)">${MD.min}'</b></h3>
     <input type="range" min="0" max="95" value="${MD.min}" style="width:100%" oninput="MD.min=+this.value;render()">
     <h3>Score situation</h3><div class="seg">${seg('sit',[['winningBig','🟢 Winning 2+'],['winning1','🟢 Winning by 1'],['drawing','🟡 Drawing'],['losing1','🔴 Losing by 1'],['losingBig','🔴 Losing 2+']])}</div>
@@ -1454,7 +1524,7 @@ function repPersonality(){
 function devPlan(p){
   const tr=trainingFor(p), m=mins(p), br=bestRole(p), dev=devProxy(p,br.score), pers=rawOf(p,KEYS.pers), th=rawOf(p,KEYS.trainhappy);
   const steps=[];
-  steps.push(["🏋️ Train", `Set Individual Training to <b>${esc(tr.fmRole)}</b>${tr.focuses.length?` · additional focus <b>${esc(tr.focuses[0][0])}</b>`:""}. Keep intensity <b>Medium / Automatic</b> and rest after matches (avoids burnout & injury).`]);
+  steps.push(["🏋️ Train", `Individual Training role <b>${esc(tr.fmRole)}</b>${tr.primary?` · Additional Focus <b>${esc(tr.primary.focus)}</b>`:""}. Keep intensity <b>Medium / Automatic</b> and rest after matches (avoids burnout & injury).`]);
   if(th&&/unhappy/i.test(th)) steps.push(["⚠️ Training mood",`He's <b>unhappy with training</b> — lower his workload or change focus before morale drops.`]);
   if(persIsBad(pers)||A(p,"Det")<11) steps.push(["🤝 Mentor",`Weak personality/Determination — put him in a mentoring group led by a senior pro (good personality, Det ≥14). Personality & mentals transfer.`]);
   if(!m||m<900) steps.push(["⏱️ Minutes",`Only ${m||0} mins. <b>Game time is the #1 driver of development</b> — start him in cups, or <b>loan him out</b> for regular first-team football.`]);
