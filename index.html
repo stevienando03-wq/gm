@@ -289,6 +289,22 @@ function trainingFor(p){
 /* ============================ UI HELPERS ============================ */
 function scoreColor(s){ if(s>=14)return"#22c55e"; if(s>=12)return"#4ade80"; if(s>=10)return"#a3e635"; if(s>=8)return"#fbbf24"; if(s>=6)return"#fb923c"; return"#f43f5e"; }
 function scoreBadge(s){ return `<span class="score" title="Role-fit 0–20 · ${scoreProfile()==='fmarena'?'FM-Arena (match-engine)':'My Excel'} model — higher = better fit" style="background:${scoreColor(s)}">${(+s).toFixed(2)}</span>`; }
+function scoreLegend(){ return `<div class="row" style="gap:10px;font-size:11px;margin:0 0 10px;color:var(--mut)">Scale: ${[["Excellent",15],["Starter",12],["Squad",9.5],["Weak",6.5],["Poor",3]].map(([l,s])=>`<span>${scoreBadge(s)} ${l}</span>`).join("")}</div>`; }
+function welcomeModal(){
+  document.getElementById("modal").innerHTML=`<div class="overlay" onclick="if(event.target===this)dismissWelcome()"><div class="modal" style="max-width:560px">
+    <span class="x" onclick="dismissWelcome()">✕</span>
+    <h2 style="margin:0 0 6px">👋 Welcome to Gaffer</h2>
+    <p class="sub">Your personal FM assistant — built around YOUR squad to help you survive in the Premier League.</p>
+    <div class="tipbox"><b>3 things to do:</b><ol style="margin:6px 0 0;padding-left:18px">
+      <li><b>Update your data</b> — header 🔄 / 📥 with your <code>Untitled.html</code> export.</li>
+      <li><b>Read the 🎓 Coach's report</b> (Home) — my full analysis of your team.</li>
+      <li><b>Pick your team</b> in ⚽ Best XI, your shape in 🏆 Tactics (Survival), your subs in ⚡ Matchday.</li>
+    </ol></div>
+    <p class="sub">Every data screen has an <b>ℹ️ How to read this</b> you can tap, the <b>💡 Tips & Tricks</b> tab is a full sourced playbook, and on a phone you can <b>swipe left/right</b> to change section.</p>
+    <button class="btn primary" onclick="dismissWelcome()">Let's go 💪</button>
+  </div></div>`;
+}
+function dismissWelcome(){ STATE.settings.welcomeSeen=true; save(); closeModal(); }
 function grpOf(role){ if(role.startsWith("SK"))return"gk"; if(role.startsWith("FB")||role.startsWith("BPD"))return"def"; if(role.startsWith("DM")||role.startsWith("IF")||role.startsWith("AM -"))return"mid"; return"att"; }
 function rolePill(role){ return `<span class="pill ${grpOf(role)}">${role}</span>`; }
 function grpColor(g){ return g=="gk"?"var(--gk)":g=="def"?"var(--def)":g=="mid"?"var(--mid)":"var(--att)"; }
@@ -559,6 +575,7 @@ function vSquad(){
     <h2>👥 Squad — ${rows.length} players</h2>
     <p class="sub">Tap any player for full attributes, role fit, radar & training. Score = fit in the assigned role.</p>
     ${explain("Your whole squad, each player scored 0–20 for how well his attributes fit his assigned role.","Colours go red→green with the score: 14+ excellent, 11–14 starter, 8–11 squad, under 8 weak. 'Best' shows his strongest role if it differs. 🤕 = injured, 🔁 = on loan. Use the filters to find e.g. everyone with Pace ≥ 15.","It tells you who's actually good in the role you play them — the foundation for picking your XI and spotting players in the wrong position.")}
+    ${scoreLegend()}
     <div class="row" style="margin-bottom:10px">
       <input type="text" id="sq" placeholder="🔍 Search name…" value="${esc(squadFilter.q)}">
       <select id="sr">${opts}</select>
@@ -1779,6 +1796,7 @@ document.getElementById("restoreFile").onchange=e=>{const f=e.target.files[0];if
 
 /* ============================ BOOT ============================ */
 renderTabs(); applyTextScale(); go("dash");
+if(STATE.current && !STATE.settings.welcomeSeen) welcomeModal();
 /* ============================ SWIPE NAV (mobile) ============================ */
 /* Flick left/right to move between the 8 sections — but NOT when the swipe
    starts on something that scrolls horizontally (tables, pitch, nav, inputs, modal). */
