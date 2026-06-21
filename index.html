@@ -212,6 +212,75 @@ const ATTR_FOCUS = {
   Cmd:"Tactical (GK)",Com:"Tactical (GK)",Han:"Technique (GK)",Kic:"Distribution (GK)",Thr:"Distribution (GK)",TRO:"Sweeping (GK)"
 };
 const NO_FOCUS_ATTRS = new Set(["Ant","Cnt","Dec","Vis","Wor","Agg","Bra","Det","Fla","Tea","Ecc"]);
+/* Complete FM24 team instructions by phase (with a one-line note each) + the recommended survival set */
+const TEAM_INSTR = {
+ "⚔️ In possession":[
+  ["Mentality (master dial)","Very Defensive → Very Attacking. Biases risk, line height, tempo & width across all phases."],
+  ["Passing Directness","Much Shorter → Much More Direct. Shorter keeps the ball; More Direct springs counters fast."],
+  ["Pass Into Space","Plays the ball ahead of runners — turns pace into chances without holding it."],
+  ["Play Out Of Defence","CBs/DM build patiently from the back. Leave OFF to go more direct & relieve pressure."],
+  ["Tempo","Lower saves stamina & holds shape; the Counter instruction speeds you up on the break."],
+  ["Attacking Width","Narrow = compact central counters; Wider = stretch play for crosses."],
+  ["Creative Freedom","Be More Disciplined (hold shape — best for a young side) vs Be More Expressive."],
+  ["Run At Defence","Carry the ball at defenders — suits fast wide forwards on the break."],
+  ["Dribble Less","Prefer passing — keeps transitions quick, fewer turnovers."],
+  ["Focus Play","Channel build-up: Both flanks / Left / Right / Through the Middle."],
+  ["Overlaps (L/R)","Push the full-back on; the winger holds for the run. Adds defensive risk — use selectively."],
+  ["Underlaps (L/R)","Inside runs from deep — good with Inside Forwards cutting in."],
+  ["Final third: Work Ball Into Box / Shoot On Sight / Hit Early Crosses","Pick one — patient / shoot early / quick crosses on the break."],
+  ["Crossing: More/Less Often + Type","Whipped / Floated / Low / Near / Far / Centre / Target — match your striker."],
+  ["Play For Set Pieces","Players actively win corners/FKs/throws — good for a dead-ball-reliant side."],
+  ["GK Distribution (speed / to / type)","Distribute Quickly to your fastest outlet (or long to bypass a press) to ignite counters."]
+ ],
+ "🔁 In transition":[
+  ["Counter","Break immediately on winning the ball. THE core instruction for your fast side — ON."],
+  ["Hold Shape","Advance as a unit instead. Use to slow the game, protect a lead, or when stamina is gone."],
+  ["Counter-Press","Swarm to win it back instantly (gegenpress). AVOID — too costly for low stamina/work-rate."],
+  ["Regroup","Retreat into shape on losing it. ON for you — fall back, get compact, defend the box."],
+  ["GK Distribution Speed","Quickly to launch the counter the instant you recover; Slow to settle & regain shape."]
+ ],
+ "🛡️ Out of possession":[
+  ["Line of Engagement","How high you start pressing. LOW for a deep block — let them have it in front of you."],
+  ["Defensive Line","Back-line height. Lower protects against balls in behind. Keep it close to the engagement line."],
+  ["Defensive Width","Narrower congests the centre & forces play wide — standard for a low block."],
+  ["Trigger Press (intensity)","Much Less → Much More Often. Keep LOW for survival — pressing drains stamina & breaks the block."],
+  ["Pressing Trap","None / Trap Inside / Trap Outside. Trap Outside (force them wide) suits a compact block."],
+  ["Tackling","Stay On Feet (avoid fouls/penalties near your box) vs Get Stuck In (wins more, risks cards)."],
+  ["Tighter Marking","Defenders stick to opponents — denies space but can be dragged out of shape."],
+  ["Offside Trap","Step up to catch runners. Pairs with a HIGH line — OFF for a deep block."],
+  ["Drop Off More","Defenders retreat when pressed — reinforces the deep block. Good fit for you."],
+  ["Step Up More","Hold an aggressive line to compress space — for a high press, not a deep block."],
+  ["Stop Crosses / Invite Crosses","Block crosses if weak aerially; invite them only if strong in the air."],
+  ["Prevent Short GK Distribution","Block their keeper's short pass. Costs energy — off in a pure deep block."],
+  ["Time Wasting","None → Maximum. Crank it to run down the clock & protect a late lead."]
+ ]
+};
+const TEAM_INSTR_REC = "MENTALITY Cautious (Defensive vs the very best; Balanced when chasing). IN POSS: More Direct + Pass Into Space ON, Lower/Standard tempo, Narrow width, Dribble Less, Be More Disciplined, GK Distribute Quickly to your fastest outlet. TRANSITION: Counter ON, Regroup ON (Counter-Press OFF). OUT OF POSS: Lower Line of Engagement + Lower Defensive Line, Narrower, Trigger Press Less Often, Trap Outside, Stay On Feet, Drop Off More, Offside Trap OFF, Prevent Short GK Distribution OFF. GAME-STATE: Time Wasting up + switch Counter→Hold Shape + GK Slow Pace Down to close out a lead.";
+/* Additional Focus glossary — what each EXACT FM24 focus trains */
+const FOCUS_GLOSSARY = {
+ "Physical":[["Quickness","Acceleration + Pace — the ONLY focus that trains two attributes"],["Agility","Agility"],["Balance","Balance"],["Jumping Reach","Jumping Reach"],["Stamina","Stamina — priority for your low-stamina squad"],["Strength","Strength"]],
+ "Attacking":[["Crossing","Crossing"],["Dribbling","Dribbling"],["Finishing","Finishing"],["Heading","Heading"],["Long Shots","Long Shots"],["Off the Ball","Off the Ball (needs decent training facilities)"]],
+ "Ball Distribution":[["First Touch","First Touch"],["Passing","Passing"],["Technique","Technique"]],
+ "Defending":[["Marking","Marking (needs decent facilities)"],["Positioning","Positioning (needs decent facilities)"],["Tackling","Tackling"]],
+ "Mentality":[["Composure","Composure"],["Leadership","Leadership"]],
+ "Set Pieces":[["Corners","Corners"],["Free Kick Taking","Free Kick Taking"],["Long Throws","Long Throws"],["Penalty Taking","Penalty Taking"]],
+ "Goalkeeping":[["Reactions","Reflexes · One-on-Ones · Aerial Reach"],["Tactical","Command of Area · Communication · Concentration · Decisions · Positioning"],["Technique","Handling · First Touch · Technique"],["Sweeping","Rushing Out · Command of Area · Aerial Reach · Anticipation"],["Distribution","Kicking · Throwing · Passing"]]
+};
+function teamInstrHTML(){
+  return `<details><summary>📋 Full team-instructions reference (every FM24 instruction, by phase)</summary>
+    <div style="margin-top:8px">
+      <div class="tipbox"><b>✅ Your recommended set (deep-block counter):</b> ${TEAM_INSTR_REC}</div>
+      ${Object.entries(TEAM_INSTR).map(([phase,list])=>`<h3 style="margin:12px 0 4px">${phase}</h3>${list.map(([n,note])=>`<div style="margin:3px 0;font-size:13px"><b>${n}</b> — <span class="muted">${note}</span></div>`).join("")}`).join("")}
+      <p class="sub" style="margin-top:8px">Source: FM24 community team-instructions guides + FM-Arena.</p>
+    </div></details>`;
+}
+function focusGlossaryHTML(){
+  return `<details><summary>📖 Additional Focus glossary — what each one trains (exact FM24 names)</summary>
+    <div style="margin-top:8px">
+      ${Object.entries(FOCUS_GLOSSARY).map(([area,list])=>`<h3 style="margin:10px 0 4px">${area}</h3><div class="def-grid">${list.map(([n,t])=>`<div><b>${n}</b> — ${t}</div>`).join("")}</div>`).join("")}
+      <div class="tipbox amber" style="margin-top:10px"><b>No Additional Focus exists for:</b> Anticipation, Concentration, Decisions, Vision, Work Rate, Aggression, Bravery, Determination, Flair, Teamwork — these only improve through <b>role training + real match minutes</b> (and mentoring, for the mentals).</div>
+    </div></details>`;
+}
 /* EXACT FM24 individual-training ROLE names (the training picker shows the ROLE only; the duty is inherited from your tactic) */
 const ROLE_FM = {"SK - Defend":"Sweeper Keeper","FB - Attack":"Full Back","BPD - Defend":"Ball Playing Defender","DM - Support":"Defensive Midfielder","IF - Support":"Inside Forward","AM - Attack":"Attacking Midfielder","AF - Attack":"Advanced Forward"};
 
@@ -799,6 +868,7 @@ function vTraining(){
         <td class="muted" style="white-space:normal">${r.tr.weak.length?r.tr.weak.map(w=>`${w.a} ${w.v}`).join(", "):'—'}</td>
       </tr>`).join("")}</tbody></table></div>
     <div class="tipbox"><b>How to apply in FM:</b> Player → <b>Training</b> tab → set <b>Individual Training → Role</b> to the one shown, and add the <b>Additional Focus</b> for ~6 weeks, then re-check here after your next import. Young players gain fastest with focus + real minutes.</div>
+    ${focusGlossaryHTML()}
   </div>`;
 }
 
@@ -1004,7 +1074,8 @@ function vTactics(){
     <p class="sub" style="margin-top:6px">${t.blurb}</p>
     <p><b>Mentality:</b> ${t.mentality}</p>
     <div class="tablewrap"><table><thead><tr><th>Position</th><th>Role – Duty</th><th>Why</th></tr></thead><tbody>${t.rows.map(r=>`<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td class="muted" style="white-space:normal">${r[2]}</td></tr>`).join("")}</tbody></table></div>
-    <h3>Team instructions</h3><ul class="notice">${t.instr.map(i=>`<li>${i}</li>`).join("")}</ul>
+    <h3>Team instructions for this preset</h3><ul class="notice">${t.instr.map(i=>`<li>${i}</li>`).join("")}</ul>
+    ${teamInstrHTML()}
   </div>
   <div class="card notice">
     <h3 style="margin-top:0">🎯 The 5 things that actually win games</h3>
