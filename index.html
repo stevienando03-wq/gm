@@ -404,6 +404,7 @@ function vSquad(){
       <span class="muted">· age ≤</span><input type="number" id="fAge" min="14" max="40" value="${squadFilter.ageMax<99?squadFilter.ageMax:''}" placeholder="any" style="width:60px">
       ${(squadFilter.attr||squadFilter.ageMax<99)?'<button class="btn sm ghost" onclick="squadFilter.attr=\'\';squadFilter.minVal=0;squadFilter.ageMax=99;render()">clear</button>':''}
     </div>
+    <div class="row" style="margin-bottom:12px"><button class="btn sm primary" onclick="optimizeRoles()">✨ Auto-assign best roles</button><button class="btn sm ghost" onclick="resetRoles()">reset to FM roles</button><span class="muted" style="font-size:12px">Sets each player to the role he scores highest in (under the active model).</span></div>
     <div class="tablewrap"><table>
       <thead><tr><th data-k="name">Name</th><th data-k="age">Age</th><th data-k="pos">Position</th><th data-k="role">Role</th><th data-k="score">Score</th><th>Best</th></tr></thead>
       <tbody>${rows.map(r=>`<tr onclick="openPlayer('${esc(r.p.name)}')">
@@ -498,6 +499,8 @@ function openPlayer(name){
 }
 function closeModal(){ document.getElementById("modal").innerHTML=""; }
 function setRole(name,val){ if(val)STATE.overrides[name]=val; else delete STATE.overrides[name]; save(); openPlayer(name); }
+function optimizeRoles(){ players().forEach(p=>{STATE.overrides[p.name]=bestRole(p).role;}); save(); toast("Every player set to his best-fit role"); render(); }
+function resetRoles(){ STATE.overrides={}; save(); toast("Roles reset to your FM export"); render(); }
 function pinPlayer(sid,name){ if(xiPins[sid]===name) delete xiPins[sid]; else xiPins[sid]=name; closeModal(); go("xi"); }
 function clearPins(){ xiPins={}; if(TAB==="xi") render(); }
 
@@ -662,7 +665,49 @@ function renderProg(){
 
 /* ---------- TACTICS (two tactics) ---------- */
 let tacticSel="safe";
+function squadProfile(){
+  const xi=bestXI(); const A=Object.values(xi.assign).map(a=>a.p);
+  const ps=A.length>=8?A:players().filter(p=>p.avail);
+  if(!ps.length) return null;
+  const avg=(arr,attrs)=>{ if(!arr.length)return 0; let s=0; arr.forEach(p=>{let t=0;attrs.forEach(a=>t+=(p.attrs[a]||0));s+=t/attrs.length;}); return s/arr.length; };
+  const fwd=ps.filter(p=>{const m=parsePos(p.position);return m.ST||m.AM;});
+  const def=ps.filter(p=>{const m=parsePos(p.position);return m.D;});
+  const mid=ps.filter(p=>{const m=parsePos(p.position);return m.DM||m.M||m.AM;});
+  const strikers=ps.filter(p=>parsePos(p.position).ST);
+  return {
+    pace: avg(fwd.length?fwd:ps,["Pac","Acc"]),
+    aerial: avg([...def,...strikers].length?[...def,...strikers]:ps,["Jum","Hea","Str"]),
+    technical: avg(fwd.length?fwd:ps,["Dri","Tec","Fir"]),
+    engine: avg(ps,["Sta","Wor","Nat"]),
+    defense: avg(def.length?def:ps,["Tck","Mar","Pos","Cnt"]),
+    creativity: avg(mid.length?mid:ps,["Pas","Vis","OtB"])
+  };
+}
+function styleRec(pr){
+  const hi=v=>v>=13, lo=v=>v<10.5;
+  let style,why,ment,instr;
+  if(hi(pr.pace)&&pr.engine>=12){ style="⚡ High press & quick transitions"; ment="Positive → Attacking"; why="You have pace up front AND the legs to press — hunt the ball high and break fast."; instr=["Higher line + higher press (in bursts)","Counter + Counter-press","Run at them — direct, quick tempo, get in behind"]; }
+  else if(hi(pr.pace)){ style="🏃 Counter-attack with pace"; ment="Positive"; why="Quick forwards but not the stamina to press 90' — sit a touch deeper and spring fast."; instr=["Standard/Lower line, mid-block","Counter — hit them in transition","Balls in behind for your runners"]; }
+  else if(hi(pr.aerial)&&!hi(pr.technical)){ style="🎯 Direct & wing play"; ment="Positive"; why="Strong/tall but not quick or silky — get it wide and cross to your big men."; instr=["Wider attacking width, overlap","Whip crosses to the back/near post","Win the second balls in midfield"]; }
+  else if(hi(pr.technical)&&!hi(pr.pace)){ style="🎽 Patient possession"; ment="Positive"; why="Technical but slow — keep the ball, move them around, don't get caught in foot races."; instr=["Shorter passing, work into the box","Lower tempo, play out of defence","Higher line to compress space (only if defenders cope)"]; }
+  else if(hi(pr.defense)&&pr.pace<12&&pr.technical<12){ style="🛡️ Solid counter (park-and-break)"; ment="Cautious → Positive"; why="Your strength is defending — stay compact, frustrate them, nick it on the break & set pieces."; instr=["Lower line, deeper block, stay compact","Counter, distribute to the flanks","Make set pieces a weapon"]; }
+  else { style="⚖️ Balanced 4-2-3-1"; ment="Positive"; why="No standout strength yet — keep it balanced, solid shape, and develop the squad."; instr=["Shorter passing, work into the box","Mid-block, press more often (not 'much')","Keep one IF on Support to protect the full-back"]; }
+  return {style,why,ment,instr,fits:hi(pr.pace)&&pr.engine>=12?"meta":"safe"};
+}
 function vTactics(){
+  const pr=squadProfile();
+  let analyzer="";
+  if(pr){
+    const rec=styleRec(pr);
+    const bar=(label,v)=>{const c=v>=13?"#22c55e":v>=11?"#a3e635":v>=9?"#fbbf24":"#fb923c";return `<div class="rolefit" style="grid-template-columns:90px 1fr 32px"><span>${label}</span><span class="barmini"><i style="width:${v/20*100}%;background:${c}"></i></span><span style="text-align:right;font-weight:700;color:${c}">${v.toFixed(1)}</span></div>`;};
+    analyzer=`<div class="card" style="background:linear-gradient(135deg,#0c2b20,#121821)">
+      <h2>🧬 Best style for YOUR squad</h2>
+      <p class="sub">The experts agree: <b>build the tactic around what your players are good at</b>. Here's your squad's profile (from your likely XI) and the style that fits.</p>
+      <div class="flex2"><div>${bar("Pace",pr.pace)}${bar("Aerial",pr.aerial)}${bar("Technical",pr.technical)}</div><div>${bar("Engine",pr.engine)}${bar("Defending",pr.defense)}${bar("Creativity",pr.creativity)}</div></div>
+      <div class="tipbox" style="margin-top:10px"><b>${rec.style}</b> — ${rec.why}<br><b>Mentality:</b> ${rec.ment}<br><b>Do:</b> ${rec.instr.join(" · ")}</div>
+      <p class="sub">Closest ready-made setup below: <b>${rec.fits==="meta"?"⚔️ Meta Gegenpress":"🛡️ Youth-Safe"}</b>. <span class="muted">(givemesport / Toxigon: play to your strengths)</span></p>
+    </div>`;
+  }
   const T={
     safe:{
       name:"Youth-Safe Highway Star", mood:"Recommended for YOUR squad", tone:"good",
@@ -680,7 +725,7 @@ function vTactics(){
     }
   };
   const t=T[tacticSel];
-  return `<div class="card">
+  return `${analyzer}<div class="card">
     <h2>🏆 Tactics — stop losing</h2>
     <p class="sub">A formation alone never beats the match engine. Role/duty balance + mentality + matching your players' attributes does. Two ready-made setups for your Highway Star 4-2-3-1:</p>
     <div class="seg"><button class="${tacticSel=='safe'?'on':''}" onclick="tacticSel='safe';render()">🛡️ Youth-Safe (recommended)</button><button class="${tacticSel=='meta'?'on':''}" onclick="tacticSel='meta';render()">⚔️ Meta Gegenpress</button></div>
@@ -786,8 +831,8 @@ function vNotice(){
   <div class="def-grid">
     <div><b>🏠 Home</b> — dashboard: squad health, what-to-do, age chart</div>
     <div><b>🧭 Decisions</b> — your weekly checklist (with a badge of pending actions)</div>
-    <div><b>👥 Squad</b> — List (search + filters) · Compare · Depth & succession · Surplus</div>
-    <div><b>⚽ Team</b> — Best XI · Set pieces · Tactics · Matchday assistant</div>
+    <div><b>👥 Squad</b> — List (search, filters, ✨ auto-best-roles) · Compare · Depth & succession · Surplus</div>
+    <div><b>⚽ Team</b> — Best XI · Set pieces · Tactics (🧬 best style for your squad) · Matchday (assistant + pre-match routine)</div>
     <div><b>🌱 Develop</b> — Wonderkids · Training · Reports · Progress</div>
     <div><b>📝 Season</b> — objectives · fixtures · results & form · 🏆 honours</div>
     <div><b>⚙️ Data</b> — import, snapshots, settings, evaluation model, report</div>
@@ -950,6 +995,20 @@ function vMatchday(){
       <tr><td><b>Full time</b></td><td>Praise a win · constructive after a loss</td><td>Praise effort whatever the result</td></tr>
     </tbody></table></div>
     <div class="tipbox"><b>Rule of thumb:</b> match the body-language to the performance, not just the score. Reading the players' reaction (green = it worked) matters more than the exact words.</div>
+  </div>
+  <div class="card notice">
+    <h2>✅ Before every match (the winning routine)</h2>
+    <p class="sub">Do this every game and you'll stop dropping points — sourced from FM analysis guides.</p>
+    <ol>
+      <li><b>Read the opposition report</b> in your inbox (arrives ~a week to 2 days before). Note their shape, danger man & pressing.</li>
+      <li><b>Set Opposition Instructions</b> from it — use the <b>🆚 Game plan</b> above for their style.</li>
+      <li><b>Pick the XI</b> — open <b>⚽ Best XI</b> (it already excludes injured & can rest tired legs).</li>
+      <li><b>Match the style to your squad</b> — check <b>🧬 Best style for your squad</b> in Tactics; set the right mentality.</li>
+      <li><b>Confirm set-piece takers & captain</b> in <b>🎯 Set Pieces</b> (≈⅓ of goals).</li>
+      <li><b>Team talk</b> — assertive if favourite, calm if underdog (table above).</li>
+      <li><b>In-game:</b> watch the clock — at 60-70' open the <b>⚡ In-Match Assistant</b> and react to the scoreline.</li>
+    </ol>
+    <div class="tipbox amber"><b>Biggest single edge:</b> data-driven opposition instructions every single game (press their playmaker, show wingers onto their weak foot). Most managers set-and-forget — you won't.</div>
   </div>`;
 }
 
