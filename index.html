@@ -284,7 +284,7 @@ function last(n){ return n.split(" ").slice(-1)[0]; }
 
 /* ============================ TABS ============================ */
 const GROUPS=[
-  {id:"home",label:"🏠 Home",views:[["dash","Dashboard"]]},
+  {id:"home",label:"🏠 Home",views:[["dash","Dashboard"],["coach","🎓 Coach's report"]]},
   {id:"decisions",label:"🧭 Decisions",badge:true,views:[["advice","Decisions"]]},
   {id:"squad",label:"👥 Squad",views:[["squad","List"],["compare","Compare"],["depth","Depth & succession"],["release","Surplus"]]},
   {id:"team",label:"⚽ Team",views:[["xi","Best XI"],["setpiece","Set pieces"],["tactics","Tactics"],["matchday","Matchday"]]},
@@ -322,7 +322,7 @@ function render(){
   document.getElementById("refreshBtn").textContent = STATE.fmConnected ? "🔄 Refresh from FM" : "🔗 Connect FM";
   const v=document.getElementById("view");
   if(!STATE.current){ v.innerHTML=`<div class="card"><h2>No squad loaded</h2><p class="sub">Import your <code>Untitled.html</code> FM export to begin.</p><button class="btn primary" onclick="openImport()">Import now</button></div>`; return; }
-  v.innerHTML=({dash:vDash,advice:vAdvice,squad:vSquad,compare:vCompare,xi:vXI,matchday:vMatchday,season:vSeason,setpiece:vSetpiece,reports:vReports,training:vTraining,youth:vYouth,release:vRelease,depth:vDepth,progress:vProgress,tactics:vTactics,history:vHistory,notice:vNotice}[TAB]||vDash)();
+  v.innerHTML=({dash:vDash,coach:vCoach,advice:vAdvice,squad:vSquad,compare:vCompare,xi:vXI,matchday:vMatchday,season:vSeason,setpiece:vSetpiece,reports:vReports,training:vTraining,youth:vYouth,release:vRelease,depth:vDepth,progress:vProgress,tactics:vTactics,history:vHistory,notice:vNotice}[TAB]||vDash)();
   if(TAB==="squad") wireSquad();
 }
 
@@ -374,6 +374,84 @@ function vDash(){
   </div>`;
 }
 function daysAgo(d){ try{const ms=Date.now()-new Date(d).getTime();const days=Math.round(ms/86400000);return days<=0?"today":days+" day"+(days>1?"s":"")+" ago";}catch(e){return d;} }
+
+/* ---------- COACH'S REPORT (personalised analysis) ---------- */
+function vCoach(){
+  const ps=players(); if(!ps.length) return `<div class="card"><h2>🎓 Coach's report</h2><p class="sub">Import your squad first.</p></div>`;
+  const avail=ps.filter(p=>p.avail);
+  const pr=squadProfile(), rec=pr?styleRec(pr):null;
+  const xi=bestXI(); const xiArr=Object.values(xi.assign); const xiAvg=xiArr.length?xiArr.reduce((s,a)=>s+a.score,0)/xiArr.length:0;
+  const ya=STATE.settings.youthAge, keep=STATE.settings.youthKeep;
+  const avgAge=ps.reduce((s,p)=>s+p.age,0)/ps.length;
+  const youth=ps.filter(p=>p.age<=ya);
+  const injured=ps.filter(p=>!p.avail);
+  // star: best Av Rat with mins, else best XI score
+  const rated=ps.map(p=>({p,rat:parseNumLoose(rawOf(p,KEYS.rat)),m:mins(p)})).filter(o=>o.rat!=null&&o.m&&o.m>=270).sort((a,b)=>b.rat-a.rat);
+  const star=rated.length?rated[0]:(xiArr.length?xiArr.slice().sort((a,b)=>b.score-a.score)[0]:null);
+  const topYouth=youth.map(p=>({p,...bestRole(p),dev:devProxy(p,bestRole(p).score)})).sort((a,b)=>b.dev-a.dev).slice(0,4);
+  const surplus=releaseList();
+  // identify the squad's weakest profile dimension
+  const dims=pr?[["pace","pace",pr.pace],["aerial","aerial presence",pr.aerial],["technical","technical quality",pr.technical],["engine","stamina/work-rate",pr.engine],["defense","defending",pr.defense],["creativity","creativity",pr.creativity]]:[];
+  const weakest=dims.slice().sort((a,b)=>a[2]-b[2])[0], strongest=dims.slice().sort((a,b)=>b[2]-a[2])[0];
+  // priorities
+  const pri=[];
+  if(pr&&pr.engine<10.5) pri.push(["Manage the legs","Your stamina/work-rate is low ("+pr.engine.toFixed(1)+"). <b>Don't press high for 90'</b> — you gas out and concede late. Press in bursts, rotate often, and train Stamina & Natural Fitness."]);
+  if(injured.length) pri.push(["Cover the treatment room",injured.length+" player(s) injured. The app already removes them from your XI — line up deputies and <b>lower training intensity</b> to stop the bleeding."]);
+  const starved=youth.filter(p=>!new Set(xiArr.map(a=>a.p.name)).has(p.name)&&devProxy(p,bestRole(p).score)>=keep&&(!mins(p)||mins(p)<450));
+  if(starved.length) pri.push(["Get the kids minutes",starved.length+" good prospect(s) aren't playing enough. Game time is the #1 driver of development — start them in cups or <b>loan them out</b>."]);
+  if(pr&&pr.pace>=13) pri.push(["Use your pace","Your quickest weapon is speed ("+pr.pace.toFixed(1)+"). Play balls in behind and counter — don't slow it down into their block."]);
+  if(surplus.length) pri.push(["Trim the deadwood",surplus.length+" surplus player(s) clogging wages/squad slots — loan or release to free space for youth."]);
+  while(pri.length<3) pri.push(["Keep developing","Re-import every 6 months and watch Progress climb. Patience compounds in a youth save."]);
+
+  return `<div class="card" style="background:linear-gradient(135deg,#0c2b20,#121821)">
+    <h2>🎓 Coach's report — your squad, by me</h2>
+    <p class="sub">A full read of <b>your</b> players (not generic advice), updated live from your data. Think of it as me sitting in your dugout.</p>
+    <div class="grid kpis">
+      <div class="kpi"><div class="n" style="color:${scoreColor(xiAvg)}">${xiAvg.toFixed(1)}</div><div class="l">XI rating</div></div>
+      <div class="kpi"><div class="n">${avgAge.toFixed(1)}</div><div class="l">Avg age</div></div>
+      <div class="kpi"><div class="n">${youth.length}</div><div class="l">Youth ≤${ya}</div></div>
+      <div class="kpi"><div class="n">${injured.length}</div><div class="l">Injured</div></div>
+    </div>
+  </div>
+
+  <div class="card"><h3 style="margin-top:0">1. The honest verdict</h3>
+    <p>You're running a <b>young, ${avgAge<22?'very ':''}raw squad</b> (avg ${avgAge.toFixed(1)}, ${youth.length} of ${ps.length} aged ≤${ya}). ${pr?`Your <b>biggest strength is ${strongest[1]}</b> (${strongest[2].toFixed(1)}/20) and your <b>weakest area is ${weakest[1]}</b> (${weakest[2].toFixed(1)}/20).`:''} ${pr&&pr.engine<10.5?`The low stamina is the single most important thing to understand — <b>it explains the late goals you concede.</b>`:''}</p>
+    ${star?`<div class="tipbox"><b>⭐ Build around ${esc(star.p.name)}</b> — ${star.rat?('your form player ('+star.rat.toFixed(2)+' avg). Keep him fit, keep him happy, feed him the ball.'):('your highest-rated performer. He\'s the spine of this team.')}</div>`:''}
+  </div>
+
+  ${rec?`<div class="card"><h3 style="margin-top:0">2. How I'd set you up — and why</h3>
+    <p><b>${rec.style}.</b> ${rec.why}</p>
+    <p><b>Mentality:</b> ${rec.ment}. <b>Key instructions:</b> ${rec.instr.join(" · ")}.</p>
+    <div class="tipbox amber"><b>Why this and not all-out attack?</b> A formation alone never beats the match engine. With ${pr.engine<11?'tired young legs':'this squad'}, over-committing gets you countered — that's how small clubs throw away games. Solid shape first, then break with your ${pr.pace>=13?'pace':'best players'}. Closest ready-made setup: <b>Team → Tactics → ${rec.fits==='meta'?'⚔️ Meta Gegenpress':'🛡️ Youth-Safe'}</b>.</div>
+  </div>`:''}
+
+  <div class="card"><h3 style="margin-top:0">3. The XI & rotation</h3>
+    <p>Your strongest available XI is on <b>Team → Best XI</b> (rating ${xiAvg.toFixed(1)}). ${pr&&pr.engine<11?`With low stamina, <b>rotate hard</b> — use the "🔄 Next match (rest tired)" mode and don't play your key men every 3 days.`:`Keep your best XI for the big games and rotate in the cups.`}</p>
+    ${injured.length?`<p class="muted">Out right now: ${injured.map(p=>esc(last(p.name))).join(", ")} — already excluded for you.</p>`:''}
+  </div>
+
+  <div class="card"><h3 style="margin-top:0">4. The kids — your whole project</h3>
+    <p>This is a youth save, so development <b>is</b> the objective. Your brightest prospects:</p>
+    ${topYouth.map(o=>`<div class="row" style="justify-content:space-between;cursor:pointer" onclick="openPlayer('${esc(o.p.name)}')"><span><b>${esc(o.p.name)}</b> <span class="muted">${o.p.age}y · ${o.role.split(" ")[0]}</span></span>${scoreBadge(o.score)}</div>`).join("")}
+    <div class="tipbox" style="margin-top:8px"><b>How I'd grow them:</b> real minutes (start in cups, loan the blocked ones), individual <b>role training</b> at <b>Medium intensity</b>, and put any bad-attitude kids with a senior pro mentor. Don't rush them into the XI before they're ready. <span class="muted">(sourced: FM24 youth-development consensus)</span></div>
+  </div>
+
+  <div class="card"><h3 style="margin-top:0">5. Do these first (my priorities)</h3>
+    <ol>${pri.slice(0,4).map(p=>`<li><b>${p[0]}.</b> ${p[1]}</li>`).join("")}</ol>
+  </div>
+
+  <div class="card notice"><h3 style="margin-top:0">6. Tips & tricks for YOUR situation</h3>
+    <ul>
+      <li><b>Win the second balls</b> with your double pivot — a young side that loses midfield gets overrun. Keep two in there.</li>
+      <li><b>Set pieces ≈ a third of goals</b> — for a weaker squad they're the great equaliser. Set the corner routine in <b>Team → Set pieces</b> and pick your tall men.</li>
+      <li><b>Opposition instructions every game</b> — press their playmaker, show wingers onto their weak foot. Most managers skip this; it's free points.</li>
+      <li><b>Don't chase the meta blindly</b> — the FM-Arena model (in Data → settings) shows <b>Pace, Acceleration & Jumping</b> win matches; pick those players, but only press if you have the legs.</li>
+      <li><b>Pre-season fitness</b> matters for a low-stamina squad — build it up so you can sustain your tempo longer.</li>
+      <li><b>Patience</b> — you'll still lose some games as a small club; the goal is to stop <i>throwing away</i> winnable ones. Re-import every 6 months and watch the squad (and results) climb.</li>
+    </ul>
+    <p class="sub">Sourced from the FM24 community (FM-Arena, GiveMeSport, sortitoutsi, footballmanagerblog, Toxigon) and adapted to your fast, young, low-stamina side.</p>
+  </div>`;
+}
 
 /* ---------- SQUAD ---------- */
 let squadSort={key:"score",dir:-1}, squadFilter={role:"",q:"",attr:"",minVal:0,ageMax:99};
@@ -829,7 +907,7 @@ function vNotice(){
   <div class="row" style="gap:10px;margin:8px 0">${[["Excellent",14.5],["Good/starter",12],["Rotation",10],["Weak",7],["Poor",4]].map(([t,s])=>`<span>${scoreBadge(s)} <b>${t}</b></span>`).join(" ")}</div>
   <h3>8 sections (tap a section → sub-menu appears)</h3>
   <div class="def-grid">
-    <div><b>🏠 Home</b> — dashboard: squad health, what-to-do, age chart</div>
+    <div><b>🏠 Home</b> — dashboard + <b>🎓 Coach's report</b> (full personalised analysis of your squad)</div>
     <div><b>🧭 Decisions</b> — your weekly checklist (with a badge of pending actions)</div>
     <div><b>👥 Squad</b> — List (search, filters, ✨ auto-best-roles) · Compare · Depth & succession · Surplus</div>
     <div><b>⚽ Team</b> — Best XI · Set pieces · Tactics (🧬 best style for your squad) · Matchday (assistant + pre-match routine)</div>
@@ -886,8 +964,9 @@ function vSetpiece(){
     <h3>©️ Captain candidates</h3>
     ${spTable(captain,set,o=>'Ldr '+A(o.p,'Ldr')+' · Det '+A(o.p,'Det'))}
     <div class="tipbox"><b>Pick:</b> make <b>${esc(captain[0].p.name)}</b> captain and <b>${esc(captain[1]?captain[1].p.name:'—')}</b> vice — leadership lifts the whole team's Determination on the pitch.</div>
-    <h3>🛡️ Defending set pieces</h3>
-    <div class="tipbox"><b>Man-mark their tall men</b> with your best aerial defenders (${aerial.filter(o=>/D /.test(o.p.position)).slice(0,2).map(o=>esc(last(o.p.name))).join(", ")||esc(last(aerial[0].p.name))}). Leave your fastest forward (${esc(last(fast[0].p.name))}) up the pitch to counter. Use <b>zonal + man-marking mix</b> if your defenders' Heading is below 12.</div>
+    <h3>🛡️ Defending a corner — who does what</h3>
+    ${(()=>{const defenders=players().filter(p=>/D|GK/.test(p.position)).map(p=>({p,a:A(p,"Jum")*0.5+A(p,"Hea")*0.35+A(p,"Str")*0.15})).sort((a,b)=>b.a-a.a);const markers=defenders.slice(0,3);const tall=defenders.slice(0,2);const rows=[["Man-mark their biggest threats",markers.map(o=>last(o.p.name)).join(", ")],["Attack the ball / clear (best headers)",tall.map(o=>last(o.p.name)).join(", ")],["Stay forward for the counter",last(fast[0].p.name)],["Mark short / edge of area",defenders.length>3?last(defenders[3].p.name):"a midfielder"]];return `<div class="tablewrap"><table><tbody>${rows.map(r=>`<tr><td class="muted">${r[0]}</td><td><b>${esc(r[1])}</b></td></tr>`).join("")}</tbody></table></div>`;})()}
+    <div class="tipbox"><b>Setup:</b> use a <b>mix of zonal + man-marking</b> if your defenders' Heading is below 12 (young defenders struggle purely man-to-man). Always keep your fastest man (${esc(last(fast[0].p.name))}) up top so a cleared corner becomes <i>your</i> counter.</div>
   </div>`;
 }
 
