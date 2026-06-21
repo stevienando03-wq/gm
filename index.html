@@ -312,6 +312,8 @@ function attrColor(v){ if(v>=15)return"#22c55e"; if(v>=12)return"#a3e635"; if(v>
 function toast(m){ const t=document.getElementById("toast"); t.textContent=m; t.classList.remove("hidden"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.add("hidden"),2400); }
 function esc(s){ return (s+"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c])); }
 function explain(what,read,why){ return `<details class="explain"><summary>ℹ️ How to read this</summary><div class="ex"><p><b>What it is:</b> ${what}</p><p><b>How to read it:</b> ${read}</p><p><b>Why it matters:</b> ${why}</p></div></details>`; }
+/* JS-string + HTML-attr safe name for inline onclick handlers (fixes apostrophe names like O'Connell) */
+function jsq(s){ return esc((s+"").replace(/\\/g,"\\\\").replace(/'/g,"\\'")); }
 function last(n){ return n.split(" ").slice(-1)[0]; }
 
 /* ============================ TABS ============================ */
@@ -466,7 +468,7 @@ function vCoach(){
 
   <div class="card"><h3 style="margin-top:0">4. The kids — your whole project</h3>
     <p>This is a youth save, so development <b>is</b> the objective. Your brightest prospects:</p>
-    ${topYouth.map(o=>`<div class="row" style="justify-content:space-between;cursor:pointer" onclick="openPlayer('${esc(o.p.name)}')"><span><b>${esc(o.p.name)}</b> <span class="muted">${o.p.age}y · ${o.role.split(" ")[0]}</span></span>${scoreBadge(o.score)}</div>`).join("")}
+    ${topYouth.map(o=>`<div class="row" style="justify-content:space-between;cursor:pointer" onclick="openPlayer('${jsq(o.p.name)}')"><span><b>${esc(o.p.name)}</b> <span class="muted">${o.p.age}y · ${o.role.split(" ")[0]}</span></span>${scoreBadge(o.score)}</div>`).join("")}
     <div class="tipbox" style="margin-top:8px"><b>How I'd grow them:</b> real minutes (start in cups, loan the blocked ones), individual <b>role training</b> at <b>Medium intensity</b>, and put any bad-attitude kids with a senior pro mentor. Don't rush them into the XI before they're ready. <span class="muted">(sourced: FM24 youth-development consensus)</span></div>
   </div>
 
@@ -590,7 +592,7 @@ function vSquad(){
     <div class="row" style="margin-bottom:12px"><button class="btn sm primary" onclick="optimizeRoles()">✨ Auto-assign best roles</button><button class="btn sm ghost" onclick="resetRoles()">reset to FM roles</button><span class="muted" style="font-size:12px">Sets each player to the role he scores highest in (under the active model).</span></div>
     <div class="tablewrap"><table>
       <thead><tr><th data-k="name">Name</th><th data-k="age">Age</th><th data-k="pos">Position</th><th data-k="role">Role</th><th data-k="score">Score</th><th>Best</th></tr></thead>
-      <tbody>${rows.map(r=>`<tr onclick="openPlayer('${esc(r.p.name)}')">
+      <tbody>${rows.map(r=>`<tr onclick="openPlayer('${jsq(r.p.name)}')">
         <td><b>${esc(r.p.name)}</b>${r.p.injury&&r.p.injury!=="-"?' <span title="'+esc(r.p.injury)+'">🤕</span>':""}${r.p.loanFrom&&r.p.loanFrom!=="-"?' <span title="On loan from '+esc(r.p.loanFrom)+'">🔁</span>':""}</td><td>${r.p.age||""}</td><td class="muted">${esc(r.p.position)}</td>
         <td>${rolePill(r.role)}</td><td>${scoreBadge(r.score)}</td>
         <td>${r.best.role!==r.role?`<span class="muted">${r.best.role.split(" ")[0]} ${r.best.score.toFixed(1)}</span>`:'<span class="tag good">best fit</span>'}</td>
@@ -658,7 +660,7 @@ function openPlayer(name){
     ${statLine}
     <div class="row" style="margin-bottom:12px">
       <label class="muted">Assigned role:
-        <select onchange="setRole('${esc(p.name)}',this.value)">
+        <select onchange="setRole('${jsq(p.name)}',this.value)">
           <option value="">(auto best)</option>${ROLES.map(r=>`<option ${role===r?'selected':''}>${r}</option>`).join("")}
         </select></label>
     </div>
@@ -675,7 +677,7 @@ function openPlayer(name){
     ${attrTrends(p.name,role)}
     <h3>📐 Role fit (all 7 roles)</h3>
     ${fits.map(f=>`<div class="rolefit"><span>${esc(f.r)}</span><span class="barmini"><i style="width:${f.s/20*100}%;background:${scoreColor(f.s)}"></i></span><span style="text-align:right;font-weight:700;color:${scoreColor(f.s)}">${f.s.toFixed(1)}</span></div>`).join("")}
-    ${(()=>{const sl=FORMATION.filter(s=>eligible(p,s));return sl.length?`<h3>🧮 What-if — try him in the XI</h3><p class="sub" style="margin:0 0 6px">Pin him to a slot, then check <b>⚽ Best XI</b> to see who drops and the rating change.</p><div class="row">${sl.map(s=>`<button class="btn sm ${xiPins[s.id]===p.name?'primary':''}" onclick="pinPlayer('${s.id}','${esc(p.name)}')">${s.label}</button>`).join("")}${Object.keys(xiPins).length?'<button class="btn sm ghost" onclick="clearPins();closeModal()">clear pins</button>':''}</div>`:"";})()}
+    ${(()=>{const sl=FORMATION.filter(s=>eligible(p,s));return sl.length?`<h3>🧮 What-if — try him in the XI</h3><p class="sub" style="margin:0 0 6px">Pin him to a slot, then check <b>⚽ Best XI</b> to see who drops and the rating change.</p><div class="row">${sl.map(s=>`<button class="btn sm ${xiPins[s.id]===p.name?'primary':''}" onclick="pinPlayer('${s.id}','${jsq(p.name)}')">${s.label}</button>`).join("")}${Object.keys(xiPins).length?'<button class="btn sm ghost" onclick="clearPins();closeModal()">clear pins</button>':''}</div>`:"";})()}
     <h3>📋 Attributes</h3>
     <div class="attrcols">${attrCol("Technical")}${attrCol("Mental")}${attrCol("Physical")}</div>
     <details style="margin-top:12px"><summary>Goalkeeping attributes</summary><div style="margin-top:8px">${ATTR_GROUPS.Goalkeeping.map(a=>{const v=p.attrs[a]||0;return `<div class="attrrow"><span class="an">${a}</span><span class="barmini"><i style="width:${v/20*100}%;background:${attrColor(v)}"></i></span><span class="av">${v}</span></div>`;}).join("")}</div></details>
@@ -697,14 +699,14 @@ function vXI(){
   const strong=bestXI(); const strongSet=new Set(Object.values(strong.assign).map(a=>a.p.name));
   const usedSet=new Set(Object.values(assign).map(a=>a.p.name));
   const rested=xiMode==="rotate"?Object.values(strong.assign).map(a=>a.p).filter(p=>!usedSet.has(p.name)):[];
-  const slots=FORMATION.map(s=>{const a=assign[s.id];const nm=a?last(a.p.name):"—";const sc=a?a.score:0;const warn=a&&!a.nat?'<span class="tag warn" style="font-size:10px;padding:1px 4px">OOP</span>':'';const pin=a&&a.pinned?'📌':'';return `<div class="slot" style="left:${s.x}%;top:${s.y}%" onclick="${a?`openPlayer('${esc(a.p.name)}')`:''}"><div class="dot" style="background:${a?scoreColor(sc):'#445'};${a&&a.pinned?'outline:2px solid var(--gold);outline-offset:1px':''}">${a?sc.toFixed(1):'–'}</div><div class="nm">${pin}${esc(nm)} ${warn}</div><div class="ro">${s.label}</div></div>`;}).join("");
+  const slots=FORMATION.map(s=>{const a=assign[s.id];const nm=a?last(a.p.name):"—";const sc=a?a.score:0;const warn=a&&!a.nat?'<span class="tag warn" style="font-size:10px;padding:1px 4px">OOP</span>':'';const pin=a&&a.pinned?'📌':'';return `<div class="slot" style="left:${s.x}%;top:${s.y}%" onclick="${a?`openPlayer('${jsq(a.p.name)}')`:''}"><div class="dot" style="background:${a?scoreColor(sc):'#445'};${a&&a.pinned?'outline:2px solid var(--gold);outline-offset:1px':''}">${a?sc.toFixed(1):'–'}</div><div class="nm">${pin}${esc(nm)} ${warn}</div><div class="ro">${s.label}</div></div>`;}).join("");
   const vals=Object.values(assign).map(a=>a.score);const avg=vals.length?vals.reduce((x,y)=>x+y,0)/vals.length:0;
   const nPins=Object.keys(xiPins).length;
   let pinBanner="";
   if(nPins){ const opt=bestXI(Object.assign({ignorePins:true},xiMode==="youth"?{youthBoost:2.5}:xiMode==="rotate"?{rotate:true}:{})); const ov=Object.values(opt.assign).map(a=>a.score); const optAvg=ov.length?ov.reduce((x,y)=>x+y,0)/ov.length:0; const d=avg-optAvg;
     pinBanner=`<div class="tipbox amber"><b>🧮 What-if active:</b> ${nPins} player(s) pinned (📌). Rating <b>${avg.toFixed(2)}</b> vs optimal ${optAvg.toFixed(2)} (<b style="color:${d>=0?'#34d399':'#fb7185'}">${d>=0?'+':''}${d.toFixed(2)}</b>). <button class="btn sm ghost" onclick="clearPins()">Clear experiment</button></div>`; }
-  const benchRows=bench.map(b=>`<tr onclick="openPlayer('${esc(b.p.name)}')"><td><b>${esc(b.p.name)}</b></td><td>${b.p.age}</td><td class="muted">${esc(b.p.position)}</td><td>${rolePill(b.role)}</td><td>${scoreBadge(b.score)}</td></tr>`).join("");
-  const youthAlt=FORMATION.map(s=>{const start=assign[s.id]?.p.name;const c=ps.filter(p=>p.age<=ya&&eligible(p,s)&&p.name!==start).map(p=>({p,score:scoreFor(p,s.role)})).sort((a,b)=>b.score-a.score)[0];if(!c)return"";return `<tr onclick="openPlayer('${esc(c.p.name)}')"><td>${s.label}</td><td><b>${esc(c.p.name)}</b></td><td>${c.p.age}</td><td>${scoreBadge(c.score)}</td><td class="muted">${assign[s.id]?('−'+(assign[s.id].score-c.score).toFixed(1)+' vs starter'):''}</td></tr>`;}).filter(Boolean).join("");
+  const benchRows=bench.map(b=>`<tr onclick="openPlayer('${jsq(b.p.name)}')"><td><b>${esc(b.p.name)}</b></td><td>${b.p.age}</td><td class="muted">${esc(b.p.position)}</td><td>${rolePill(b.role)}</td><td>${scoreBadge(b.score)}</td></tr>`).join("");
+  const youthAlt=FORMATION.map(s=>{const start=assign[s.id]?.p.name;const c=ps.filter(p=>p.age<=ya&&eligible(p,s)&&p.name!==start).map(p=>({p,score:scoreFor(p,s.role)})).sort((a,b)=>b.score-a.score)[0];if(!c)return"";return `<tr onclick="openPlayer('${jsq(c.p.name)}')"><td>${s.label}</td><td><b>${esc(c.p.name)}</b></td><td>${c.p.age}</td><td>${scoreBadge(c.score)}</td><td class="muted">${assign[s.id]?('−'+(assign[s.id].score-c.score).toFixed(1)+' vs starter'):''}</td></tr>`;}).filter(Boolean).join("");
   const modeDesc={strong:"Your strongest legal line-up by role fit.",rotate:"Tired & fatigued players benched for the next match — keeps your stars fresh.",youth:"Prospects (≤"+ya+"y) get a boost so you can blood them while staying competitive."};
   return `<div class="card">
     <h2>⚽ Best XI — 4-2-3-1</h2>
@@ -734,7 +736,7 @@ function vTraining(){
     <p class="sub">For each player: the FM <b>individual role training</b> to set, plus an <b>additional focus</b> targeting his weakest important attributes for that role. Tap a row for the full breakdown.</p>
     ${explain("A per-player training plan: which Individual Training role to set in FM, and which extra focus area will fix his biggest gaps.","'Role training' = set it on his Training screen. 'Additional focus' = the attribute group he's weakest in for his role. 'Weak in role' lists the specific low attributes.","Targeted training turns raw academy kids into useful players — your only no-transfer way to get better.")}
     <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>Role training (FM)</th><th>Additional focus</th><th>Weak in role</th></tr></thead>
-      <tbody>${rows.map(r=>`<tr onclick="openPlayer('${esc(r.p.name)}')">
+      <tbody>${rows.map(r=>`<tr onclick="openPlayer('${jsq(r.p.name)}')">
         <td><b>${esc(r.p.name)}</b></td><td>${r.p.age}</td>
         <td class="muted">${esc(r.tr.fmRole)}</td>
         <td>${r.tr.focuses.length?r.tr.focuses.map(f=>`<span class="tag info">${esc(f[0])}</span>`).join(" "):'<span class="tag good">strong</span>'}</td>
@@ -765,7 +767,7 @@ function vYouth(){
     else if(o.dev>=keep-2){tag="warn";txt="Decent prospect";}
     else{tag="bad";txt="Limited ceiling";}
     const risk=persIsBad(o.pers)?' <span class="tag bad">attitude</span>':persIsGood(o.pers)?' <span class="tag good">pro</span>':'';
-    return `<tr onclick="openPlayer('${esc(o.p.name)}')"><td><b>${esc(o.p.name)}</b></td><td>${o.p.age}</td><td class="muted">${esc(o.fmRole||o.p.position)}</td><td>${rolePill(o.role)}</td><td>${scoreBadge(o.score)}</td><td><b style="color:${scoreColor(o.dev)}">${o.dev.toFixed(1)}</b></td><td><span class="tag ${tag}">${txt}</span>${hasPers?risk:''}</td></tr>`;
+    return `<tr onclick="openPlayer('${jsq(o.p.name)}')"><td><b>${esc(o.p.name)}</b></td><td>${o.p.age}</td><td class="muted">${esc(o.fmRole||o.p.position)}</td><td>${rolePill(o.role)}</td><td>${scoreBadge(o.score)}</td><td><b style="color:${scoreColor(o.dev)}">${o.dev.toFixed(1)}</b></td><td><span class="tag ${tag}">${txt}</span>${hasPers?risk:''}</td></tr>`;
   }).join("");
   return `<div class="card"><h2>🌟 Wonderkids & development (≤ ${ya})</h2>
     <p class="sub"><b>Ceiling est.</b> = a development-headroom estimate (FM hides true PA, so this is NOT FM's Potential): current fit + youth + Determination + attitude. Higher = more room to grow. Sorted by it. Change the age cut-off in <b>Data → Settings</b>.</p>
@@ -795,7 +797,7 @@ function releaseList(){
 }
 function vRelease(){
   const list=releaseList();
-  const rows=list.map(o=>`<tr onclick="openPlayer('${esc(o.p.name)}')"><td><b>${esc(o.p.name)}</b></td><td>${o.p.age}</td><td class="muted">${esc(o.p.position)}</td><td>${rolePill(o.role)}</td><td>${scoreBadge(o.score)}</td><td><span class="tag ${o.tag}">${esc(o.reason)}</span></td></tr>`).join("");
+  const rows=list.map(o=>`<tr onclick="openPlayer('${jsq(o.p.name)}')"><td><b>${esc(o.p.name)}</b></td><td>${o.p.age}</td><td class="muted">${esc(o.p.position)}</td><td>${rolePill(o.role)}</td><td>${scoreBadge(o.score)}</td><td><span class="tag ${o.tag}">${esc(o.reason)}</span></td></tr>`).join("");
   return `<div class="card"><h2>🗑️ Release / Sell — ${list.length} flagged</h2><p class="sub">Advice, not orders. Threshold = best-role fit below <b>${STATE.settings.releaseScore}</b>. Free wages & slots for youth and targeted signings.</p>
     ${explain("Players who look surplus — too low-rated for their age to be worth a squad slot.","Each row gives the reason (too weak, or ageing and only squad-level). It's a suggestion, not an order.","Clearing deadwood frees wages and minutes for youngsters — in a youth save, loan or release rather than let them block a kid's path.")}
     <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>Position</th><th>Best role</th><th>Score</th><th>Why</th></tr></thead><tbody>${rows||'<tr><td colspan=6 class="muted">Nobody flagged — healthy squad.</td></tr>'}</tbody></table></div>
@@ -810,7 +812,7 @@ function vDepth(){
     const cand=ps.filter(p=>eligible(p,g.slot)).map(p=>({p,s:scoreFor(p,g.role)})).sort((a,b)=>b.s-a.s);
     const good=cand.filter(c=>c.s>=11).length;
     const status=good>=2?["good","Solid"]:good==1?["warn","Thin — 1 deep"]:["bad","WEAK — retrain/promote"];
-    const list=cand.slice(0,6).map(c=>`<div class="depthcell" onclick="openPlayer('${esc(c.p.name)}')" style="cursor:pointer;margin:3px 0"><span style="min-width:120px"><b>${esc(last(c.p.name))}</b> <span class="muted">${c.p.age}</span></span><span class="barmini"><i style="width:${c.s/20*100}%;background:${scoreColor(c.s)}"></i></span><span style="font-weight:700;color:${scoreColor(c.s)};min-width:34px;text-align:right">${c.s.toFixed(1)}</span></div>`).join("")||'<span class="muted">No natural option.</span>';
+    const list=cand.slice(0,6).map(c=>`<div class="depthcell" onclick="openPlayer('${jsq(c.p.name)}')" style="cursor:pointer;margin:3px 0"><span style="min-width:120px"><b>${esc(last(c.p.name))}</b> <span class="muted">${c.p.age}</span></span><span class="barmini"><i style="width:${c.s/20*100}%;background:${scoreColor(c.s)}"></i></span><span style="font-weight:700;color:${scoreColor(c.s)};min-width:34px;text-align:right">${c.s.toFixed(1)}</span></div>`).join("")||'<span class="muted">No natural option.</span>';
     // retraining advisor: non-natural players whose attributes suit this role (no transfers in a youth challenge)
     const usedNames=new Set(cand.map(c=>c.p.name));
     const retrain=good<2?ps.filter(p=>!usedNames.has(p.name)).map(p=>({p,s:scoreFor(p,g.role)})).filter(o=>o.s>=10).sort((a,b)=>b.s-a.s).slice(0,3):[];
@@ -850,7 +852,7 @@ function renderProg(){
   const i=+document.getElementById("baseSel").value,base=STATE.snapshots[i];if(!base)return;
   const bm={};base.records.map(normalize).forEach(p=>bm[p.name]=p);
   const rows=players().map(p=>{const b=bm[p.name];if(!b)return null;const role=assignedRole(p),w=SCORING.weights[role]||{};let gain=0,ups=[];ATTRS.forEach(a=>{if((w[a]||0)>0){const d=(p.attrs[a]||0)-(b.attrs[a]||0);if(d!==0){gain+=d;if(d>0)ups.push(a+" +"+d);}}});const sN=scoreFor(p,role),sO=scoreFor(b,role);return{p,role,gain,sN,sO,ds:Math.round((sN-sO)*100)/100,ups};}).filter(Boolean).sort((a,b)=>b.gain-a.gain);
-  document.getElementById("progOut").innerHTML=`<div class="tablewrap"><table><thead><tr><th>Name</th><th>Role</th><th>Then→Now</th><th>Δ</th><th>Pts</th><th>Improved</th></tr></thead><tbody>${rows.map(r=>`<tr onclick="openPlayer('${esc(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td>${rolePill(r.role)}</td><td class="muted">${r.sO.toFixed(1)}→<b style="color:${scoreColor(r.sN)}">${r.sN.toFixed(1)}</b></td><td><span class="tag ${r.ds>0?'good':r.ds<0?'bad':'info'}">${r.ds>0?'+':''}${r.ds.toFixed(2)}</span></td><td><b style="color:${r.gain>0?'#34d399':r.gain<0?'#fb7185':'var(--mut)'}">${r.gain>0?'+':''}${r.gain}</b></td><td class="muted" style="white-space:normal">${esc(r.ups.slice(0,8).join(", "))}</td></tr>`).join("")}</tbody></table></div>`;
+  document.getElementById("progOut").innerHTML=`<div class="tablewrap"><table><thead><tr><th>Name</th><th>Role</th><th>Then→Now</th><th>Δ</th><th>Pts</th><th>Improved</th></tr></thead><tbody>${rows.map(r=>`<tr onclick="openPlayer('${jsq(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td>${rolePill(r.role)}</td><td class="muted">${r.sO.toFixed(1)}→<b style="color:${scoreColor(r.sN)}">${r.sN.toFixed(1)}</b></td><td><span class="tag ${r.ds>0?'good':r.ds<0?'bad':'info'}">${r.ds>0?'+':''}${r.ds.toFixed(2)}</span></td><td><b style="color:${r.gain>0?'#34d399':r.gain<0?'#fb7185':'var(--mut)'}">${r.gain>0?'+':''}${r.gain}</b></td><td class="muted" style="white-space:normal">${esc(r.ups.slice(0,8).join(", "))}</td></tr>`).join("")}</tbody></table></div>`;
 }
 
 /* ---------- TACTICS (two tactics) ---------- */
@@ -1069,7 +1071,7 @@ function A(p,a){ return p.attrs[a]||0; }
 function pickTop(fn,n){ return players().map(p=>({p,v:fn(p)})).sort((a,b)=>b.v-a.v).slice(0,n); }
 function inXIset(){ return new Set(Object.values(bestXI().assign).map(a=>a.p.name)); }
 function spTag(name,set){ return set.has(name)?'<span class="tag good" style="margin-left:6px">XI</span>':'<span class="tag warn" style="margin-left:6px">bench</span>'; }
-function spTable(list,set,fmt){ return `<div class="tablewrap"><table><tbody>${list.map((o,i)=>`<tr onclick="openPlayer('${esc(o.p.name)}')"><td style="width:26px;color:var(--mut)">${i+1}</td><td><b>${esc(o.p.name)}</b>${spTag(o.p.name,set)}</td><td class="muted">${esc(o.p.position)}</td><td style="text-align:right">${fmt(o)}</td></tr>`).join("")}</tbody></table></div>`; }
+function spTable(list,set,fmt){ return `<div class="tablewrap"><table><tbody>${list.map((o,i)=>`<tr onclick="openPlayer('${jsq(o.p.name)}')"><td style="width:26px;color:var(--mut)">${i+1}</td><td><b>${esc(o.p.name)}</b>${spTag(o.p.name,set)}</td><td class="muted">${esc(o.p.position)}</td><td style="text-align:right">${fmt(o)}</td></tr>`).join("")}</tbody></table></div>`; }
 function vSetpiece(){
   const set=inXIset();
   const pen=pickTop(p=>A(p,'Pen')*0.45+A(p,'Cmp')*0.25+A(p,'Tec')*0.15+A(p,'Fin')*0.15,5);
@@ -1094,7 +1096,7 @@ function vSetpiece(){
     ${(()=>{const lon=pickTop(p=>A(p,"Lon")*0.7+A(p,"Tec")*0.3,1)[0];const rows=[
       ["Near post — flick-on",aerial[0]],["Far post — attack ball",aerial[1]],["Penalty spot — attack ball",aerial[2]],
       ["Edge of area — knock-downs / long shot",lon],["Stay forward (counter)",fast[0]],["Corner taker",corner[0]]
-    ];return `<div class="tablewrap"><table><tbody>${rows.map(r=>`<tr><td class="muted">${r[0]}</td><td onclick="openPlayer('${esc(r[1].p.name)}')" style="cursor:pointer"><b>${esc(r[1].p.name)}</b></td></tr>`).join("")}</tbody></table></div>`;})()}
+    ];return `<div class="tablewrap"><table><tbody>${rows.map(r=>`<tr><td class="muted">${r[0]}</td><td onclick="openPlayer('${jsq(r[1].p.name)}')" style="cursor:pointer"><b>${esc(r[1].p.name)}</b></td></tr>`).join("")}</tbody></table></div>`;})()}
     <p class="sub">Keep <b>2 men back</b> (your slowest defenders) so a cleared corner doesn't become their counter. Mirror this for wide free kicks.</p>
     ${throwWeapon?`<div class="tipbox amber"><b>Long-throw weapon:</b> ${esc(lthrow[0].p.name)} has Long Throws ${lthrow[0].v} — set throw-ins near the box to <b>launch into the area</b> like an extra corner.</div>`:lthrow.length?`<p class="muted">Best long throw: ${esc(lthrow[0].p.name)} (${lthrow[0].v}) — usable but not a weapon.</p>`:''}
     <h3>©️ Captain candidates</h3>
@@ -1171,7 +1173,7 @@ function matchdaySubs(idx){
   const tiredOff=entries.map(e=>e.p).slice().sort((x,y)=>cr(x)-cr(y))[0];
   const wideOff=entries.filter(e=>["AML","AMR","AMC","ST"].includes(e.sid)).map(e=>e.p).sort((x,y)=>cr(x)-cr(y))[0];
   const dmOff=entries.filter(e=>["DML","DMR"].includes(e.sid)).map(e=>e.p).sort((x,y)=>cr(x)-cr(y))[0];
-  const ln=(on,off,why)=>on?`<div style="margin:4px 0">⬆️ <b onclick="openPlayer('${esc(on.name)}')" style="cursor:pointer;color:var(--brand)">${esc(on.name)}</b> <span class="muted">(pace ${A(on,"Pac")}, ${esc(rawOf(on,KEYS.con)||"fresh")})</span>${off?` &nbsp;⬇️ for <b onclick="openPlayer('${esc(off.name)}')" style="cursor:pointer">${esc(last(off.name))}</b>`:""} — <span class="muted">${why}</span></div>`:"";
+  const ln=(on,off,why)=>on?`<div style="margin:4px 0">⬆️ <b onclick="openPlayer('${jsq(on.name)}')" style="cursor:pointer;color:var(--brand)">${esc(on.name)}</b> <span class="muted">(pace ${A(on,"Pac")}, ${esc(rawOf(on,KEYS.con)||"fresh")})</span>${off?` &nbsp;⬇️ for <b onclick="openPlayer('${jsq(off.name)}')" style="cursor:pointer">${esc(last(off.name))}</b>`:""} — <span class="muted">${why}</span></div>`:"";
   if(idx>=6){ // throw everything at it
     return ln(byAtk[0], dmOff||tiredOff, "your best impact sub — fresh legs to chase the game"+atkWhy)
       + ln(byAtk[1]&&byAtk[1]!==byAtk[0]?byAtk[1]:null, tiredOff!==dmOff?tiredOff:entries.map(e=>e.p).sort((x,y)=>cr(x)-cr(y))[1], "second attacker — go 4-2-4, sacrifice a holder, flood the box");
@@ -1326,17 +1328,17 @@ function repFitness(){
   rows.sort((a,b)=>(a.cr??6)-(b.cr??6));
   return `${rest.length?`<div class="tipbox amber"><b>Rest before next match:</b> ${rest.map(r=>esc(last(r.p.name))).join(", ")} — tired/fatigued starters; start a fresh deputy or they fade & risk injury.</div>`:`<div class="tipbox"><b>Squad is fresh</b> — every starter is in good condition. ✅</div>`}
     ${prone.length?`<div class="tipbox amber"><b>🏥 Injury-prone (manage their load, lower training intensity):</b> ${prone.slice(0,8).map(r=>esc(last(r.p.name))+" <span class='muted'>("+esc(r.sus)+")</span>").join(", ")}.</div>`:''}
-    <div class="tablewrap"><table><thead><tr><th>Name</th><th>XI</th><th>Condition</th><th>Fatigue</th><th>Injury risk</th><th>Morale</th></tr></thead><tbody>${rows.map(r=>`<tr onclick="openPlayer('${esc(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td>${starters.has(r.p.name)?'<span class="tag good">XI</span>':''}</td><td>${r.con?`<b style="color:${condColor(r.cr)}">${esc(r.con)}</b>`:'—'}</td><td class="muted">${esc((r.fat||'—').split(' - ')[0])}</td><td>${isInjProne(r.sus)?'<span class="tag bad">'+esc(r.sus)+'</span>':`<span class="muted">${esc(r.sus||r.risk||'—')}</span>`}</td><td class="muted">${esc(r.mor||'—')}</td></tr>`).join("")}</tbody></table></div>`;
+    <div class="tablewrap"><table><thead><tr><th>Name</th><th>XI</th><th>Condition</th><th>Fatigue</th><th>Injury risk</th><th>Morale</th></tr></thead><tbody>${rows.map(r=>`<tr onclick="openPlayer('${jsq(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td>${starters.has(r.p.name)?'<span class="tag good">XI</span>':''}</td><td>${r.con?`<b style="color:${condColor(r.cr)}">${esc(r.con)}</b>`:'—'}</td><td class="muted">${esc((r.fat||'—').split(' - ')[0])}</td><td>${isInjProne(r.sus)?'<span class="tag bad">'+esc(r.sus)+'</span>':`<span class="muted">${esc(r.sus||r.risk||'—')}</span>`}</td><td class="muted">${esc(r.mor||'—')}</td></tr>`).join("")}</tbody></table></div>`;
 }
 function repAnalytics(){
   if(!hasCol(KEYS.xg)&&!hasCol(KEYS.xa)&&!hasCol(KEYS.ccc)) return noData("xG / xA / chance-creation analytics",["xG","xA","CCC","K Pas"]);
   const rows=players().map(p=>({p,xg:parseNumLoose(rawOf(p,KEYS.xg)),xa:parseNumLoose(rawOf(p,KEYS.xa)),ccc:parseNumLoose(rawOf(p,KEYS.ccc)),kp:parseNumLoose(rawOf(p,KEYS.kpas)),tckr:rawOf(p,KEYS.tckr),hdr:rawOf(p,KEYS.hdrpc),conv:rawOf(p,KEYS.convpc),g:parseNumLoose(rawOf(p,KEYS.gls)),mins:parseNumLoose(rawOf(p,KEYS.mins))})).filter(r=>r.mins);
   const top=(k,n)=>rows.filter(r=>r[k]!=null).sort((a,b)=>b[k]-a[k]).slice(0,n);
-  const card=(t,list,fmt)=>`<div><h3 style="margin-top:0">${t}</h3>${list.length?list.map((r,i)=>`<div class="row" style="justify-content:space-between;cursor:pointer" onclick="openPlayer('${esc(r.p.name)}')"><span>${i+1}. <b>${esc(r.p.name)}</b></span><b>${fmt(r)}</b></div>`).join(""):'<p class="muted">No data.</p>'}</div>`;
+  const card=(t,list,fmt)=>`<div><h3 style="margin-top:0">${t}</h3>${list.length?list.map((r,i)=>`<div class="row" style="justify-content:space-between;cursor:pointer" onclick="openPlayer('${jsq(r.p.name)}')"><span>${i+1}. <b>${esc(r.p.name)}</b></span><b>${fmt(r)}</b></div>`).join(""):'<p class="muted">No data.</p>'}</div>`;
   // xG over/under-performance (Goals - xG). Sourced: tends to regress to the mean.
   const perf=rows.filter(r=>r.xg!=null&&r.g!=null&&r.xg>=1).map(r=>({...r,diff:r.g-r.xg})).sort((a,b)=>b.diff-a.diff);
   const over=perf.slice(0,5), under=perf.slice(-5).reverse();
-  const pc=(r,sign)=>`<div class="row" style="justify-content:space-between;cursor:pointer" onclick="openPlayer('${esc(r.p.name)}')"><span><b>${esc(r.p.name)}</b> <span class="muted">${r.g} gls / ${r.xg.toFixed(1)} xG</span></span><b style="color:${r.diff>=0?'#34d399':'#fb7185'}">${r.diff>=0?'+':''}${r.diff.toFixed(1)}</b></div>`;
+  const pc=(r,sign)=>`<div class="row" style="justify-content:space-between;cursor:pointer" onclick="openPlayer('${jsq(r.p.name)}')"><span><b>${esc(r.p.name)}</b> <span class="muted">${r.g} gls / ${r.xg.toFixed(1)} xG</span></span><b style="color:${r.diff>=0?'#34d399':'#fb7185'}">${r.diff>=0?'+':''}${r.diff.toFixed(1)}</b></div>`;
   return `<p class="sub">Underlying performance (players with minutes). <b>xG</b>=expected goals, <b>xA</b>=expected assists, <b>CCC</b>=clear-cut chances created, <b>K Pas</b>=key passes.</p>
     <div class="flex2">${card("🎯 Goal threat (xG)",top('xg',6),r=>r.xg.toFixed(2))}${card("🅰️ Creativity (xA)",top('xa',6),r=>r.xa.toFixed(2))}</div>
     <div class="flex2">${card("🔑 Chances created (CCC)",top('ccc',6),r=>r.ccc)}${card("📨 Key passes",top('kp',6),r=>r.kp)}</div>
@@ -1344,13 +1346,13 @@ function repAnalytics(){
     <div class="flex2"><div><div class="muted" style="font-size:12px;margin-bottom:4px">🔥 Over-performing (clinical — but expect some regression)</div>${over.map(r=>pc(r)).join("")}</div>
       <div><div class="muted" style="font-size:12px;margin-bottom:4px">❄️ Under-performing (unlucky or wasteful — often bounces back)</div>${under.map(r=>pc(r)).join("")}</div></div>
     <div class="tipbox"><b>How to read it:</b> a striker scoring <i>well above</i> his xG is finishing hot — enjoy it, but don't expect it forever (it regresses). One scoring <i>below</i> xG is getting the chances and just needs them to drop — keep faith, or train Finishing/Composure. <span class="muted">(xG-vs-goals is a finishing & regression signal, per football analytics.)</span></div>`:''}
-    <h3>Full analytics</h3><div class="tablewrap"><table><thead><tr><th>Name</th><th>xG</th><th>xA</th><th>CCC</th><th>K Pas</th><th>Tck R</th><th>Hdr %</th></tr></thead><tbody>${rows.sort((a,b)=>((b.xg||0)+(b.xa||0))-((a.xg||0)+(a.xa||0))).map(r=>`<tr onclick="openPlayer('${esc(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td>${r.xg!=null?r.xg.toFixed(2):'—'}</td><td>${r.xa!=null?r.xa.toFixed(2):'—'}</td><td>${r.ccc??'—'}</td><td>${r.kp??'—'}</td><td class="muted">${esc(r.tckr||'—')}</td><td class="muted">${esc(r.hdr||'—')}</td></tr>`).join("")}</tbody></table></div>`;
+    <h3>Full analytics</h3><div class="tablewrap"><table><thead><tr><th>Name</th><th>xG</th><th>xA</th><th>CCC</th><th>K Pas</th><th>Tck R</th><th>Hdr %</th></tr></thead><tbody>${rows.sort((a,b)=>((b.xg||0)+(b.xa||0))-((a.xg||0)+(a.xa||0))).map(r=>`<tr onclick="openPlayer('${jsq(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td>${r.xg!=null?r.xg.toFixed(2):'—'}</td><td>${r.xa!=null?r.xa.toFixed(2):'—'}</td><td>${r.ccc??'—'}</td><td>${r.kp??'—'}</td><td class="muted">${esc(r.tckr||'—')}</td><td class="muted">${esc(r.hdr||'—')}</td></tr>`).join("")}</tbody></table></div>`;
 }
 function repForm(){
   if(!hasCol(KEYS.gls)&&!hasCol(KEYS.rat)&&!hasCol(KEYS.ast)) return noData("top scorers, assists & form",["Gls","Ast","Av Rat","Apps"]);
   const rows=players().map(p=>({p,apps:rawOf(p,KEYS.apps),g:parseNumLoose(rawOf(p,KEYS.gls)),a:parseNumLoose(rawOf(p,KEYS.ast)),rat:parseNumLoose(rawOf(p,KEYS.rat)),mins:parseNumLoose(rawOf(p,KEYS.mins))}));
   const top=(key,n)=>rows.filter(r=>r[key]!=null).sort((a,b)=>b[key]-a[key]).slice(0,n);
-  const card=(title,list,fmt)=>`<div><h3 style="margin-top:0">${title}</h3>${list.length?list.map((r,i)=>`<div class="row" style="justify-content:space-between" onclick="openPlayer('${esc(r.p.name)}')"><span style="cursor:pointer">${i+1}. <b>${esc(r.p.name)}</b></span><b>${fmt(r)}</b></div>`).join(""):'<p class="muted">No data.</p>'}</div>`;
+  const card=(title,list,fmt)=>`<div><h3 style="margin-top:0">${title}</h3>${list.length?list.map((r,i)=>`<div class="row" style="justify-content:space-between" onclick="openPlayer('${jsq(r.p.name)}')"><span style="cursor:pointer">${i+1}. <b>${esc(r.p.name)}</b></span><b>${fmt(r)}</b></div>`).join(""):'<p class="muted">No data.</p>'}</div>`;
   const ratPs=rows.filter(r=>r.rat!=null&&r.mins&&r.mins>=270);
   const star=ratPs.slice().sort((a,b)=>b.rat-a.rat)[0];
   const used=new Set();
@@ -1360,9 +1362,9 @@ function repForm(){
     <div class="flex2">${card("⭐ Best average rating",top('rat',6),r=>r.rat.toFixed(2))}${card("⏱️ Most minutes",top('mins',6),r=>money(r.mins))}</div>
     ${star?`<div class="tipbox"><b>🏅 Star man:</b> <b>${esc(star.p.name)}</b> — ${star.rat.toFixed(2)} avg over ${star.apps||""}. Your form player; build around him & keep him happy.</div>`:''}
     ${totsFilled>=7?`<h3>🌟 Team of the season <span class="muted" style="font-size:12px">(your XI by average match rating)</span></h3>
-    <div class="tablewrap"><table><thead><tr><th>Slot</th><th>Player</th><th>Avg rating</th></tr></thead><tbody>${tots.map(t=>`<tr ${t.c?`onclick="openPlayer('${esc(t.c.p.name)}')"`:''}><td class="muted">${t.s.label}</td><td>${t.c?'<b>'+esc(t.c.p.name)+'</b>':'<span class="muted">—</span>'}</td><td>${t.c?`<b style="color:${t.c.rat>=7.2?'#22c55e':t.c.rat>=6.9?'#a3e635':'#fbbf24'}">${t.c.rat.toFixed(2)}</b>`:'—'}</td></tr>`).join("")}</tbody></table></div>
+    <div class="tablewrap"><table><thead><tr><th>Slot</th><th>Player</th><th>Avg rating</th></tr></thead><tbody>${tots.map(t=>`<tr ${t.c?`onclick="openPlayer('${jsq(t.c.p.name)}')"`:''}><td class="muted">${t.s.label}</td><td>${t.c?'<b>'+esc(t.c.p.name)+'</b>':'<span class="muted">—</span>'}</td><td>${t.c?`<b style="color:${t.c.rat>=7.2?'#22c55e':t.c.rat>=6.9?'#a3e635':'#fbbf24'}">${t.c.rat.toFixed(2)}</b>`:'—'}</td></tr>`).join("")}</tbody></table></div>
     <p class="sub" style="margin-top:6px">This is who's actually performing — compare it to your <b>Best XI</b> (by attribute fit) to spot players over- or under-delivering.</p>`:''}
-    <h3>Full stats</h3><div class="tablewrap"><table><thead><tr><th>Name</th><th>Apps</th><th>Gls</th><th>Ast</th><th>Av Rat</th></tr></thead><tbody>${rows.filter(r=>r.apps||r.g!=null||r.rat!=null).sort((a,b)=>(b.rat??0)-(a.rat??0)).map(r=>`<tr onclick="openPlayer('${esc(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td class="muted">${esc(r.apps||'—')}</td><td>${r.g??'—'}</td><td>${r.a??'—'}</td><td>${r.rat!=null?`<span style="color:${r.rat>=7?'#22c55e':r.rat>=6.7?'#fbbf24':'#f43f5e'};font-weight:700">${r.rat.toFixed(2)}</span>`:'—'}</td></tr>`).join("")}</tbody></table></div>`;
+    <h3>Full stats</h3><div class="tablewrap"><table><thead><tr><th>Name</th><th>Apps</th><th>Gls</th><th>Ast</th><th>Av Rat</th></tr></thead><tbody>${rows.filter(r=>r.apps||r.g!=null||r.rat!=null).sort((a,b)=>(b.rat??0)-(a.rat??0)).map(r=>`<tr onclick="openPlayer('${jsq(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td class="muted">${esc(r.apps||'—')}</td><td>${r.g??'—'}</td><td>${r.a??'—'}</td><td>${r.rat!=null?`<span style="color:${r.rat>=7?'#22c55e':r.rat>=6.7?'#fbbf24':'#f43f5e'};font-weight:700">${r.rat.toFixed(2)}</span>`:'—'}</td></tr>`).join("")}</tbody></table></div>`;
 }
 function repFinance(){
   if(!hasCol(KEYS.val)&&!hasCol(KEYS.wage)&&!hasCol(KEYS.exp)) return noData("squad value, wage bill, sell-for-profit & expiring contracts",["Transfer Value","Wage","Expires"]);
@@ -1378,10 +1380,10 @@ function repFinance(){
   const expSoon=minY==null?[]:rows.map(r=>({...r,y:r.exp&&+((r.exp.match(/20\d\d/)||[])[0])})).filter(r=>r.y&&r.y<=minY+1).sort((a,b)=>a.y-b.y).slice(0,12);
   return `<div class="grid kpis"><div class="kpi"><div class="n">${C}${money(totV)}</div><div class="l">Squad value</div></div><div class="kpi"><div class="n">${C}${money(totW)}</div><div class="l">Wage bill ${wagePer}</div></div></div>
     <div class="flex2" style="margin-top:14px">
-      <div><h3 style="margin-top:0">💎 Most valuable</h3>${valuable.map((r,i)=>`<div class="row" style="justify-content:space-between;cursor:pointer" onclick="openPlayer('${esc(r.p.name)}')"><span>${i+1}. <b>${esc(r.p.name)}</b></span><b>${C}${money(r.val)}</b></div>`).join("")||'<p class="muted">No value data.</p>'}</div>
-      <div><h3 style="margin-top:0">💰 Sell for profit <span class="muted" style="font-size:11px">(valuable but low fit)</span></h3>${profit.length?profit.map(r=>`<div class="row" style="justify-content:space-between;cursor:pointer" onclick="openPlayer('${esc(r.p.name)}')"><span><b>${esc(r.p.name)}</b> <span class="muted">fit ${r.score.toFixed(1)}</span></span><b>${C}${money(r.val)}</b></div>`).join(""):'<p class="muted">None — your value matches your quality.</p>'}</div>
+      <div><h3 style="margin-top:0">💎 Most valuable</h3>${valuable.map((r,i)=>`<div class="row" style="justify-content:space-between;cursor:pointer" onclick="openPlayer('${jsq(r.p.name)}')"><span>${i+1}. <b>${esc(r.p.name)}</b></span><b>${C}${money(r.val)}</b></div>`).join("")||'<p class="muted">No value data.</p>'}</div>
+      <div><h3 style="margin-top:0">💰 Sell for profit <span class="muted" style="font-size:11px">(valuable but low fit)</span></h3>${profit.length?profit.map(r=>`<div class="row" style="justify-content:space-between;cursor:pointer" onclick="openPlayer('${jsq(r.p.name)}')"><span><b>${esc(r.p.name)}</b> <span class="muted">fit ${r.score.toFixed(1)}</span></span><b>${C}${money(r.val)}</b></div>`).join(""):'<p class="muted">None — your value matches your quality.</p>'}</div>
     </div>
-    <h3>⏳ Contracts expiring soonest (renew or cash in)</h3>${expSoon.length?`<div class="tablewrap"><table><thead><tr><th>Name</th><th>Expires</th><th>Best role</th><th>Fit</th><th>Value</th></tr></thead><tbody>${expSoon.map(r=>`<tr onclick="openPlayer('${esc(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td class="muted">${esc(r.exp)}</td><td>${rolePill(bestRole(r.p).role)}</td><td>${scoreBadge(r.score)}</td><td>${r.val?C+money(r.val):'—'}</td></tr>`).join("")}</tbody></table></div><p class="sub" style="margin-top:6px">Players whose deals expire by ${minY+1}. Renew your good ones now; let low-fit ones run down or sell.</p>`:'<p class="muted">No contract dates found.</p>'}`;
+    <h3>⏳ Contracts expiring soonest (renew or cash in)</h3>${expSoon.length?`<div class="tablewrap"><table><thead><tr><th>Name</th><th>Expires</th><th>Best role</th><th>Fit</th><th>Value</th></tr></thead><tbody>${expSoon.map(r=>`<tr onclick="openPlayer('${jsq(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td class="muted">${esc(r.exp)}</td><td>${rolePill(bestRole(r.p).role)}</td><td>${scoreBadge(r.score)}</td><td>${r.val?C+money(r.val):'—'}</td></tr>`).join("")}</tbody></table></div><p class="sub" style="margin-top:6px">Players whose deals expire by ${minY+1}. Renew your good ones now; let low-fit ones run down or sell.</p>`:'<p class="muted">No contract dates found.</p>'}`;
 }
 function buildMentorGroups(){
   if(!hasCol(KEYS.pers)) return "";
@@ -1418,7 +1420,7 @@ function repPersonality(){
   return `<div class="tipbox"><b>©️ Best dressing-room leaders:</b> ${leaders.slice(0,3).map(r=>esc(last(r.p.name))).join(", ")} — captain material, lift everyone's Determination.</div>
     ${buildMentorGroups()}
     <h3>All personalities</h3>
-    <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>Personality</th><th>Det</th><th></th></tr></thead><tbody>${rows.filter(r=>r.pers).sort((a,b)=>b.det-a.det).map(r=>`<tr onclick="openPlayer('${esc(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td>${r.p.age}</td><td class="muted">${esc(r.pers)}</td><td>${r.det}</td><td>${good(r.pers)?'<span class="tag good">good</span>':bad(r.pers)?'<span class="tag bad">risk</span>':''}</td></tr>`).join("")}</tbody></table></div>`;
+    <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>Personality</th><th>Det</th><th></th></tr></thead><tbody>${rows.filter(r=>r.pers).sort((a,b)=>b.det-a.det).map(r=>`<tr onclick="openPlayer('${jsq(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td>${r.p.age}</td><td class="muted">${esc(r.pers)}</td><td>${r.det}</td><td>${good(r.pers)?'<span class="tag good">good</span>':bad(r.pers)?'<span class="tag bad">risk</span>':''}</td></tr>`).join("")}</tbody></table></div>`;
 }
 
 /* ============================ DEVELOPMENT (sourced advice) ============================ */
@@ -1603,7 +1605,7 @@ function vSeason(){
 
 /* ============================ DECISION CENTRE (your assistant) ============================ */
 function mins(p){ return parseNumLoose(rawOf(p,KEYS.mins)); }
-function advItem(name,meta,tag){ return `<div class="row" style="justify-content:space-between;cursor:pointer;padding:3px 0" onclick="openPlayer('${esc(name)}')"><span><b>${esc(name)}</b>${meta?' <span class="muted">'+meta+'</span>':''}</span>${tag||''}</div>`; }
+function advItem(name,meta,tag){ return `<div class="row" style="justify-content:space-between;cursor:pointer;padding:3px 0" onclick="openPlayer('${jsq(name)}')"><span><b>${esc(name)}</b>${meta?' <span class="muted">'+meta+'</span>':''}</span>${tag||''}</div>`; }
 function advCard(title,sub,html){ return html?`<div class="card" style="margin:0"><h3 style="margin:0 0 3px">${title}</h3><p class="sub" style="margin:0 0 8px">${sub}</p>${html}</div>`:''; }
 function vAdvice(){
   const ps=players(), ya=STATE.settings.youthAge, keep=STATE.settings.youthKeep;
@@ -1772,7 +1774,7 @@ function openSearch(){
     let list=players().map(p=>{const r=assignedRole(p);return{p,role:r,score:scoreFor(p,r)};});
     if(q) list=list.filter(o=>o.p.name.toLowerCase().includes(q));
     list.sort((a,b)=>b.score-a.score); list=list.slice(0,40);
-    res.innerHTML=list.map(o=>`<div class="row" style="justify-content:space-between;cursor:pointer;padding:8px 4px;border-bottom:1px solid var(--line)" onclick="closeModal();openPlayer('${esc(o.p.name)}')"><span><b>${esc(o.p.name)}</b> <span class="muted">${o.p.age}y · ${esc(o.p.position)}</span></span>${scoreBadge(o.score)}</div>`).join("")||'<p class="muted">No match.</p>'; };
+    res.innerHTML=list.map(o=>`<div class="row" style="justify-content:space-between;cursor:pointer;padding:8px 4px;border-bottom:1px solid var(--line)" onclick="closeModal();openPlayer('${jsq(o.p.name)}')"><span><b>${esc(o.p.name)}</b> <span class="muted">${o.p.age}y · ${esc(o.p.position)}</span></span>${scoreBadge(o.score)}</div>`).join("")||'<p class="muted">No match.</p>'; };
   inp.oninput=draw; draw(); setTimeout(()=>inp.focus(),60);
 }
 function backup(){const blob=new Blob([JSON.stringify(STATE)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="gaffer-backup-"+todayStr()+".json";a.click();toast("Backup downloaded");}
