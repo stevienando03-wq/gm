@@ -174,6 +174,16 @@ const FA_WEIGHTS = {
   "AF - Attack":   {Jum:0.020557, Pac:0.020096, Acc:0.014496, Cnt:0.013675, Bal:0.012043, Dri:0.010739, Vis:0.009392, Cmp:0.009161}
 };
 function scoreProfile(){ return STATE.settings&&STATE.settings.scoreProfile==="fmarena"?"fmarena":"excel"; }
+/* FM's own key + preferable attributes per role (for reference in player cards) */
+const ROLE_ATTRS = {
+  "SK - Defend":{key:["Aer","Cmd","Com","Kic","Fir","1v1","Han","Ref"],imp:["Pas","Ant","TRO","Cnt","Thr","Pos","Cmp","Agi","Dec","Vis","Acc"]},
+  "FB - Attack":{key:["Cro","Dri","Tck","Fir","Ant"],imp:["Mar","Pos","Pas","Tea","Tec","Wor","Cmp","Pac","Dec","Sta","OtB","Acc","Agi"]},
+  "BPD - Defend":{key:["Hea","Mar","Tck","Pos","Jum","Str"],imp:["Fir","Tec","Pas","Agg","Ant","Cmp","Bra","Cnt","Dec","Vis","Pac"]},
+  "DM - Support":{key:["Pos","Tck","Ant","Cnt","Tea"],imp:["Mar","Pas","Fir","Cmp","Dec","Wor","Agg","Bra","Str","Sta"]},
+  "IF - Support":{key:["Acc","Agi","Dri","Fin","Fir","Tec","OtB"],imp:["Pac","Cmp","Fla","Pas","Vis","Ant","Bal","Dec","Wor"]},
+  "AM - Attack":{key:["Fir","Pas","Tec","Cmp","Dec","OtB","Vis"],imp:["Dri","Fin","Fla","Lon","Ant","Acc","Agi","Tea"]},
+  "AF - Attack":{key:["Acc","Pac","Fin","Fir","Cmp","OtB","Dri","Tec"],imp:["Ant","Dec","Hea","Agi","Bal","Fla","Wor","Det"]}
+};
 
 const ATTR_FULL = {Acc:"Acceleration",Aer:"Aerial Reach",Agg:"Aggression",Agi:"Agility",Ant:"Anticipation",Bal:"Balance",Bra:"Bravery",Cmd:"Command of Area",Com:"Communication",Cmp:"Composure",Cnt:"Concentration",Cor:"Corners",Cro:"Crossing",Dec:"Decisions",Det:"Determination",Dri:"Dribbling",Ecc:"Eccentricity",Fin:"Finishing",Fir:"First Touch",Fla:"Flair",Fre:"Free Kicks",Han:"Handling",Hea:"Heading",Jum:"Jumping Reach",Kic:"Kicking",Ldr:"Leadership",Lon:"Long Shots","L Th":"Long Throws",Mar:"Marking",Nat:"Natural Fitness",OtB:"Off the Ball","1v1":"One on One",Pac:"Pace",Pas:"Passing",Pen:"Penalty Taking",Pos:"Positioning",Pun:"Punching",Ref:"Reflexes",TRO:"Rushing Out",Sta:"Stamina",Str:"Strength",Tck:"Tackling",Tea:"Teamwork",Tec:"Technique",Thr:"Throwing",Vis:"Vision",Wor:"Work Rate"};
 const ATTR_GROUPS = {
@@ -213,7 +223,7 @@ const DEPTH_GROUPS = [
 /* ============================ STATE ============================ */
 const LS_KEY="fm_team_manager_v2";
 let STATE = load();
-function blankState(){ return { current:null, snapshots:[], overrides:{}, honours:[], settings:{youthAge:21,releaseScore:9.0,youthKeep:9.5,benchSize:9,textScale:1,theme:"dark",accent:"emerald",scoreProfile:"excel"}, fmConnected:false, season:{results:[],fixtures:[]} }; }
+function blankState(){ return { current:null, snapshots:[], overrides:{}, honours:[], settings:{youthAge:21,releaseScore:9.0,youthKeep:9.5,benchSize:9,textScale:1,theme:"dark",accent:"emerald",scoreProfile:"excel"}, fmConnected:false, season:{results:[],fixtures:[],league:{}} }; }
 const ACCENTS={emerald:["#10b981","#059669"],blue:["#3b82f6","#2563eb"],purple:["#8b5cf6","#7c3aed"],red:["#f43f5e","#e11d48"],amber:["#f59e0b","#d97706"]};
 function applyTheme(){
   const s=STATE.settings; const root=document.documentElement;
@@ -224,7 +234,7 @@ function applyTheme(){
 function applyTextScale(){ try{ document.documentElement.style.zoom=(STATE.settings.textScale||1); }catch(e){} applyTheme(); }
 function cycleText(){ const cur=STATE.settings.textScale||1; STATE.settings.textScale=cur>=1.25?1:Math.round((cur+0.12)*100)/100; save(); applyTextScale(); toast("Text size "+Math.round(STATE.settings.textScale*100)+"%"); }
 function load(){
-  try{ const s=JSON.parse(localStorage.getItem(LS_KEY)); if(s&&s.settings){ s.season=s.season||{results:[]}; s.season.fixtures=s.season.fixtures||[]; s.honours=s.honours||[]; s.settings.theme=s.settings.theme||"dark"; s.settings.accent=s.settings.accent||"emerald"; s.settings.scoreProfile=s.settings.scoreProfile||"excel"; return s; } }catch(e){}
+  try{ const s=JSON.parse(localStorage.getItem(LS_KEY)); if(s&&s.settings){ s.season=s.season||{results:[]}; s.season.fixtures=s.season.fixtures||[]; s.season.league=s.season.league||{}; s.honours=s.honours||[]; s.settings.theme=s.settings.theme||"dark"; s.settings.accent=s.settings.accent||"emerald"; s.settings.scoreProfile=s.settings.scoreProfile||"excel"; return s; } }catch(e){}
   try{ const o=JSON.parse(localStorage.getItem("fm_team_manager_v1")); if(o&&o.settings){o.fmConnected=false;o.season=o.season||{results:[]};return o;} }catch(e){}
   const st=blankState(); st.current={label:"Seed squad",date:todayStr(),records:SEED}; return st;
 }
@@ -246,7 +256,7 @@ function players(){ return (STATE.current?.records||[]).map(normalize).filter(p=
 function scoreExcel(p,role){ if(!SCORING.weights[role])return 0; let D=footScore(p.lf)+footScore(p.rf); const w=SCORING.weights[role]; for(const a of ATTRS) D+=(p.attrs[a]||0)*(w[a]||0); return Math.round(D/SCORING.rolemax[role]*20*100)/100; }
 function scoreFA(p,role){ const w=FA_WEIGHTS[role]; if(!w)return 0; let num=0,den=0; for(const a in w){ num+=(p.attrs[a]||0)*w[a]; den+=w[a]; } return den?Math.round(num/den*100)/100:0; }
 function scoreFor(p,role){ return scoreProfile()==="fmarena"?scoreFA(p,role):scoreExcel(p,role); }
-function bestRole(p){ let best=null,bs=-1; for(const r of ROLES){const s=scoreFor(p,r);if(s>bs){bs=s;best=r;}} return {role:best,score:bs}; }
+function bestRole(p){ const isGK=/(^|[ ,/])GK/.test(p.position||""); let best=null,bs=-1; for(const r of ROLES){ if((r.indexOf("SK")===0)!==isGK) continue; const s=scoreFor(p,r); if(s>bs){bs=s;best=r;} } if(best===null){ for(const r of ROLES){const s=scoreFor(p,r);if(s>bs){bs=s;best=r;}} } return {role:best,score:bs}; }
 function assignedRole(p){ if(STATE.overrides[p.name]&&ROLES.includes(STATE.overrides[p.name]))return STATE.overrides[p.name]; if(p.role)return p.role; return bestRole(p).role; }
 function parsePos(str){ const map={}; (str||"").split(",").forEach(seg=>{seg=seg.trim();if(!seg)return;const m=seg.match(/^([A-Za-z\/]+)\s*(?:\(([^)]*)\))?/);if(!m)return;const toks=m[1].split("/");let sides=(m[2]||"").replace(/[^LRC]/g,"").split("");if(!sides.length)sides=["C"];toks.forEach(t=>{t=t.toUpperCase();map[t]=map[t]||new Set();sides.forEach(s=>map[t].add(s));});}); return map; }
 function eligible(p,slot){ const mp=parsePos(p.position); for(const tok in slot.match){ if(mp[tok]) for(const s of slot.match[tok]) if(mp[tok].has(s)) return true; } return false; }
@@ -284,7 +294,7 @@ function last(n){ return n.split(" ").slice(-1)[0]; }
 
 /* ============================ TABS ============================ */
 const GROUPS=[
-  {id:"home",label:"🏠 Home",views:[["dash","Dashboard"],["coach","🎓 Coach's report"]]},
+  {id:"home",label:"🏠 Home",views:[["dash","Dashboard"],["coach","🎓 Coach's report"],["tips","💡 Tips & Tricks"]]},
   {id:"decisions",label:"🧭 Decisions",badge:true,views:[["advice","Decisions"]]},
   {id:"squad",label:"👥 Squad",views:[["squad","List"],["compare","Compare"],["depth","Depth & succession"],["release","Surplus"]]},
   {id:"team",label:"⚽ Team",views:[["xi","Best XI"],["setpiece","Set pieces"],["tactics","Tactics"],["matchday","Matchday"]]},
@@ -322,7 +332,7 @@ function render(){
   document.getElementById("refreshBtn").textContent = STATE.fmConnected ? "🔄 Refresh from FM" : "🔗 Connect FM";
   const v=document.getElementById("view");
   if(!STATE.current){ v.innerHTML=`<div class="card"><h2>No squad loaded</h2><p class="sub">Import your <code>Untitled.html</code> FM export to begin.</p><button class="btn primary" onclick="openImport()">Import now</button></div>`; return; }
-  v.innerHTML=({dash:vDash,coach:vCoach,advice:vAdvice,squad:vSquad,compare:vCompare,xi:vXI,matchday:vMatchday,season:vSeason,setpiece:vSetpiece,reports:vReports,training:vTraining,youth:vYouth,release:vRelease,depth:vDepth,progress:vProgress,tactics:vTactics,history:vHistory,notice:vNotice}[TAB]||vDash)();
+  v.innerHTML=({dash:vDash,coach:vCoach,tips:vTips,advice:vAdvice,squad:vSquad,compare:vCompare,xi:vXI,matchday:vMatchday,season:vSeason,setpiece:vSetpiece,reports:vReports,training:vTraining,youth:vYouth,release:vRelease,depth:vDepth,progress:vProgress,tactics:vTactics,history:vHistory,notice:vNotice}[TAB]||vDash)();
   if(TAB==="squad") wireSquad();
 }
 
@@ -354,7 +364,7 @@ function vDash(){
   <div class="flex2">
     <div class="card">
       <h3 style="margin-top:0">🧭 What to do now</h3>
-      ${weak.length?`<div class="tipbox amber"><b>Weak positions (buy / promote here):</b><br>${weak.map(o=>`${o.g.label} — only <b>${o.good}</b> good option${o.good==1?'':'s'}`).join("<br>")}</div>`:`<div class="tipbox"><b>Squad depth looks healthy</b> across all positions. ✅</div>`}
+      ${weak.length?`<div class="tipbox amber"><b>Weak positions (promote a youth / recall a loanee / retrain):</b><br>${weak.map(o=>`${o.g.label} — only <b>${o.good}</b> good option${o.good==1?'':'s'}`).join("<br>")}</div>`:`<div class="tipbox"><b>Squad depth looks healthy</b> across all positions. ✅</div>`}
       ${topRel.length?`<p class="muted" style="margin:8px 0 4px">Consider moving on:</p>${topRel.map(o=>`<div class="row" style="justify-content:space-between"><span><b>${esc(o.p.name)}</b> <span class="muted">${o.p.age}y</span></span>${scoreBadge(o.score)}</div>`).join("")}`:""}
       <p class="muted" style="margin:10px 0 4px">Brightest youth:</p>
       ${topYouth.map(o=>`<div class="row" style="justify-content:space-between"><span><b>${esc(o.p.name)}</b> <span class="muted">${o.p.age}y · ${o.role.split(" ")[0]}</span></span>${scoreBadge(o.score)}</div>`).join("")}
@@ -414,8 +424,9 @@ function vCoach(){
     </div>
   </div>
 
+  ${(()=>{const s=survivalCalc();return s.hasData?`<div class="tipbox amber"><b>🪂 Survival check:</b> ${s.position?s.position+'th, ':''}${s.points} pts from ${s.played} — projected <b>${s.proj}</b> (need ~${SURVIVAL_LINE}). ${s.verdict[1]}. You need ${s.needPpg.toFixed(2)} pts/game from here. Full tracker in <b>Season</b>.</div>`:`<div class="tipbox amber"><b>🪂 You're 20th — a relegation fight.</b> Enter your league standing in <b>Season → Survival tracker</b> and I'll track your survival pace. Everything below is built around staying up.</div>`;})()}
   <div class="card"><h3 style="margin-top:0">1. The honest verdict</h3>
-    <p>You're running a <b>young, ${avgAge<22?'very ':''}raw squad</b> (avg ${avgAge.toFixed(1)}, ${youth.length} of ${ps.length} aged ≤${ya}). ${pr?`Your <b>biggest strength is ${strongest[1]}</b> (${strongest[2].toFixed(1)}/20) and your <b>weakest area is ${weakest[1]}</b> (${weakest[2].toFixed(1)}/20).`:''} ${pr&&pr.engine<10.5?`The low stamina is the single most important thing to understand — <b>it explains the late goals you concede.</b>`:''}</p>
+    <p>You're <b>20th in the Premier League</b> — outgunned most weeks — with a <b>young, ${avgAge<22?'very ':''}raw squad</b> (avg ${avgAge.toFixed(1)}, ${youth.length} of ${ps.length} aged ≤${ya}). Survival isn't about out-playing anyone; it's about <b>losing fewer games</b>: banking draws, nicking the six-pointers, and not getting hammered by the top sides. ${pr?`Your <b>biggest strength is ${strongest[1]}</b> (${strongest[2].toFixed(1)}/20), your <b>weakest area is ${weakest[1]}</b> (${weakest[2].toFixed(1)}/20).`:''} ${pr&&pr.engine<10.5?`The low stamina is the key thing — <b>it explains the late goals you concede</b>, so you must not press high for 90'.`:''}</p>
     ${star?`<div class="tipbox"><b>⭐ Build around ${esc(star.p.name)}</b> — ${star.rat?('your form player ('+star.rat.toFixed(2)+' avg). Keep him fit, keep him happy, feed him the ball.'):('your highest-rated performer. He\'s the spine of this team.')}</div>`:''}
   </div>
 
@@ -450,6 +461,75 @@ function vCoach(){
       <li><b>Patience</b> — you'll still lose some games as a small club; the goal is to stop <i>throwing away</i> winnable ones. Re-import every 6 months and watch the squad (and results) climb.</li>
     </ul>
     <p class="sub">Sourced from the FM24 community (FM-Arena, GiveMeSport, sortitoutsi, footballmanagerblog, Toxigon) and adapted to your fast, young, low-stamina side.</p>
+  </div>`;
+}
+
+/* ---------- TIPS & TRICKS (sourced, personalised) ---------- */
+const TIPS_DATA = [
+ {t:"🪂 Survival & tactics — you're 20th, play like it", open:true, items:[
+  ["Default to CAUTIOUS mentality in the league; only step up to Balanced for home six-pointers vs fellow strugglers.","Survival = losing fewer games, not chasing wins you can't sustain. A lower mentality keeps the shape compact and protects low-stamina legs.","https://steamcommunity.com/sharedfiles/filedetails/?id=3557367493"],
+  ["Defend in a LOW BLOCK: Defensive Line = Lower, Line of Engagement = Lower.","A high line + high press is suicidal against faster, better PL attackers and burns out your ~7.8 work-rate squad. A deep block lets your pace defend the space behind.","https://nothrow.com/defensive-line-positions/"],
+  ["Trigger Press = MUCH LESS URGENT, and REGROUP (not counter-press) when you lose it.","A high press demands stamina you don't have; regroup gets tired players back into shape instead of chasing shadows.","https://www.givemesport.com/football-manager-2024-best-tips-to-defend-better/"],
+  ["In transition: COUNTER + Distribute Quickly. In possession: Pass Into Space, slightly higher tempo, more direct, fairly narrow.","Direct counter-attacking is how weak fast squads overperform — it weaponises pace (~13.4), your single biggest asset, instead of slow possession your kids can't execute.","https://www.footballmanagerblog.org/2024/12/fm24-lower-league-defensive-tactic.html"],
+  ["LEAN INTO PACE — never play possession. FM-Arena's test ranks Pace #1 and Acceleration #2 by a mile (≈+20 pts/season each).","Your whole profile (young, fast, broke) aligns with the most match-decisive traits in the engine. Slow patient football throws away your only edge.","https://fm-arena.com/table/26-player-attributes-testing/"],
+  ["Budget your points: ~38 stays up; ~17 of 19 rivals are better. Win the 6-8 games vs fellow strugglers, nick draws elsewhere, accept damage-limitation losses to the top 6.","An underdog can't out-play everyone for 90'; planning expected points per fixture is how survival sides actually plan a season.","https://www.fmscout.com/a-zims-op-3421-avoid-relegation-fm24-tactic.html"],
+  ["Build a SECOND, even lower-intensity tactic (deeper, lower tempo, no counter-press) and rotate it in for 3-4 of every 5 games.","You can't run high intensity all season with low-stamina kids — that's what's producing your injuries.","https://www.fmscout.com/q-1327-Stamina-and-workrate.html"]
+ ]},
+ {t:"⏱️ Match-day — manage the game in phases", items:[
+  ["Plan subs around the 60-70' stamina cliff: first sub ~60' (most tired/booked), ALWAYS hold one back to ~75'. Sub your fastest attackers ~60-65' so fresh pace is on when opponents tire.","Tired players perform worse AND get injured more — critical with 7 already hurt.","https://fm-arena.com/thread/9521-substitutions-why-amp-when-do-you-make-them/"],
+  ["React to the scoreline. Leading / closing out (esp. after 65'): drop to Cautious/Defensive, Regroup, deeper line, lower tempo, waste time. Only push up + throw a CB forward when you MUST chase late.","Bottom sides drop points by failing to see out leads; over-committing turns draws into losses.","https://community.sports-interactive.com/forums/topic/579191-how-do-you-close-out-games/"],
+  ["Set Opposition Instructions from the Data Hub EVERY week — never leave them blank. Find their 1-2 dangermen and target them.","Underdogs win on preparation, not quality. Blank OIs leave their best players free — the biggest free edge you have.","https://www.passion4fm.com/analyzing-the-next-opposition-in-football-manager/"],
+  ["Right OI per player type: slow creative playmaker = TIGHT MARK; pacey winger = do NOT tight-mark (close down + show onto weaker foot); tight-mark their full-backs to kill flank overloads.","Wrong OIs backfire — match the instruction to the attribute or you get skinned.","https://www.passion4fm.com/using-opposition-instructions-in-football-manager-to-deal-with-players/"],
+  ["Pre-match team talk: play the underdog card CALMLY ('no pressure', 'I believe in you'). Never aggressive vs stronger sides. Half-time: praise above ~7.0, demand below ~6.7; talk to groups, vary it weekly.","Talks are scored vs performance and morale; the right tone relaxes fragile young players.","https://fmwonderkid.com/football-manager-team-talks/"],
+  ["Use live Opposition Analysis (Tactics & Subs > Analysis > Show Opposition Analysis) to aim your counters at a bombing full-back's space or a slow CB.","You won't win possession battles — goals come from precise exploitation of specific weak links.","https://x.com/FM_Stag/status/1717325845520388504"]
+ ]},
+ {t:"🎯 Set pieces — your #1 controllable points source", items:[
+  ["Treat set pieces as a CORE pillar — a good corner routine is worth 8-12 goals a season, the difference between going down and staying up.","You can't out-play PL sides in open play; set pieces reset the contest to a standstill where dead-ball quality decides.","https://www.videogamer.com/news/youtuber-zealand-unveils-broken-fm24-corner-tactic-that-guarantees-goals/"],
+  ["Pick corner targets by JUMPING REACH (15+, ideally 16+), then Heading/Bravery/Strength. Screen the whole squad's Jumping column — one 16+ header runs the exploit.","FM24 weights set pieces to ~3 attributes per role, so one great header is a repeatable weapon a weak squad can build around.","https://www.charlieintel.com/games/how-to-score-and-defend-corners-football-manager-2024-283001/"],
+  ["Meta attacking corner: 2 big bodies near post + INSWINGING delivery, 1 at far post for flick-ons, 1 short to drag a marker, best long-shot man on the edge, a man on the keeper, 2 staying back.","It's the consensus routine because the AI marks corners predictably — exactly the matchup a modest squad can win.","https://realsport101.com/article/the-best-football-manager-2024-corner-routine"],
+  ["ALWAYS leave one fast attacker forward when defending corners + one on the edge for second balls.","Tailor-made for you: your pace turns their corners into your counters and deters them from over-committing. One sprint costs no stamina.","https://fmwonderkid.com/fm-tips-and-tricks/fm24-tips-and-tricks/set-piece-routines/"],
+  ["Assign BACKUP set-piece takers explicitly — there's a bug where your GOALKEEPER takes corners if no assigned taker is on the pitch, and you rotate constantly with 7 injuries.","Stops you wasting set pieces in matches you can't afford to throw.","https://realsport101.com/article/the-best-football-manager-2024-corner-routine"],
+  ["Weaponise long throws if anyone has high Long Throws — it's a free extra corner from open play (only customisable in the attacking third).","Every repeatable set-piece source raises a goal-shy survival side's scoring floor at no cost.","https://www.fmscout.com/a-fm24-set-pieces-guide.html"]
+ ]},
+ {t:"🏋️ Training, youth & the 9 attributes that matter", items:[
+  ["Train the 9 that move the needle, in order: Pace, Acceleration, Jumping Reach, then Strength/Balance/Agility, then Anticipation/Concentration, then Dribbling.","A test maxing only these 9 (CA ~80) finished 2nd; a 'balanced' side with them low got relegated. 6 of the 9 are physical — that IS your squad, so your kids are closer to the template than their CA suggests.","https://realsport101.com/article/fm24-only-9-attributes-really-matter-claims-community-test"],
+  ["STOP training the green 'key' stats. Passing, Marking, Tackling, Positioning, Vision, Crossing, Technique, Finishing have ~zero measurable match impact in FM24.","Hours on textbook attributes produce no points; a no-transfer manager must spend limited training on what wins games.","https://fm-arena.com/thread/14009-attribute-testing-football-manager-24/"],
+  ["Train PHYSICALS now while they're young (fastest growth before ~24): set Quickness & Aerial focuses, gym for Strength. Your 7.8 stamina caps how long you can run — and you can't buy fitness, you must train it.","Physicals develop fastest for under-24s, the biggest near-term return for a relegation fight.","https://fm-arena.com/thread/13924-training-and-age-golden-age-declining-age/"],
+  ["Set training intensity DOUBLE for under-23s, but lean on auto-throttle and DON'T stack Weaker Foot + Traits + Additional Focus (each is a hidden intensity multiplier that raises injury risk).","Double intensity is the biggest growth lever, but unmanaged it deepens a 7-injury crisis.","https://www.footballmanagerblog.org/2024/12/develop-young-players-fm24.html"],
+  ["Mentoring is your ONLY no-transfer route to raise hidden Professionalism/Determination — one good-personality senior per 2-3 youngsters, grouped by position.","Your core weakness is work-rate/professionalism; raising hidden Professionalism speeds ALL future training.","https://www.videogamer.com/guides/football-manager-2024-fm24-how-to-mentor-players/"],
+  ["Loan out fringe kids — your one allowed transfer tool — but ONLY where they're guaranteed starters in a competitive league. After 18, match minutes drive the mental attributes you can't train.","A loan where they start beats them rotting on your bench; bench-warming a loan is wasted development.","https://www.passion4fm.com/using-loans-to-improve-youth-development-on-football-manager/"],
+  ["Maximise medical/fitness staff (Sports Science, Physio, Fitness Coach) and run a fitness-first pre-season.","Staff is a rules-safe upgrade that directly attacks your two biggest problems — injuries and fitness.","https://www.givemesport.com/football-manager-2024-medical-centre-guide/"]
+ ]},
+ {t:"👥 Squad, morale & cohesion — you can't rebuild them cheaply", items:[
+  ["Lock in your strongest XI and play it to build Team Cohesion — with no transfers, consistency is your only lever to raise it.","Good→Excellent cohesion measurably improves how the team executes the 4-2-3-1 — the cheapest gain an underdog has.","https://www.charlieintel.com/games/football-manager-2024-best-ways-to-improve-team-cohesion-285653/"],
+  ["Read Dynamics fortnightly; identify Team Leaders and NEVER upset one — a leader's unhappiness spreads through the whole squad.","In an academy side a handful of homegrown seniors are irreplaceable leaders; protecting their morale steadies a fragile relegation run.","https://www.givemesport.com/football-manager-2024-dynamics-guide/"],
+  ["Manage promises DEFENSIVELY — give vague game-time timelines ('over the season'), never firm guarantees. A broken promise craters morale.","A deep young squad generates constant game-time complaints; loose timelines + the loan valve keep peace without commitments you can't keep.","https://sortitoutsi.net/content/70873/fm24-guide-how-to-avoid-broken-promises-ruining-your-experience"],
+  ["Pick your captain from the Leaders tier (Leadership 17+, Determination, Teamwork). A good captain stabilises the squad after a bad run.","Exactly your situation at 20th — it damps the morale swings that spiral an inexperienced dressing room.","https://www.footballmanager.com/the-byline/choosing-perfect-captain-wednesday-wisdom"]
+ ]},
+ {t:"🧠 Who plays where — match-engine coefficients", items:[
+  ["GK (Sweeper Keeper): pick your most AGILE keeper, not best handler (Agility > Reflexes > Aerial). Rushing Out is NEGATIVE — vs top sides consider a plain GK-Defend.","Counter-intuitive, but it's what the engine rewards; aggressive sweeping can cost goals behind a line you can't protect.","https://fm-arena.com/thread/14201-fm24-experiment-update-new-match-engines-most-important-attributes-for-each-respecitve-positions-with-their-coefficients/"],
+  ["Full-backs & CBs: pick your FASTEST, springiest defenders. CB top coefficient is Jumping Reach (highest defensive value anywhere) > Pace > Acceleration. A slow 'good defender' is a liability; don't fret a BPD's passing.","Pace/jumping at the back is your insurance against the space any deep block concedes — suits a young athletic squad.","https://fm-arena.com/thread/14201-fm24-experiment-update-new-match-engines-most-important-attributes-for-each-respecitve-positions-with-their-coefficients/"],
+  ["Defensive Mid: put your FITTEST, FASTEST midfielder here — Acceleration is the top DM attribute and STAMINA genuinely ranks top-3 (the one outfield slot it does). Run the double pivot to share the running.","A precise fix for your stamina problem — place your best engine where stamina actually counts.","https://fm-arena.com/thread/14201-fm24-experiment-update-new-match-engines-most-important-attributes-for-each-respecitve-positions-with-their-coefficients/"],
+  ["Inside Forwards & AMC: stack your fastest, best dribblers here — wide attack is the most pace-dependent role in the engine. Favour a 1v1 dribbler over a clever passer; set IFs to Sit Narrower + Move Into Channels.","This is where your speed edge converts directly into goals.","https://fm-arena.com/thread/14201-fm24-experiment-update-new-match-engines-most-important-attributes-for-each-respecitve-positions-with-their-coefficients/"],
+  ["Advanced Forward: pick on JUMPING REACH + PACE, not 'clinical finishing' — Finishing barely beats baseline; a fast, tall striker running in behind outscores a slow natural finisher.","Overturns the most ingrained FM belief — and a fast athletic striker is exactly what a youth academy produces.","https://fm-arena.com/thread/14009-attribute-testing-football-manager-24/"]
+ ]},
+ {t:"📤 Exporting your squad into Gaffer", items:[
+  ["Build ONE reusable FM custom view with every column you want, THEN export via Print Screen > Web Page. FM only exports the columns currently on screen.","A saved view makes each weekly export identical and diffable for week-over-week tracking.","https://www.fmscout.com/a-fm26-player-csv-export.html"],
+  ["Include: attributes, Condition/Match Sharpness/Jadedness, Injury Risk, Morale, Training Happiness, Avg Rating/Apps/Mins/Goals/Assists/xG/xA, Home-Grown Status, Eligible, On Loan From, contract & wage.","These drive the rotation, availability, form and finance features — the app lights them up automatically when present.","https://www.passion4fm.com/football-manager-custom-views/"],
+  ["Re-import before trusting any fitness/form/injury advice if your data is more than a few days old.","Form, fitness and injuries change every match — the app is only as fresh as your last import.","https://www.fmscout.com/a-fm26-player-csv-export.html"]
+ ]}
+];
+function vTips(){
+  const sec = TIPS_DATA.map((s,i)=>`<details ${s.open?'open':''}><summary>${s.t}</summary>
+    <div style="margin-top:8px">${s.items.map(it=>`<div style="margin:0 0 10px">
+      <div>✅ <b>${it[0]}</b></div>
+      <div class="muted" style="font-size:12.5px;margin:2px 0 2px 18px">Why: ${it[1]} ${it[2]?`<a href="${it[2]}" target="_blank" rel="noopener">source ↗</a>`:""}</div>
+    </div>`).join("")}</div></details>`).join("");
+  return `<div class="card">
+    <h2>💡 Tips & Tricks — for YOUR save</h2>
+    <p class="sub">A full, sourced playbook for a <b>young, fast, low-stamina, no-transfers side fighting Premier League relegation</b>. Tap a heading to expand. Every "why" links to its source.</p>
+    ${sec}
+    <div class="tipbox"><b>The one-line version:</b> defend deep, counter with your pace, win set pieces, rotate hard, set opposition instructions every week, and bank draws. You won't out-play the PL — you'll out-prepare it.</div>
   </div>`;
 }
 
@@ -566,6 +646,7 @@ function openPlayer(name){
     ${p.age<=STATE.settings.youthAge?`<h3>🎓 Development plan</h3><div class="tipbox">${devPlan(p).map(s=>`<div style="margin:4px 0"><b>${s[0]}</b> — ${s[1]}</div>`).join("")}</div>`:""}
     <h3>🕸️ Role profile <span class="muted" style="font-size:12px;font-weight:400">— his 8 key attributes for ${esc(role)}</span></h3>
     ${radarSVG(p,role)}
+    ${(()=>{const ra=ROLE_ATTRS[role];if(!ra)return"";const chip=a=>`<span class="fchip" style="padding:2px 7px"><span class="muted">${a}</span> <b style="color:${attrColor(p.attrs[a]||0)}">${p.attrs[a]||0}</b></span>`;return `<p class="sub" style="margin:2px 0 4px">FM <b>key</b> attributes for this role:</p><div class="fchips">${ra.key.map(chip).join("")}</div>`;})()}
     ${attrTrends(p.name,role)}
     <h3>📐 Role fit (all 7 roles)</h3>
     ${fits.map(f=>`<div class="rolefit"><span>${esc(f.r)}</span><span class="barmini"><i style="width:${f.s/20*100}%;background:${scoreColor(f.s)}"></i></span><span style="text-align:right;font-weight:700;color:${scoreColor(f.s)}">${f.s.toFixed(1)}</span></div>`).join("")}
@@ -591,7 +672,7 @@ function vXI(){
   const strong=bestXI(); const strongSet=new Set(Object.values(strong.assign).map(a=>a.p.name));
   const usedSet=new Set(Object.values(assign).map(a=>a.p.name));
   const rested=xiMode==="rotate"?Object.values(strong.assign).map(a=>a.p).filter(p=>!usedSet.has(p.name)):[];
-  const slots=FORMATION.map(s=>{const a=assign[s.id];const nm=a?last(a.p.name):"—";const sc=a?a.score:0;const warn=a&&!a.nat?'<span class="tag warn" style="font-size:8px;padding:1px 4px">OOP</span>':'';const pin=a&&a.pinned?'📌':'';return `<div class="slot" style="left:${s.x}%;top:${s.y}%" onclick="${a?`openPlayer('${esc(a.p.name)}')`:''}"><div class="dot" style="background:${a?scoreColor(sc):'#445'};${a&&a.pinned?'outline:2px solid var(--gold);outline-offset:1px':''}">${a?sc.toFixed(1):'–'}</div><div class="nm">${pin}${esc(nm)} ${warn}</div><div class="ro">${s.label}</div></div>`;}).join("");
+  const slots=FORMATION.map(s=>{const a=assign[s.id];const nm=a?last(a.p.name):"—";const sc=a?a.score:0;const warn=a&&!a.nat?'<span class="tag warn" style="font-size:10px;padding:1px 4px">OOP</span>':'';const pin=a&&a.pinned?'📌':'';return `<div class="slot" style="left:${s.x}%;top:${s.y}%" onclick="${a?`openPlayer('${esc(a.p.name)}')`:''}"><div class="dot" style="background:${a?scoreColor(sc):'#445'};${a&&a.pinned?'outline:2px solid var(--gold);outline-offset:1px':''}">${a?sc.toFixed(1):'–'}</div><div class="nm">${pin}${esc(nm)} ${warn}</div><div class="ro">${s.label}</div></div>`;}).join("");
   const vals=Object.values(assign).map(a=>a.score);const avg=vals.length?vals.reduce((x,y)=>x+y,0)/vals.length:0;
   const nPins=Object.keys(xiPins).length;
   let pinBanner="";
@@ -660,8 +741,8 @@ function vYouth(){
     return `<tr onclick="openPlayer('${esc(o.p.name)}')"><td><b>${esc(o.p.name)}</b></td><td>${o.p.age}</td><td class="muted">${esc(o.fmRole||o.p.position)}</td><td>${rolePill(o.role)}</td><td>${scoreBadge(o.score)}</td><td><b style="color:${scoreColor(o.dev)}">${o.dev.toFixed(1)}</b></td><td><span class="tag ${tag}">${txt}</span>${hasPers?risk:''}</td></tr>`;
   }).join("");
   return `<div class="card"><h2>🌟 Wonderkids & development (≤ ${ya})</h2>
-    <p class="sub"><b>Potential</b> = a development-headroom proxy (FM hides true PA): current fit + youth + Determination + attitude. Higher = more room to grow into a star. Sorted by it. Change the age cut-off in <b>Data → Settings</b>.</p>
-    <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>FM best role / pos</th><th>My role</th><th>Now</th><th>Potential</th><th>Verdict</th></tr></thead><tbody>${rows||'<tr><td colspan=7 class="muted">No players ≤'+ya+'.</td></tr>'}</tbody></table></div>
+    <p class="sub"><b>Ceiling est.</b> = a development-headroom estimate (FM hides true PA, so this is NOT FM's Potential): current fit + youth + Determination + attitude. Higher = more room to grow. Sorted by it. Change the age cut-off in <b>Data → Settings</b>.</p>
+    <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>FM best role / pos</th><th>My role</th><th>Now</th><th>Ceiling est.</th><th>Verdict</th></tr></thead><tbody>${rows||'<tr><td colspan=7 class="muted">No players ≤'+ya+'.</td></tr>'}</tbody></table></div>
     <div class="tipbox"><b>How to use it:</b> give your ⭐ Wonderkids real minutes + the role training from the <b>🏋️ Training</b> tab. ${hasPers?'A <span class="tag bad">attitude</span> tag (bad personality like Mercenary) means pair him with a pro mentor in <b>Reports → Personality</b> before he infects the dressing room.':'Add the <b>Personality</b> column to your export to flag attitude risks here.'}</div>
   </div>
   <div class="card notice">
@@ -742,7 +823,7 @@ function renderProg(){
 }
 
 /* ---------- TACTICS (two tactics) ---------- */
-let tacticSel="safe";
+let tacticSel="survival";
 function squadProfile(){
   const xi=bestXI(); const A=Object.values(xi.assign).map(a=>a.p);
   const ps=A.length>=8?A:players().filter(p=>p.avail);
@@ -800,13 +881,20 @@ function vTactics(){
       mentality:"Attacking (drop to Positive vs strong teams)",
       rows:[["GK","Sweeper Keeper – Defend","High line sweeper"],["D R / D L","Full Back – Support","Width without over-committing"],["D C ×2","Ball-Playing Defender – Defend ×2","Build from the back"],["DM ×2","Defensive Mid – Defend ×2","Double anchor for the high press"],["AM R / AM L","Inside Forward – Attack ×2","Cut inside, overload the box"],["AM C","Attacking Mid – Attack","Between the lines"],["ST","Advanced Forward – Attack","Spearhead"]],
       instr:["Mentality: <b>Attacking</b>","In possession: Short quick passing, Play out of defence, Underlap L+R, Fairly Narrow width, Slightly higher tempo, Focus down both flanks","Transition: <b>Counter-press</b> + <b>Counter</b>, GK <b>Roll it out</b>","Out of possession: <b>High press + Higher line</b>, Trigger press <b>Much more often</b>, Prevent short GK distribution, Get Stuck In, Invite Crosses"]
+    },
+    survival:{
+      name:"Survival — deep block & counter", mood:"BEST for 20th in the PL", tone:"bad",
+      blurb:"You're 20th and outgunned. This is the data-backed underdog setup: defend deep, protect your low-stamina legs, and murder teams on the counter with your pace. Don't press high — you'll gas out and concede late.",
+      mentality:"CAUTIOUS (Balanced only for home six-pointers)",
+      rows:[["GK","Sweeper Keeper – Defend (plain GK-Defend vs the top 6)","Cuts the risk of aggressive sweeping behind a line you can't protect"],["D R / D L","Full Back – SUPPORT (both)","Downgrade from Attack — don't over-commit; pick your fastest"],["D C ×2","Ball-Playing Def – Defend + No-Nonsense/Central Def – Defend","Pick your two FASTEST CBs — pace covers the space a deep block concedes"],["DM ×2","Defensive Mid – Defend + Ball-Winning Mid – Defend","Double shield; put your best engine/stamina here"],["AM R / AM L","Inside Forward – Support + Winger – Support","One wide man MUST track back; favour 1v1 dribblers"],["AM C","Attacking Mid – SUPPORT","Downgrade from Attack to keep the block compact"],["ST","Advanced Forward – Attack","Fast & tall — runs in behind onto counters"]],
+      instr:["Mentality: <b>Cautious</b> (your league default)","Out of possession: <b>Lower defensive line + Lower line of engagement</b>, <b>much less urgent</b> trigger press, <b>Regroup</b>, stay narrow / force outside, drop off more","Transition: <b>Counter</b> + Distribute Quickly","In possession: <b>Pass Into Space</b>, slightly higher tempo, more direct, fairly narrow, overlaps OFF","Subs: rotate fast attackers off ~60-65'; build a 2nd even-lower-intensity version for 3-4 of every 5 games"]
     }
   };
   const t=T[tacticSel];
   return `${analyzer}<div class="card">
     <h2>🏆 Tactics — stop losing</h2>
     <p class="sub">A formation alone never beats the match engine. Role/duty balance + mentality + matching your players' attributes does. Two ready-made setups for your Highway Star 4-2-3-1:</p>
-    <div class="seg"><button class="${tacticSel=='safe'?'on':''}" onclick="tacticSel='safe';render()">🛡️ Youth-Safe (recommended)</button><button class="${tacticSel=='meta'?'on':''}" onclick="tacticSel='meta';render()">⚔️ Meta Gegenpress</button></div>
+    <div class="seg"><button class="${tacticSel=='survival'?'on':''}" onclick="tacticSel='survival';render()">🪂 Survival (best for you)</button><button class="${tacticSel=='safe'?'on':''}" onclick="tacticSel='safe';render()">🛡️ Youth-Safe</button><button class="${tacticSel=='meta'?'on':''}" onclick="tacticSel='meta';render()">⚔️ Meta Gegenpress</button></div>
     <div class="row" style="justify-content:space-between"><h3 style="margin:0">${t.name}</h3><span class="tag ${t.tone}">${t.mood}</span></div>
     <p class="sub" style="margin-top:6px">${t.blurb}</p>
     <p><b>Mentality:</b> ${t.mentality}</p>
@@ -907,7 +995,8 @@ function vNotice(){
   <div class="row" style="gap:10px;margin:8px 0">${[["Excellent",14.5],["Good/starter",12],["Rotation",10],["Weak",7],["Poor",4]].map(([t,s])=>`<span>${scoreBadge(s)} <b>${t}</b></span>`).join(" ")}</div>
   <h3>8 sections (tap a section → sub-menu appears)</h3>
   <div class="def-grid">
-    <div><b>🏠 Home</b> — dashboard + <b>🎓 Coach's report</b> (full personalised analysis of your squad)</div>
+    <div><b>🏠 Home</b> — dashboard · <b>🎓 Coach's report</b> · <b>💡 Tips & Tricks</b> (sourced playbook for your save)</div>
+    <div><b>📝 Season</b> includes a <b>🪂 Survival tracker</b> (points projection vs the 38-pt line) + fixture survival planner</div>
     <div><b>🧭 Decisions</b> — your weekly checklist (with a badge of pending actions)</div>
     <div><b>👥 Squad</b> — List (search, filters, ✨ auto-best-roles) · Compare · Depth & succession · Surplus</div>
     <div><b>⚽ Team</b> — Best XI · Set pieces · Tactics (🧬 best style for your squad) · Matchday (assistant + pre-match routine)</div>
@@ -980,7 +1069,7 @@ function mdAdvice(){
   const late=min>=78, vl=min>=88;
   let idx;
   if(sit==='losingBig') idx = late?6:5;
-  else if(sit==='losing1') idx = vl?6:late?5:(min>=30?4:4);
+  else if(sit==='losing1') idx = vl?6:late?5:4;
   else if(sit==='drawing') idx = late?4:3;
   else if(sit==='winning1') idx = late?2:3;
   else if(sit==='winningBig') idx = late?1:2;
@@ -1107,7 +1196,7 @@ function parseMoney(s){ if(s==null)return null; const str=(s+"").replace(/,/g,""
 function money(n){ if(n==null)return "—"; if(n>=1e6)return (n/1e6).toFixed(2)+"M"; if(n>=1e3)return Math.round(n/1e3)+"K"; return Math.round(n); }
 const GOOD_PERS=["model citizen","model professional","professional","determined","resolute","driven","perfectionist","spirited","charismatic leader","born leader","leader","iron-willed","iron willed","fairly determined","fairly professional","very ambitious","ambitious","jovial","light-hearted"];
 const BAD_PERS=["casual","temperamental","unambitious","low determination","spineless","slack","easily discouraged","unsporting","mercenary","realist"];
-const KEYS={con:["CON","Condition","Con"],fatigue:["Fatigue"],load:["Match Load"],injrisk:["Injury Risk"],injsus:["Injury Susceptibility"],mor:["Morale","Mor"],apps:["Apps","Appearances"],gls:["Gls","Goals"],ast:["Ast","Assists"],rat:["Av Rat","Avg Rat","Average Rating","Rating","Av.R"],mins:["Mins","Minutes"],val:["Transfer Value","Value"],wage:["Wage","Salary"],exp:["Expires","Contract","Contract Expires","Expiry"],pers:["Personality"],bestrole:["Best Role"],bestpos:["Best Pos"],bestduty:["Best Duty"],pref:["Preferred Foot"],height:["Height"],weight:["Weight"],hg:["Home-Grown Status"],ctype:["Contract Type"],xg:["xG"],xa:["xA"],ccc:["CCC"],kpas:["K Pas"],tckr:["Tck R"],hdrpc:["Hdr %"],presc:["Pres C/90"],convpc:["Conv %"],trainhappy:["Training Happiness"],minsgm:["Mins/Gm"],injury:["Injury"],timeout:["Time Out"],loanfrom:["On Loan From"],loanexp:["Loan Expires"],elig:["Eligible"],yel:["Yel"],red:["Red"]};
+const KEYS={con:["CON","Condition"],fatigue:["Fatigue"],load:["Match Load"],injrisk:["Injury Risk"],injsus:["Injury Susceptibility"],mor:["Morale","Mor"],apps:["Apps","Appearances"],gls:["Gls","Goals"],ast:["Ast","Assists"],rat:["Av Rat","Avg Rat","Average Rating","Rating","Av.R"],mins:["Mins","Minutes"],val:["Transfer Value","Value"],wage:["Wage","Salary"],exp:["Expires","Contract","Contract Expires","Expiry"],pers:["Personality"],bestrole:["Best Role"],bestpos:["Best Pos"],bestduty:["Best Duty"],pref:["Preferred Foot"],height:["Height"],weight:["Weight"],hg:["Home-Grown Status"],ctype:["Contract Type"],xg:["xG"],xa:["xA"],ccc:["CCC"],kpas:["K Pas"],tckr:["Tck R"],hdrpc:["Hdr %"],presc:["Pres C/90"],convpc:["Conv %"],trainhappy:["Training Happiness"],minsgm:["Mins/Gm"],injury:["Injury"],timeout:["Time Out"],loanfrom:["On Loan From"],loanexp:["Loan Expires"],elig:["Eligible"],yel:["Yel"],red:["Red"]};
 /* currency symbol detected from data; condition/fatigue text ranks */
 function curSym(){ for(const p of players()){ const v=rawOf(p,KEYS.val)||rawOf(p,KEYS.wage); if(v){ if(/\$/.test(v))return"$"; if(/€/.test(v))return"€"; return"£"; } } return"£"; }
 function condRank(s){ if(!s)return null; s=s.toLowerCase(); if(/exhaust|jaded|very tired/.test(s))return 1; if(/tired|poor/.test(s))return 2; if(/fairly good|ok|average|adequate/.test(s))return 3; if(/very good|good/.test(s))return 4; if(/excellent|superb|peak/.test(s))return 5; return 3; }
@@ -1257,22 +1346,22 @@ function vCompare(){
   if(!ps.length) return `<div class="card"><h2>⚖️ Compare</h2><p class="muted">No squad.</p></div>`;
   if(!cmpA||!ps.find(p=>p.name===cmpA)) cmpA=ps[0].name;
   if(!cmpB||!ps.find(p=>p.name===cmpB)) cmpB=(ps[1]||ps[0]).name;
-  const A=players().find(p=>p.name===cmpA), B=players().find(p=>p.name===cmpB);
+  const pa=players().find(p=>p.name===cmpA), pb=players().find(p=>p.name===cmpB);
   const opt=sel=>ps.map(p=>`<option ${sel===p.name?'selected':''}>${esc(p.name)}</option>`).join("");
-  const fA=bestRole(A), fB=bestRole(B);
+  const fA=bestRole(pa), fB=bestRole(pb);
   const cell=(v,o,left)=>{const win=v>o;return `<td style="text-align:${left?'right':'left'};font-weight:${win?'800':'500'};color:${win?'#34d399':v>=12?'var(--txt)':'var(--mut)'}">${v}</td>`;};
-  const attrRows=ATTRS.map(a=>{const va=A.attrs[a]||0,vb=B.attrs[a]||0;return `<tr>${cell(va,vb,1)}<td class="an" style="text-align:center;color:var(--mut)">${a}</td>${cell(vb,va,0)}</tr>`;}).join("");
-  const roleRows=ROLES.map(r=>{const sa=scoreFor(A,r),sb=scoreFor(B,r);return `<tr><td style="text-align:right;font-weight:${sa>sb?800:500};color:${sa>sb?'#34d399':'var(--mut)'}">${sa.toFixed(1)}</td><td class="an" style="text-align:center;color:var(--mut)">${r}</td><td style="font-weight:${sb>sa?800:500};color:${sb>sa?'#34d399':'var(--mut)'}">${sb.toFixed(1)}</td></tr>`;}).join("");
-  const sharedRole=assignedRole(A), sA=scoreFor(A,sharedRole), sB=scoreFor(B,sharedRole);
-  const verdict = Math.abs(sA-sB)<0.3?"Too close to call — pick on form & freshness.":(sA>sB?esc(last(A.name)):esc(last(B.name)))+" is the better fit for "+sharedRole+" ("+Math.max(sA,sB).toFixed(1)+" vs "+Math.min(sA,sB).toFixed(1)+").";
+  const attrRows=ATTRS.map(a=>{const va=pa.attrs[a]||0,vb=pb.attrs[a]||0;return `<tr>${cell(va,vb,1)}<td class="an" style="text-align:center;color:var(--mut)">${a}</td>${cell(vb,va,0)}</tr>`;}).join("");
+  const roleRows=ROLES.map(r=>{const sa=scoreFor(pa,r),sb=scoreFor(pb,r);return `<tr><td style="text-align:right;font-weight:${sa>sb?800:500};color:${sa>sb?'#34d399':'var(--mut)'}">${sa.toFixed(1)}</td><td class="an" style="text-align:center;color:var(--mut)">${r}</td><td style="font-weight:${sb>sa?800:500};color:${sb>sa?'#34d399':'var(--mut)'}">${sb.toFixed(1)}</td></tr>`;}).join("");
+  const sharedRole=assignedRole(pa), sA=scoreFor(pa,sharedRole), sB=scoreFor(pb,sharedRole);
+  const verdict = Math.abs(sA-sB)<0.3?"Too close to call — pick on form & freshness.":(sA>sB?esc(last(pa.name)):esc(last(pb.name)))+" is the better fit for "+sharedRole+" ("+Math.max(sA,sB).toFixed(1)+" vs "+Math.min(sA,sB).toFixed(1)+").";
   return `<div class="card"><h2>⚖️ Compare players</h2><p class="sub">Side-by-side for selection calls. Higher value is <b style="color:#34d399">green</b>.</p>
     <div style="display:grid;grid-template-columns:1fr 50px 1fr;gap:8px;align-items:center;margin-bottom:12px">
       <select onchange="cmpA=this.value;render()">${opt(cmpA)}</select><span class="muted" style="text-align:center">vs</span><select onchange="cmpB=this.value;render()">${opt(cmpB)}</select>
     </div>
     <div style="display:grid;grid-template-columns:1fr 50px 1fr;gap:8px;text-align:center;margin-bottom:8px">
-      <div><b>${esc(A.name)}</b><br><span class="muted">${A.age}y · ${esc(A.position)}</span><br>${scoreBadge(fA.score)} <span class="muted">${fA.role.split(" ")[0]}</span></div>
+      <div><b>${esc(pa.name)}</b><br><span class="muted">${pa.age}y · ${esc(pa.position)}</span><br>${scoreBadge(fA.score)} <span class="muted">${fA.role.split(" ")[0]}</span></div>
       <div></div>
-      <div><b>${esc(B.name)}</b><br><span class="muted">${B.age}y · ${esc(B.position)}</span><br>${scoreBadge(fB.score)} <span class="muted">${fB.role.split(" ")[0]}</span></div>
+      <div><b>${esc(pb.name)}</b><br><span class="muted">${pb.age}y · ${esc(pb.position)}</span><br>${scoreBadge(fB.score)} <span class="muted">${fB.role.split(" ")[0]}</span></div>
     </div>
     <div class="tipbox"><b>Verdict:</b> ${verdict}</div>
     <h3>Role fit</h3><div class="tablewrap"><table><tbody>${roleRows}</tbody></table></div>
@@ -1282,6 +1371,35 @@ function vCompare(){
 
 /* ============================ SEASON / RESULT LOG ============================ */
 function seasonStats(){ const r=STATE.season.results; let w=0,d=0,l=0,gf=0,ga=0; r.forEach(m=>{gf+=+m.gf;ga+=+m.ga;if(+m.gf>+m.ga)w++;else if(+m.gf<+m.ga)l++;else d++;}); return {p:r.length,w,d,l,gf,ga,gd:gf-ga,pts:w*3+d}; }
+const SURVIVAL_LINE=38;
+function survivalCalc(){
+  const L=STATE.season.league||{}; const played=+L.played||0, points=+L.points||0, total=38;
+  const remaining=Math.max(0,total-played), ppg=played?points/played:0, proj=Math.round(ppg*total);
+  const need=Math.max(0,SURVIVAL_LINE-points), needPpg=remaining?need/remaining:0;
+  const verdict= proj>=41?["good","On course to stay up"]:proj>=37?["warn","On the line — every point counts"]:["bad","Relegation pace — must improve"];
+  return {position:+L.position||0, points, played, remaining, ppg, proj, need, needPpg, verdict, hasData:!!(L.played||L.points)};
+}
+function saveLeague(){ STATE.season.league={position:+val("lgPos")||0, points:+val("lgPts")||0, played:+val("lgPld")||0}; save(); toast("League table updated"); render(); }
+function survivalCardHTML(){
+  const s=survivalCalc();
+  return `<div class="card" style="background:linear-gradient(135deg,#2a1313,#121821)">
+    <h2>🪂 Survival tracker — Premier League</h2>
+    <p class="sub">You're fighting relegation. ~<b>${SURVIVAL_LINE} points</b> usually stays up. Enter your league standing to track your pace.</p>
+    ${s.hasData?`<div class="grid kpis">
+      <div class="kpi"><div class="n">${s.position||"—"}${s.position?"<span style='font-size:13px'>th</span>":""}</div><div class="l">Position</div></div>
+      <div class="kpi"><div class="n">${s.points}</div><div class="l">Points (${s.played} pl)</div></div>
+      <div class="kpi"><div class="n">${s.ppg.toFixed(2)}</div><div class="l">Points / game</div></div>
+      <div class="kpi"><div class="n" style="color:${s.verdict[0]==='good'?'#34d399':s.verdict[0]==='warn'?'#fbbf24':'#fb7185'}">${s.proj}</div><div class="l">Projected final</div></div>
+    </div>
+    <div class="tipbox ${s.verdict[0]==='bad'?'amber':''}" style="margin-top:10px"><b>${s.verdict[1]}.</b> ${s.remaining} games left. You need <b>${s.need} more points</b> to reach ${SURVIVAL_LINE} — that's <b>${s.needPpg.toFixed(2)} pts/game</b> from here (${s.needPpg<=1?'a draw every other game does it':s.needPpg<=1.4?'roughly a draw a game':'you must start winning the six-pointers'}).</div>`:''}
+    <div class="row" style="margin-top:10px">
+      <label class="muted">Pos <input type="number" id="lgPos" value="${STATE.season.league.position||''}" placeholder="20" style="width:56px"></label>
+      <label class="muted">Points <input type="number" id="lgPts" value="${STATE.season.league.points||''}" placeholder="14" style="width:64px"></label>
+      <label class="muted">Played <input type="number" id="lgPld" value="${STATE.season.league.played||''}" placeholder="19" style="width:64px"></label>
+      <button class="btn primary" onclick="saveLeague()">Update</button>
+    </div>
+  </div>`;
+}
 function addResult(){
   const opp=document.getElementById("rOpp").value.trim()||"Opponent";
   const ha=document.getElementById("rHA").value, gf=+document.getElementById("rGF").value, ga=+document.getElementById("rGA").value, comp=document.getElementById("rComp").value.trim();
@@ -1307,7 +1425,12 @@ function objectives(){
 }
 function addFixture(){ const opp=val("fxOpp")||"Opponent"; STATE.season.fixtures.push({opp,ha:val("fxHA"),diff:val("fxDiff")}); save(); render(); }
 function delFixture(i){ STATE.season.fixtures.splice(i,1); save(); render(); }
-function fixtureAdvice(d){ return d==="hard"?["💪 Strongest XI","Positive · full focus · win the midfield battle"]:d==="easy"?["🌱 Rotate & blood youth","Rest key men, give academy kids real minutes"]:["💪 Strongest XI","Standard front-foot approach"]; }
+function fixtureAdvice(d){
+  // survival framing for a 20th-placed side
+  if(d==="hard") return ["🛡️ Damage limitation","Deepest block, Cautious/Defensive, accept a 0-0 or narrow loss, REST key legs for the games that matter",0];
+  if(d==="easy") return ["⚔️ Six-pointer — go for it","Strongest available XI, step up to Balanced, win the midfield — these are the games that keep you up",2.4];
+  return ["🤝 Banker draw","Cautious low block + counter, nick a point off a mid-table side",1];
+}
 function addHonour(){ const season=val("hSeason")||"Season"; const finish=val("hFinish"); const trophies=val("hTrophy"); STATE.honours.unshift({season,finish,trophies}); save(); render(); }
 function delHonour(i){ STATE.honours.splice(i,1); save(); render(); }
 function vSeason(){
@@ -1320,19 +1443,21 @@ function vSeason(){
     return `<div style="margin:7px 0"><div class="row" style="justify-content:space-between"><span>${done?'✅':'⏳'} ${o.label}</span><b style="color:${done?'#34d399':'var(--mut)'}">${curTxt}</b></div><div class="barmini" style="margin-top:3px"><i style="width:${pct}%;background:${done?'#22c55e':'#fbbf24'}"></i></div></div>`;
   }).join("");
   const easyCount=fx.filter(f=>f.diff==="easy").length;
-  const fxHtml=fx.map((f,i)=>{const a=fixtureAdvice(f.diff);const col=f.diff==="hard"?"bad":f.diff==="easy"?"good":"warn";return `<tr><td>${f.ha==="H"?"🏠":"✈️"} <b>${esc(f.opp)}</b></td><td><span class="tag ${col}">${f.diff||"even"}</span></td><td><b>${a[0]}</b><br><span class="muted" style="font-size:11px">${a[1]}</span></td><td><button class="btn sm ghost" onclick="delFixture(${i})">✕</button></td></tr>`;}).join("");
+  const xptsFx=fx.reduce((s,f)=>s+(fixtureAdvice(f.diff)[2]||0),0);
+  const lbl={easy:"six-pointer",even:"mid-table",hard:"top side"};
+  const fxHtml=fx.map((f,i)=>{const a=fixtureAdvice(f.diff);const col=f.diff==="hard"?"bad":f.diff==="easy"?"good":"warn";return `<tr><td>${f.ha==="H"?"🏠":"✈️"} <b>${esc(f.opp)}</b></td><td><span class="tag ${col}">${lbl[f.diff]||"mid-table"}</span></td><td><b>${a[0]}</b><br><span class="muted" style="font-size:11px">${a[1]}</span></td><td><button class="btn sm ghost" onclick="delFixture(${i})">✕</button></td></tr>`;}).join("");
   const last5=r.slice(0,5).map(m=>{const res=+m.gf>+m.ga?["W","#22c55e"]:+m.gf<+m.ga?["L","#f43f5e"]:["D","#fbbf24"];return `<span title="${esc(m.opp)} ${m.gf}-${m.ga}" style="display:inline-flex;width:26px;height:26px;border-radius:6px;background:${res[1]};color:#06140d;font-weight:800;align-items:center;justify-content:center;margin-right:4px">${res[0]}</span>`;}).join("");
   // streak
   let streak="",sc=0,st=null; for(const m of r){const o=+m.gf>+m.ga?"W":+m.gf<+m.ga?"L":"D"; const cat=o==="W"?"win":o==="L"?"loss":"draw"; if(st===null){st=(o==="L")?"winless":(o==="W")?"unbeaten":"unbeaten";} if((st==="unbeaten"&&o!=="L")||(st==="winless"&&o!=="W")){sc++;}else break;}
   if(r.length) streak=`${sc} ${st==="winless"?"winless":"unbeaten"}`;
   const rows=r.map((m,i)=>{const res=+m.gf>+m.ga?["W","good"]:+m.gf<+m.ga?["L","bad"]:["D","warn"];return `<tr><td><span class="tag ${res[1]}">${res[0]}</span></td><td>${m.ha==="H"?"🏠":"✈️"} <b>${esc(m.opp)}</b></td><td><b>${m.gf}-${m.ga}</b></td><td class="muted">${esc(m.comp||"")}</td><td class="muted">${m.date}</td><td><button class="btn sm ghost" onclick="delResult(${i})">✕</button></td></tr>`;}).join("");
-  return `<div class="card"><h2>🎖️ Season objectives</h2><p class="sub">Auto-set for a youth challenge and tracked live from your data — your north star.</p>${objHtml}</div>
-  <div class="card"><h2>🗓️ Upcoming fixtures</h2><p class="sub">Add your next games + difficulty → get a rotation plan so you rest stars in easy games and blood youth.</p>
-    ${fx.length?`<div class="tablewrap"><table><thead><tr><th>Opponent</th><th>Difficulty</th><th>Plan</th><th></th></tr></thead><tbody>${fxHtml}</tbody></table></div>${easyCount>=2?`<div class="tipbox"><b>Rotation plan:</b> you have <b>${easyCount}</b> easy games — rotate & give academy kids minutes in those, keep your strongest XI for the rest.</div>`:''}`:'<p class="muted">No fixtures added yet.</p>'}
+  return `${survivalCardHTML()}<div class="card"><h2>🎖️ Season objectives</h2><p class="sub">Auto-set for a youth challenge and tracked live from your data — your north star.</p>${objHtml}</div>
+  <div class="card"><h2>🗓️ Upcoming fixtures — survival plan</h2><p class="sub">Tag each game by opponent strength → get the survival plan + a rough expected-points haul. Win the six-pointers, draw mid-table, limit damage vs the top sides.</p>
+    ${fx.length?`<div class="tablewrap"><table><thead><tr><th>Opponent</th><th>Type</th><th>Plan</th><th></th></tr></thead><tbody>${fxHtml}</tbody></table></div><div class="tipbox"><b>Expected from these ${fx.length} games: ~${xptsFx.toFixed(1)} pts.</b> ${easyCount?`Your ${easyCount} six-pointer${easyCount>1?'s are':' is'} where your season is decided — full strength, go for the win.`:'Add your six-pointers — they decide your season.'}</div>`:'<p class="muted">No fixtures added yet.</p>'}
     <div class="row" style="margin-top:10px">
       <select id="fxHA"><option value="H">🏠 Home</option><option value="A">✈️ Away</option></select>
       <input type="text" id="fxOpp" placeholder="Opponent" style="flex:1;min-width:120px">
-      <select id="fxDiff"><option value="even">Even</option><option value="hard">Hard</option><option value="easy">Easy</option></select>
+      <select id="fxDiff"><option value="easy">Six-pointer (vs strugglers)</option><option value="even">Mid-table</option><option value="hard">Top side</option></select>
       <button class="btn primary" onclick="addFixture()">Add</button>
     </div>
   </div>
@@ -1439,6 +1564,13 @@ function vAdvice(){
     weak.map(o=>`<div class="row" style="justify-content:space-between"><span><b>${o.g.label}</b></span><span class="tag ${o.good?'warn':'bad'}">${o.good} good</span></div>`).join("")));
 
   const count=injured.length+tired.length+giveTime.length+promote.length+cold.length+hot.length+inj.length+unhappy.length+(weak.length);
+  // This week's top 3 — the highest-impact survival actions
+  const top3=[];
+  if(injured.length) top3.push(`🤕 <b>Cover ${injured.length} injury(ies)</b> — line up deputies for ${injured.slice(0,3).map(p=>esc(last(p.name))).join(", ")}.`);
+  if(tired.length) top3.push(`🛌 <b>Rest ${tired.length} tired starter(s)</b> before kickoff — ${tired.slice(0,3).map(p=>esc(last(p.name))).join(", ")}.`);
+  if(cold.length) top3.push(`❄️ <b>Drop/rotate ${esc(last(cold[0].p.name))}</b> (out of form) — try ${hot.length?esc(last(hot[0].p.name)):"a fresh option"}.`);
+  if(top3.length<3 && giveTime.length) top3.push(`⏱️ <b>Get ${esc(last(giveTime[0].p.name))} minutes</b> (cup start or loan).`);
+  if(top3.length<3) top3.push(`🪂 <b>Set the deep-block survival tactic</b> & opposition instructions before your next game.`);
   return `<div class="card" style="background:linear-gradient(135deg,#0c2b20,#121821)">
     <h2>🧭 Decision Centre</h2>
     <p class="sub">Your weekly checklist so you never miss a call. Built live from availability, fitness, form, development & morale. Tap any name to open the player.</p>
@@ -1446,6 +1578,7 @@ function vAdvice(){
       <div class="kpi"><span class="ic">🤕</span><div class="n">${injured.length}</div><div class="l">Out injured</div></div>
       <div class="kpi"><span class="ic">🛌</span><div class="n">${tired.length}</div><div class="l">To rest</div></div>
       <div class="kpi"><span class="ic">⏱️</span><div class="n">${giveTime.length}</div><div class="l">Need minutes</div></div></div>
+    <div class="tipbox" style="margin-top:12px"><b>⭐ This week's top 3:</b><ol style="margin:6px 0 0;padding-left:20px">${top3.slice(0,3).map(t=>`<li>${t}</li>`).join("")}</ol></div>
   </div>
   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(290px,1fr))">${cards.filter(Boolean).join("")}</div>
   <div class="card"><details><summary>📖 How to read your stats → what to do (cheat-sheet)</summary>

@@ -1,5 +1,5 @@
 /* Gaffer service worker — offline app shell */
-const CACHE = "gaffer-v7";
+const CACHE = "gaffer-v8";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
@@ -9,15 +9,24 @@ self.addEventListener("activate", e => {
 });
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
-  e.respondWith(
-    caches.match(e.request).then(cached => {
-      const net = fetch(e.request).then(res => {
-        if (res && res.status === 200 && e.request.url.startsWith(self.location.origin)) {
-          const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy));
-        }
+  const isPage = e.request.mode === "navigate" || e.request.destination === "document";
+  if (isPage) {
+    // network-first for the app shell so users always get the latest version when online
+    e.respondWith(
+      fetch(e.request).then(res => {
+        const copy = res.clone(); caches.open(CACHE).then(c => c.put("./index.html", copy));
         return res;
-      }).catch(() => cached);
-      return cached || net;
-    })
+      }).catch(() => caches.match(e.request).then(c => c || caches.match("./index.html")))
+    );
+    return;
+  }
+  // cache-first for static assets (icons, manifest)
+  e.respondWith(
+    caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
+      if (res && res.status === 200 && e.request.url.startsWith(self.location.origin)) {
+        const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy));
+      }
+      return res;
+    }).catch(() => cached))
   );
 });
