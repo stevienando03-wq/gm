@@ -128,6 +128,11 @@ code{background:var(--bg3);padding:1px 5px;border-radius:5px;font-size:12px}
 .fchips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}
 .fchip{font-size:11px;background:var(--bg3);border:1px solid var(--line);border-radius:7px;padding:3px 8px}
 .fchip b{color:var(--mut);font-weight:700}
+details.explain{background:#0c1f17;border:1px solid #16543a;border-radius:10px;padding:8px 12px;margin:0 0 14px}
+details.explain summary{color:var(--brand);font-weight:700;font-size:13px}
+details.explain .ex{margin-top:8px;font-size:13px;line-height:1.5}
+details.explain .ex p{margin:4px 0}
+details.explain .ex b{color:var(--txt)}
 .seg{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
 .seg button{background:var(--bg3);border:1px solid var(--line);color:var(--mut);padding:7px 13px;border-radius:9px;cursor:pointer;font-weight:700;font-size:13px}
 .seg button.on{background:var(--bg4);color:#fff;border-color:var(--brand)}
@@ -290,6 +295,7 @@ function grpColor(g){ return g=="gk"?"var(--gk)":g=="def"?"var(--def)":g=="mid"?
 function attrColor(v){ if(v>=15)return"#22c55e"; if(v>=12)return"#a3e635"; if(v>=9)return"#fbbf24"; if(v>=6)return"#fb923c"; return"#f43f5e"; }
 function toast(m){ const t=document.getElementById("toast"); t.textContent=m; t.classList.remove("hidden"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.add("hidden"),2400); }
 function esc(s){ return (s+"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c])); }
+function explain(what,read,why){ return `<details class="explain"><summary>ℹ️ How to read this</summary><div class="ex"><p><b>What it is:</b> ${what}</p><p><b>How to read it:</b> ${read}</p><p><b>Why it matters:</b> ${why}</p></div></details>`; }
 function last(n){ return n.split(" ").slice(-1)[0]; }
 
 /* ============================ TABS ============================ */
@@ -551,6 +557,7 @@ function vSquad(){
   return `<div class="card">
     <h2>👥 Squad — ${rows.length} players</h2>
     <p class="sub">Tap any player for full attributes, role fit, radar & training. Score = fit in the assigned role.</p>
+    ${explain("Your whole squad, each player scored 0–20 for how well his attributes fit his assigned role.","Colours go red→green with the score: 14+ excellent, 11–14 starter, 8–11 squad, under 8 weak. 'Best' shows his strongest role if it differs. 🤕 = injured, 🔁 = on loan. Use the filters to find e.g. everyone with Pace ≥ 15.","It tells you who's actually good in the role you play them — the foundation for picking your XI and spotting players in the wrong position.")}
     <div class="row" style="margin-bottom:10px">
       <input type="text" id="sq" placeholder="🔍 Search name…" value="${esc(squadFilter.q)}">
       <select id="sr">${opts}</select>
@@ -684,6 +691,7 @@ function vXI(){
   return `<div class="card">
     <h2>⚽ Best XI — 4-2-3-1</h2>
     <p class="sub">${modeDesc[xiMode]} <span class="tag warn">OOP</span> = out of natural position. Tap a player for details.</p>
+    ${explain("Your strongest legal 4-2-3-1, picked automatically — best fit per position, injured/unavailable excluded.","Each dot shows the player's role-fit score (green = good). 'Team rating' is the XI's average. Switch modes: 💪 Strongest, 🔄 rest-tired (for a fresh next-match XI), 🌱 blood youth. 📌 = a what-if pin you set.","It removes guesswork from selection and shows where you're weak (an OOP slot = a hole to fix by promoting/retraining).")}
     <div class="seg"><button class="${xiMode=='strong'?'on':''}" onclick="xiMode='strong';render()">💪 Strongest</button><button class="${xiMode=='rotate'?'on':''}" onclick="xiMode='rotate';render()">🔄 Next match (rest tired)</button><button class="${xiMode=='youth'?'on':''}" onclick="xiMode='youth';render()">🌱 Blood youth</button></div>
     <div class="row" style="margin-bottom:12px"><span class="muted">Team rating ${scoreBadge(avg)}</span>${rested.length?`<span class="spacer"></span><span class="muted">Rested: ${rested.map(p=>esc(last(p.name))).join(", ")}</span>`:''}</div>
     ${(()=>{const out=players().filter(p=>!p.avail);return out.length?`<div class="tipbox amber"><b>🤕 Unavailable (auto-excluded from the XI):</b> ${out.map(p=>esc(last(p.name))+(p.injury&&p.injury!=='-'?' <span class="muted">('+esc(p.injury)+')</span>':' <span class="muted">(ineligible)</span>')).join(", ")}.</div>`:'';})()}
@@ -706,6 +714,7 @@ function vTraining(){
   return `<div class="card">
     <h2>🎯 Training plan</h2>
     <p class="sub">For each player: the FM <b>individual role training</b> to set, plus an <b>additional focus</b> targeting his weakest important attributes for that role. Tap a row for the full breakdown.</p>
+    ${explain("A per-player training plan: which Individual Training role to set in FM, and which extra focus area will fix his biggest gaps.","'Role training' = set it on his Training screen. 'Additional focus' = the attribute group he's weakest in for his role. 'Weak in role' lists the specific low attributes.","Targeted training turns raw academy kids into useful players — your only no-transfer way to get better.")}
     <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>Role training (FM)</th><th>Additional focus</th><th>Weak in role</th></tr></thead>
       <tbody>${rows.map(r=>`<tr onclick="openPlayer('${esc(r.p.name)}')">
         <td><b>${esc(r.p.name)}</b></td><td>${r.p.age}</td>
@@ -742,6 +751,7 @@ function vYouth(){
   }).join("");
   return `<div class="card"><h2>🌟 Wonderkids & development (≤ ${ya})</h2>
     <p class="sub"><b>Ceiling est.</b> = a development-headroom estimate (FM hides true PA, so this is NOT FM's Potential): current fit + youth + Determination + attitude. Higher = more room to grow. Sorted by it. Change the age cut-off in <b>Data → Settings</b>.</p>
+    ${explain("Your young players (≤ the age cut-off) ranked by how much they could still grow.","'Now' = current role-fit; 'Ceiling est.' = my growth estimate (FM hides real Potential). Verdict tags: ⭐ wonderkid, high ceiling, decent, limited. An 'attitude' tag = bad personality to mentor.","It tells you which kids to invest minutes and training in — the players who'll carry this save long-term.")}
     <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>FM best role / pos</th><th>My role</th><th>Now</th><th>Ceiling est.</th><th>Verdict</th></tr></thead><tbody>${rows||'<tr><td colspan=7 class="muted">No players ≤'+ya+'.</td></tr>'}</tbody></table></div>
     <div class="tipbox"><b>How to use it:</b> give your ⭐ Wonderkids real minutes + the role training from the <b>🏋️ Training</b> tab. ${hasPers?'A <span class="tag bad">attitude</span> tag (bad personality like Mercenary) means pair him with a pro mentor in <b>Reports → Personality</b> before he infects the dressing room.':'Add the <b>Personality</b> column to your export to flag attitude risks here.'}</div>
   </div>
@@ -769,6 +779,7 @@ function vRelease(){
   const list=releaseList();
   const rows=list.map(o=>`<tr onclick="openPlayer('${esc(o.p.name)}')"><td><b>${esc(o.p.name)}</b></td><td>${o.p.age}</td><td class="muted">${esc(o.p.position)}</td><td>${rolePill(o.role)}</td><td>${scoreBadge(o.score)}</td><td><span class="tag ${o.tag}">${esc(o.reason)}</span></td></tr>`).join("");
   return `<div class="card"><h2>🗑️ Release / Sell — ${list.length} flagged</h2><p class="sub">Advice, not orders. Threshold = best-role fit below <b>${STATE.settings.releaseScore}</b>. Free wages & slots for youth and targeted signings.</p>
+    ${explain("Players who look surplus — too low-rated for their age to be worth a squad slot.","Each row gives the reason (too weak, or ageing and only squad-level). It's a suggestion, not an order.","Clearing deadwood frees wages and minutes for youngsters — in a youth save, loan or release rather than let them block a kid's path.")}
     <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>Position</th><th>Best role</th><th>Score</th><th>Why</th></tr></thead><tbody>${rows||'<tr><td colspan=6 class="muted">Nobody flagged — healthy squad.</td></tr>'}</tbody></table></div>
     <div class="tipbox amber"><b>Keep a low-scorer only if</b> he's a cheap natural backup for a slot you have no youth in. Never sell your only specialist.</div>
   </div>`;
@@ -801,7 +812,8 @@ function vDepth(){
     return {g,starter,heir,st};
   });
   const succRows=succ.map(o=>`<tr><td><b>${o.g.label}</b></td><td>${o.starter?esc(last(o.starter.p.name))+' <span class="muted">'+o.starter.p.age+'</span>':'—'}</td><td>${o.starter?scoreBadge(o.starter.s):'—'}</td><td>${o.heir?esc(last(o.heir.p.name))+' <span class="muted">'+o.heir.p.age+'</span>':'<span class="muted">none</span>'}</td><td>${o.heir?scoreBadge(o.heir.s):'—'}</td><td><span class="tag ${o.st[0]}">${o.st[1]}</span></td></tr>`).join("");
-  return `<div class="card"><h2>📊 Squad depth</h2><p class="sub">Per position: your natural options ranked. <span class="tag bad">WEAK</span> = fewer than 2 players ≥11. No transfers in a youth challenge → <b>🔁 Retrain</b> tips show who to convert.</p></div>
+  return `<div class="card"><h2>📊 Squad depth</h2><p class="sub">Per position: your natural options ranked. <span class="tag bad">WEAK</span> = fewer than 2 players ≥11. No transfers in a youth challenge → <b>🔁 Retrain</b> tips show who to convert.</p>
+    ${explain("How well-stocked each position is, plus a succession plan (current best vs your best young heir).","Green 'Solid' = 2+ good options; amber 'Thin' = only 1; red 'WEAK' = a hole. The succession table flags positions where your starter is ageing with no young replacement.","It shows where one injury leaves you exposed and which kid to fast-track — vital with no transfer market.")}</div>
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">${blocks}</div>
     <div class="card"><h2>🧬 Succession plan</h2><p class="sub">Every position's current best vs your best young heir (≤23). <span class="tag bad">ageing, no heir</span> = develop or promote a replacement now.</p>
       <div class="tablewrap"><table><thead><tr><th>Position</th><th>Current best</th><th>Fit</th><th>Young heir (≤23)</th><th>Fit</th><th>Status</th></tr></thead><tbody>${succRows}</tbody></table></div>
@@ -813,6 +825,7 @@ function vProgress(){
   if(!STATE.snapshots.length) return `<div class="card"><h2>📈 Progression</h2><p class="sub">Save a snapshot first: <b>Data → Save snapshot</b>. Then import a newer export later and compare here.</p></div>`;
   const opts=STATE.snapshots.map((s,i)=>`<option value="${i}">${esc(s.label)} (${s.date})</option>`).join("");
   return `<div class="card"><h2>📈 Progression</h2><p class="sub">Attribute gains in <b>current data</b> vs an older snapshot, for the attributes that matter to each player's role.</p>
+    ${explain("How much each player has grown since a saved snapshot — both his role-fit score and the raw attribute points gained.","Pick the older snapshot to compare against. Green Δ = improved, red = declined. 'Improved' lists exactly which attributes went up.","It proves whether your training & game-time choices are actually developing players — the whole point of a youth save.")}
     <div class="row"><label>Baseline: <select id="baseSel" onchange="renderProg()">${opts}</select></label></div><div id="progOut" style="margin-top:12px"></div></div>`;
 }
 function renderProg(){
@@ -893,7 +906,8 @@ function vTactics(){
   const t=T[tacticSel];
   return `${analyzer}<div class="card">
     <h2>🏆 Tactics — stop losing</h2>
-    <p class="sub">A formation alone never beats the match engine. Role/duty balance + mentality + matching your players' attributes does. Two ready-made setups for your Highway Star 4-2-3-1:</p>
+    <p class="sub">A formation alone never beats the match engine. Role/duty balance + mentality + matching your players' attributes does. Ready-made setups for your Highway Star 4-2-3-1:</p>
+    ${explain("Three complete tactic presets (roles, duties, mentality, instructions) you can copy straight into FM.","🪂 Survival is your default (deep block + counter, best for 20th). 🛡️ Youth-Safe is a balanced middle ground. ⚔️ Meta Gegenpress is high-press — only once your squad has the stamina. The 🧬 analyser above each tells you which fits your players.","The right shape for YOUR players is the single biggest lever on results — this gives you a tested one to copy, not guesswork.")}
     <div class="seg"><button class="${tacticSel=='survival'?'on':''}" onclick="tacticSel='survival';render()">🪂 Survival (best for you)</button><button class="${tacticSel=='safe'?'on':''}" onclick="tacticSel='safe';render()">🛡️ Youth-Safe</button><button class="${tacticSel=='meta'?'on':''}" onclick="tacticSel='meta';render()">⚔️ Meta Gegenpress</button></div>
     <div class="row" style="justify-content:space-between"><h3 style="margin:0">${t.name}</h3><span class="tag ${t.tone}">${t.mood}</span></div>
     <p class="sub" style="margin-top:6px">${t.blurb}</p>
@@ -1037,6 +1051,7 @@ function vSetpiece(){
   return `<div class="card">
     <h2>🎯 Set pieces & leaders</h2>
     <p class="sub">Auto-picked from your squad's attributes — set pieces are roughly <b>a third of all goals</b>, so getting these right wins games. <span class="tag good">XI</span> = currently a starter. Tap any name for detail.</p>
+    ${explain("Who should take and attack your set pieces, computed from the right attributes (Corners/Free-Kicks/Penalties for takers; Jumping/Heading for targets; Leadership for captain).","Lists are ranked best-first. The corner table tells each man exactly where to stand. Assign these in FM's Set Pieces screen — and set a BACKUP taker (bug: the GK takes corners if no assigned taker is on the pitch).","For a weaker side, set pieces are the most reliable goals you control — often the difference between dropping and winning a tight game.")}
     <div class="flex2">
       <div><h3 style="margin-top:0">⚽ Penalty taker order</h3>${spTable(pen,set,o=>'<b>'+Math.round(o.v)+'</b>')}<p class="sub" style="margin-top:6px">Order = your shootout list too. Top man takes match penalties.</p></div>
       <div><h3 style="margin-top:0">🚩 Corners</h3>${spTable(corner,set,o=>'Cor '+A(o.p,'Cor'))}<h3>🎯 Direct free kicks</h3>${spTable(fk,set,o=>'Fre '+A(o.p,'Fre'))}</div>
@@ -1109,7 +1124,12 @@ function matchdaySubs(idx){
   const atk=p=>Math.max(scoreFor(p,"AF - Attack"),scoreFor(p,"IF - Support"),scoreFor(p,"AM - Attack"));
   const def=p=>Math.max(scoreFor(p,"DM - Support"),scoreFor(p,"BPD - Defend"),scoreFor(p,"FB - Attack"));
   const byAtk=bench.slice().sort((x,y)=>(atk(y)+A(y,"Pac")*0.4+cr(y)*0.5)-(atk(x)+A(x,"Pac")*0.4+cr(x)*0.5));
-  const byDef=bench.slice().sort((x,y)=>(def(y)+cr(y)*0.5)-(def(x)+cr(x)*0.5));
+  // opponent-aware defensive pick: bring on the right TYPE of defender for who you're facing
+  const oppDef={ targetman:p=>A(p,"Jum")*0.5+A(p,"Hea")*0.3+A(p,"Str")*0.2, wingers:p=>A(p,"Pac")*0.5+A(p,"Mar")*0.3+A(p,"Tck")*0.2, playmaker:p=>A(p,"Tck")*0.4+A(p,"Mar")*0.3+A(p,"Ant")*0.3, possession:p=>A(p,"Tck")*0.4+A(p,"Ant")*0.3+A(p,"Wor")*0.3, counter:p=>def(p) };
+  const oppReason={ targetman:"a tall/strong man to win headers vs their target striker", wingers:"a quick, defensively-sound man to deal with their fast wide players", playmaker:"a ball-winner to screen and shut down their playmaker", possession:"a ball-winner to break up their passing", counter:"a fresh defensive-minded player" };
+  const defFn = oppDef[oppArch]||def;
+  const byDef=bench.slice().sort((x,y)=>(defFn(y)+cr(y)*0.5)-(defFn(x)+cr(x)*0.5));
+  const oppWhy = oppReason[oppArch]||"a fresh defensive-minded player";
   const byFresh=bench.slice().sort((x,y)=>cr(y)-cr(x));
   const tiredOff=entries.map(e=>e.p).slice().sort((x,y)=>cr(x)-cr(y))[0];
   const wideOff=entries.filter(e=>["AML","AMR","AMC","ST"].includes(e.sid)).map(e=>e.p).sort((x,y)=>cr(x)-cr(y))[0];
@@ -1123,7 +1143,7 @@ function matchdaySubs(idx){
     return ln(byAtk[0], dmOff||tiredOff, "fresh pace & goal threat to run at tired defenders in the last 25-30 mins");
   }
   if(idx<=2){ // protect the lead
-    return ln(byDef[0], wideOff||tiredOff, "shore it up — a fresh defensive-minded player on for a tiring attacker to see it out")
+    return ln(byDef[0], wideOff||tiredOff, "shore it up — "+oppWhy+" on for a tiring attacker to see it out")
       + (byDef[1]&&cr(tiredOff)<=2?ln(byDef[1], tiredOff, "second defensive change if a starter is gassed/red-zone"):"");
   }
   return ln(byFresh[0], tiredOff, "like-for-like refresh of your most tired starter — keeps intensity up & cuts injury risk");
@@ -1255,7 +1275,9 @@ function noData(label,cols){ return `<div class="tipbox amber"><b>➕ Add the �
 
 function vReports(){
   const seg=[["fitness","💪 Fitness"],["form","📈 Form"],["analytics","📊 Analytics"],["finance","💰 Finance"],["personality","🧠 Personality"]].map(([k,l])=>`<button class="${repSeg===k?'on':''}" onclick="repSeg='${k}';render()">${l}</button>`).join("");
-  return `<div class="card"><h2>📋 Reports</h2><p class="sub">Deeper squad analysis. Each section activates when its FM column is in your export — see <b>📖 Help → columns to add</b>.</p><div class="seg">${seg}</div><div>${({fitness:repFitness,form:repForm,analytics:repAnalytics,finance:repFinance,personality:repPersonality}[repSeg]||repFitness)()}</div></div>`;
+  return `<div class="card"><h2>📋 Reports</h2><p class="sub">Deeper squad analysis. Each section activates when its FM column is in your export — see <b>📖 Help → columns to add</b>.</p>
+    ${explain("Five deeper data views: Fitness (rest/injury), Form (scorers/ratings), Analytics (xG/xA), Finance (value/wages), Personality (mentoring).","Switch sub-tabs below. In Analytics, 'goals vs xG' shows who's finishing hot (over xG — expect regression) or unlucky (under xG — keep faith). Greyed sections need a column adding to your export.","Turns raw FM stats into decisions: who to rest, who's really performing vs just looking busy, and who to mentor.")}
+    <div class="seg">${seg}</div><div>${({fitness:repFitness,form:repForm,analytics:repAnalytics,finance:repFinance,personality:repPersonality}[repSeg]||repFitness)()}</div></div>`;
 }
 function repFitness(){
   if(!hasCol(KEYS.con)&&!hasCol(KEYS.injsus)) return noData("a fitness, rotation & injury view",["CON / Condition","Injury Susceptibility"]);
@@ -1404,6 +1426,7 @@ function vCompare(){
   const sharedRole=assignedRole(pa), sA=scoreFor(pa,sharedRole), sB=scoreFor(pb,sharedRole);
   const verdict = Math.abs(sA-sB)<0.3?"Too close to call — pick on form & freshness.":(sA>sB?esc(last(pa.name)):esc(last(pb.name)))+" is the better fit for "+sharedRole+" ("+Math.max(sA,sB).toFixed(1)+" vs "+Math.min(sA,sB).toFixed(1)+").";
   return `<div class="card"><h2>⚖️ Compare players</h2><p class="sub">Side-by-side for selection calls. Higher value is <b style="color:#34d399">green</b>.</p>
+    ${explain("Two players head-to-head: their fit in all 7 roles and every one of the 47 attributes.","On each row the higher number is green. The 'Verdict' tells you who's the better fit for the role you'd play them in.","Settles 'who do I start?' objectively — especially handy for two kids competing for the same shirt.")}
     <div style="display:grid;grid-template-columns:1fr 50px 1fr;gap:8px;align-items:center;margin-bottom:12px">
       <select onchange="cmpA=this.value;render()">${opt(cmpA)}</select><span class="muted" style="text-align:center">vs</span><select onchange="cmpB=this.value;render()">${opt(cmpB)}</select>
     </div>
@@ -1623,6 +1646,7 @@ function vAdvice(){
   return `<div class="card" style="background:linear-gradient(135deg,#0c2b20,#121821)">
     <h2>🧭 Decision Centre</h2>
     <p class="sub">Your weekly checklist so you never miss a call. Built live from availability, fitness, form, development & morale. Tap any name to open the player.</p>
+    ${explain("Every decision the app thinks you should action this week, grouped into cards (rest, injuries, give-minutes, promote, form, mentoring, jobs to assign…).","Start with 'This week's top 3'. Each card lists named players with a one-tap link and a tag telling you the action. The nav badge counts open actions.","It's your manager's to-do list — so nothing important (an injury to cover, a kid needing games, a booking risk) slips through.")}
     <div class="grid kpis"><div class="kpi"><span class="ic">✅</span><div class="n">${count}</div><div class="l">Actions flagged</div></div>
       <div class="kpi"><span class="ic">🤕</span><div class="n">${injured.length}</div><div class="l">Out injured</div></div>
       <div class="kpi"><span class="ic">🛌</span><div class="n">${tired.length}</div><div class="l">To rest</div></div>
