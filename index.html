@@ -288,7 +288,7 @@ function trainingFor(p){
 
 /* ============================ UI HELPERS ============================ */
 function scoreColor(s){ if(s>=14)return"#22c55e"; if(s>=12)return"#4ade80"; if(s>=10)return"#a3e635"; if(s>=8)return"#fbbf24"; if(s>=6)return"#fb923c"; return"#f43f5e"; }
-function scoreBadge(s){ return `<span class="score" style="background:${scoreColor(s)}">${(+s).toFixed(2)}</span>`; }
+function scoreBadge(s){ return `<span class="score" title="Role-fit 0–20 · ${scoreProfile()==='fmarena'?'FM-Arena (match-engine)':'My Excel'} model — higher = better fit" style="background:${scoreColor(s)}">${(+s).toFixed(2)}</span>`; }
 function grpOf(role){ if(role.startsWith("SK"))return"gk"; if(role.startsWith("FB")||role.startsWith("BPD"))return"def"; if(role.startsWith("DM")||role.startsWith("IF")||role.startsWith("AM -"))return"mid"; return"att"; }
 function rolePill(role){ return `<span class="pill ${grpOf(role)}">${role}</span>`; }
 function grpColor(g){ return g=="gk"?"var(--gk)":g=="def"?"var(--def)":g=="mid"?"var(--mid)":"var(--att)"; }
@@ -359,6 +359,7 @@ function vDash(){
   return `<div class="card" style="background:linear-gradient(135deg,#0c2b20,#121821)">
     <h2>🏠 Squad Dashboard</h2>
     <p class="sub">${esc(STATE.current.label)} · ${STATE.current.date} · last update ${daysAgo(STATE.current.date)} · model: <b>${scoreProfile()==='fmarena'?'FM-Arena (match-engine)':'My Excel'}</b> <span class="muted">(change in Data → settings)</span></p>
+    ${explain("Your home base — squad health at a glance plus the few things that need your attention.","KPIs up top (XI rating, avg age, youth, release flags), then 'What to do now' and an age chart. 'Model' = which scoring system is active.","Open it first each session: it points you straight to the decisions that matter. For the deep read, go to 🎓 Coach's report.")}
     <div class="grid kpis">
       <div class="kpi"><span class="ic">⭐</span><div class="n" style="color:${scoreColor(avg)}">${avg.toFixed(2)}</div><div class="l">Best XI rating</div></div>
       <div class="kpi"><span class="ic">👥</span><div class="n">${ps.length}</div><div class="l">Players</div></div>
@@ -1026,7 +1027,21 @@ function vNotice(){
   <h3>📲 Install it like an app</h3>
   <p class="sub">On your phone open the live link, then <b>Add to Home Screen</b> (Share menu on iPhone, ⋮ menu on Android/Chrome). It installs as a full-screen app and works <b>offline</b> — your squad is cached on the device.</p>
   <p class="sub"><b>📱 Swipe</b> left / right anywhere on a page to flick between the 8 sections. (Swiping <i>on a table or the pitch</i> scrolls that instead — as it should.)</p>
-  <details style="margin-top:14px"><summary>Attribute glossary (47)</summary><div class="def-grid" style="margin-top:8px">${ATTRS.map(a=>`<div><b>${a}</b> — ${ATTR_FULL[a]||a}</div>`).join("")}</div></details>
+  <details style="margin-top:14px" open><summary>🔠 Glossary — every abbreviation explained</summary>
+    <p class="sub" style="margin-top:8px"><b>Roles (your 4-2-3-1):</b></p>
+    <div class="def-grid">
+      <div><b>SK</b> — Sweeper Keeper</div><div><b>FB</b> — Full Back</div><div><b>BPD</b> — Ball-Playing Defender</div><div><b>DM</b> — Defensive Midfielder</div>
+      <div><b>IF</b> — Inside Forward</div><div><b>AM</b> — Attacking Midfielder</div><div><b>AF</b> — Advanced Forward</div><div><b>CB/FB/WB</b> — Centre/Full/Wing Back</div>
+    </div>
+    <p class="sub" style="margin-top:10px"><b>Stats & terms:</b></p>
+    <div class="def-grid">
+      <div><b>xG</b> — expected goals (chance quality)</div><div><b>xA</b> — expected assists</div><div><b>CCC</b> — clear-cut chances created</div><div><b>K Pas</b> — key passes</div>
+      <div><b>Av Rat</b> — average match rating</div><div><b>ppg</b> — points per game</div><div><b>OOP</b> — out of position (in Best XI)</div><div><b>CON</b> — condition (fitness %)</div>
+      <div><b>Tck R</b> — tackle success %</div><div><b>Hdr %</b> — header win %</div><div><b>CA / PA</b> — current / potential ability (FM hides these)</div><div><b>Ceiling est.</b> — our growth estimate (not FM's PA)</div>
+      <div><b>Role-fit score</b> — 0–20, how well a player suits a role</div><div><b>Team rating</b> — average role-fit of your XI</div><div><b>HG</b> — home-grown status</div><div><b>OI</b> — opposition instructions</div>
+    </div>
+  </details>
+  <details style="margin-top:10px"><summary>Attribute glossary (47)</summary><div class="def-grid" style="margin-top:8px">${ATTRS.map(a=>`<div><b>${a}</b> — ${ATTR_FULL[a]||a}</div>`).join("")}</div></details>
   <div class="tipbox"><b>Privacy:</b> all data stays in this browser + your backup files. Nothing is uploaded.</div>
   <p class="muted" style="font-size:11px;margin-top:10px">Tips & development advice sourced from FM24 community guides (footballmanagerblog, sortitoutsi, FM Scout, Toxigon, GiveMeSport).</p>
   </div>`;
@@ -1123,7 +1138,12 @@ function matchdaySubs(idx){
   const cr=p=>condRank(rawOf(p,KEYS.con))||3;
   const atk=p=>Math.max(scoreFor(p,"AF - Attack"),scoreFor(p,"IF - Support"),scoreFor(p,"AM - Attack"));
   const def=p=>Math.max(scoreFor(p,"DM - Support"),scoreFor(p,"BPD - Defend"),scoreFor(p,"FB - Attack"));
-  const byAtk=bench.slice().sort((x,y)=>(atk(y)+A(y,"Pac")*0.4+cr(y)*0.5)-(atk(x)+A(x,"Pac")*0.4+cr(x)*0.5));
+  // opponent-aware attacking pick: vs a high-line side bring a sprinter; vs a deep block bring a dribbler/creator
+  const oppAtk={ possession:p=>A(p,"Pac")*0.6+A(p,"Acc")*0.4, counter:p=>A(p,"Dri")*0.5+A(p,"Fla")*0.25+A(p,"Vis")*0.25, targetman:p=>A(p,"Pac")*0.5+A(p,"Acc")*0.5 };
+  const oppAtkWhy={ possession:"a flat-out sprinter to run in behind their high line", counter:"a dribbler/creator to unlock their deep block", targetman:"a pacey runner to exploit the space behind their pushed-up side" };
+  const atkFn = (oppArch&&oppAtk[oppArch]) ? (p=>atk(p)*0.6+oppAtk[oppArch](p)*0.6+cr(p)*0.4) : (p=>atk(p)+A(p,"Pac")*0.4+cr(p)*0.5);
+  const byAtk=bench.slice().sort((x,y)=>atkFn(y)-atkFn(x));
+  const atkWhy = oppAtkWhy[oppArch] ? " — "+oppAtkWhy[oppArch] : "";
   // opponent-aware defensive pick: bring on the right TYPE of defender for who you're facing
   const oppDef={ targetman:p=>A(p,"Jum")*0.5+A(p,"Hea")*0.3+A(p,"Str")*0.2, wingers:p=>A(p,"Pac")*0.5+A(p,"Mar")*0.3+A(p,"Tck")*0.2, playmaker:p=>A(p,"Tck")*0.4+A(p,"Mar")*0.3+A(p,"Ant")*0.3, possession:p=>A(p,"Tck")*0.4+A(p,"Ant")*0.3+A(p,"Wor")*0.3, counter:p=>def(p) };
   const oppReason={ targetman:"a tall/strong man to win headers vs their target striker", wingers:"a quick, defensively-sound man to deal with their fast wide players", playmaker:"a ball-winner to screen and shut down their playmaker", possession:"a ball-winner to break up their passing", counter:"a fresh defensive-minded player" };
@@ -1136,11 +1156,11 @@ function matchdaySubs(idx){
   const dmOff=entries.filter(e=>["DML","DMR"].includes(e.sid)).map(e=>e.p).sort((x,y)=>cr(x)-cr(y))[0];
   const ln=(on,off,why)=>on?`<div style="margin:4px 0">⬆️ <b onclick="openPlayer('${esc(on.name)}')" style="cursor:pointer;color:var(--brand)">${esc(on.name)}</b> <span class="muted">(pace ${A(on,"Pac")}, ${esc(rawOf(on,KEYS.con)||"fresh")})</span>${off?` &nbsp;⬇️ for <b onclick="openPlayer('${esc(off.name)}')" style="cursor:pointer">${esc(last(off.name))}</b>`:""} — <span class="muted">${why}</span></div>`:"";
   if(idx>=6){ // throw everything at it
-    return ln(byAtk[0], dmOff||tiredOff, "your best impact sub — fresh legs + pace to chase the game")
+    return ln(byAtk[0], dmOff||tiredOff, "your best impact sub — fresh legs to chase the game"+atkWhy)
       + ln(byAtk[1]&&byAtk[1]!==byAtk[0]?byAtk[1]:null, tiredOff!==dmOff?tiredOff:entries.map(e=>e.p).sort((x,y)=>cr(x)-cr(y))[1], "second attacker — go 4-2-4, sacrifice a holder, flood the box");
   }
   if(idx===5){ // chasing one goal
-    return ln(byAtk[0], dmOff||tiredOff, "fresh pace & goal threat to run at tired defenders in the last 25-30 mins");
+    return ln(byAtk[0], dmOff||tiredOff, "fresh goal threat for the last 25-30 mins"+atkWhy);
   }
   if(idx<=2){ // protect the lead
     return ln(byDef[0], wideOff||tiredOff, "shore it up — "+oppWhy+" on for a tiring attacker to see it out")
@@ -1172,6 +1192,7 @@ function vMatchday(){
   return `<div class="card">
     <h2>⚡ In-Match Assistant</h2>
     <p class="sub">Set the situation and get exactly what to change — mentality, instructions and the sub to make. Use it live while the match is paused.</p>
+    ${explain("A live decision tool: tell it the minute, scoreline, opponent strength and red cards, and it tells you what to change right now.","Drag the minute, tap your scoreline. The green 'Do this now' card gives mentality + in/out-of-possession tweaks + the exact named sub (who on, who off, why). It even adapts the sub to the opponent type you set below.","In-match management wins more points than your starting tactic — reacting correctly at 60-75' is where games are won and lost.")}
     <h3 style="margin-top:6px">Minute: <b style="color:var(--brand)">${MD.min}'</b></h3>
     <input type="range" min="0" max="95" value="${MD.min}" style="width:100%" oninput="MD.min=+this.value;render()">
     <h3>Score situation</h3><div class="seg">${seg('sit',[['winningBig','🟢 Winning 2+'],['winning1','🟢 Winning by 1'],['drawing','🟡 Drawing'],['losing1','🔴 Losing by 1'],['losingBig','🔴 Losing 2+']])}</div>
