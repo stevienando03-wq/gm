@@ -312,7 +312,7 @@ const DEPTH_GROUPS = [
 /* ============================ STATE ============================ */
 const LS_KEY="fm_team_manager_v2";
 let STATE = load();
-function blankState(){ return { current:null, snapshots:[], overrides:{}, honours:[], settings:{youthAge:21,releaseScore:9.0,youthKeep:9.5,benchSize:9,textScale:1,theme:"dark",accent:"emerald",scoreProfile:"fmarena",modelV2:true}, fmConnected:false, season:{results:[],fixtures:[],league:{}} }; }
+function blankState(){ return { current:null, snapshots:[], overrides:{}, honours:[], lastImport:null, ui:{tacticSel:"tuned",mdBase:"tuned",planQuick:{ha:"H",diff:"even",arch:"possession"}}, settings:{youthAge:21,releaseScore:9.0,youthKeep:9.5,benchSize:9,textScale:1,theme:"dark",accent:"emerald",scoreProfile:"fmarena",modelV2:true}, fmConnected:false, season:{results:[],fixtures:[],league:{}} }; }
 const ACCENTS={emerald:["#10b981","#059669"],blue:["#3b82f6","#2563eb"],purple:["#8b5cf6","#7c3aed"],red:["#f43f5e","#e11d48"],amber:["#f59e0b","#d97706"]};
 function applyTheme(){
   const s=STATE.settings; const root=document.documentElement;
@@ -323,7 +323,7 @@ function applyTheme(){
 function applyTextScale(){ try{ document.documentElement.style.zoom=(STATE.settings.textScale||1); }catch(e){} applyTheme(); }
 function cycleText(){ const cur=STATE.settings.textScale||1; STATE.settings.textScale=cur>=1.25?1:Math.round((cur+0.12)*100)/100; save(); applyTextScale(); toast("Text size "+Math.round(STATE.settings.textScale*100)+"%"); }
 function load(){
-  try{ const s=JSON.parse(localStorage.getItem(LS_KEY)); if(s&&s.settings){ s.season=s.season||{results:[]}; s.season.fixtures=s.season.fixtures||[]; s.season.league=s.season.league||{}; s.honours=s.honours||[]; s.settings.theme=s.settings.theme||"dark"; s.settings.accent=s.settings.accent||"emerald"; s.settings.scoreProfile=s.settings.scoreProfile||"excel"; if(!s.settings.modelV2){ s.settings.scoreProfile="fmarena"; s.settings.modelV2=true; } return s; } }catch(e){}
+  try{ const s=JSON.parse(localStorage.getItem(LS_KEY)); if(s&&s.settings){ s.season=s.season||{results:[]}; s.season.fixtures=s.season.fixtures||[]; s.season.league=s.season.league||{}; s.honours=s.honours||[]; s.settings.theme=s.settings.theme||"dark"; s.settings.accent=s.settings.accent||"emerald"; s.settings.scoreProfile=s.settings.scoreProfile||"excel"; if(!s.settings.modelV2){ s.settings.scoreProfile="fmarena"; s.settings.modelV2=true; } s.ui=s.ui||{}; s.ui.tacticSel=s.ui.tacticSel||"tuned"; s.ui.mdBase=s.ui.mdBase||"tuned"; s.ui.planQuick=s.ui.planQuick||{ha:"H",diff:"even",arch:"possession"}; if(s.lastImport===undefined)s.lastImport=null; return s; } }catch(e){}
   try{ const o=JSON.parse(localStorage.getItem("fm_team_manager_v1")); if(o&&o.settings){o.fmConnected=false;o.season=o.season||{results:[]};return o;} }catch(e){}
   const st=blankState(); st.current={label:"Seed squad",date:todayStr(),records:SEED}; return st;
 }
@@ -338,7 +338,7 @@ function normalize(rec){
   const attrs={}; ATTRS.forEach(a=>attrs[a]=num(g(a)));
   const role=(g("Position/Role/Duty")||"").trim();
   const injury=(g("Injury")||"").trim(), elig=(g("Eligible")||"").trim(), loanFrom=(g("On Loan From")||"").trim();
-  return {name:(g("Name")||"").trim(),age:num(g("Age")),position:(g("Position")||"").trim(),lf:(g("Left Foot")||"").trim(),rf:(g("Right Foot")||"").trim(),role:ROLES.includes(role)?role:"",attrs,raw:rec,
+  return {name:(g("Name")||"").trim(),age:num(g("Age")),dob:(g("Date of Birth")||g("DoB")||g("Born")||"").trim(),position:(g("Position")||"").trim(),lf:(g("Left Foot")||"").trim(),rf:(g("Right Foot")||"").trim(),role:ROLES.includes(role)?role:"",attrs,raw:rec,
     injury,loanFrom,elig,avail:(!injury||injury==="-")&&elig!=="No"};
 }
 function players(){ return (STATE.current?.records||[]).map(normalize).filter(p=>p.name); }
@@ -477,6 +477,17 @@ function makeSortable(){
 }
 
 /* ---------- DASHBOARD ---------- */
+function dismissChanges(){ STATE.lastImport=null; save(); render(); }
+function squadChangesHTML(){
+  const li=STATE.lastImport; if(!li||li.seed||(!(li.added||[]).length&&!(li.removed||[]).length)) return "";
+  const list=(arr,emoji,verb)=>arr.length?`<div style="margin:4px 0"><b>${emoji} ${verb} (${arr.length}):</b> ${arr.slice(0,14).map(n=>`<span onclick="openPlayer('${jsq(n)}')" style="cursor:pointer;color:var(--brand)">${esc(last(n))}</span>`).join(", ")}${arr.length>14?` <span class="muted">+${arr.length-14} more</span>`:""}</div>`:"";
+  return `<div class="card" style="background:linear-gradient(135deg,#0c2410,#121821);border:1px solid #1f7a3a">
+    <div class="row" style="justify-content:space-between;align-items:flex-start"><h2 style="margin:0">🔄 Squad changes since your last update</h2><span class="x" onclick="dismissChanges()" style="cursor:pointer">✕</span></div>
+    <p class="sub">Detected automatically on your last import (${esc(li.date)}). New players already appear in every view — nothing to do.</p>
+    ${list(li.added||[],"🟢","In — promoted / loan return / new")}
+    ${list(li.removed||[],"🔴","Out — left / loaned out")}
+  </div>`;
+}
 function vDash(){
   const ps=players(), xi=bestXI();
   const vals=Object.values(xi.assign).map(a=>a.score);
@@ -490,7 +501,7 @@ function vDash(){
   const bands=[["16-18",16,18],["19-21",19,21],["22-25",22,25],["26-29",26,29],["30+",30,99]];
   const counts=bands.map(([l,a,b])=>ps.filter(p=>p.age>=a&&p.age<=b).length);
   const maxc=Math.max(1,...counts);
-  return `<div class="card" style="background:linear-gradient(135deg,#0c2b20,#121821)">
+  return `${squadChangesHTML()}<div class="card" style="background:linear-gradient(135deg,#0c2b20,#121821)">
     <h2>🏠 Squad Dashboard</h2>
     <p class="sub">${esc(STATE.current.label)} · ${STATE.current.date} · last update ${daysAgo(STATE.current.date)} · model: <b>${scoreProfile()==='fmarena'?'FM-Arena (match-engine)':'My Excel'}</b> <span class="muted">(change in Data → settings)</span></p>
     ${explain("Your home base — squad health at a glance plus the few things that need your attention.","KPIs up top (XI rating, avg age, youth, release flags), then 'What to do now' and an age chart. 'Model' = which scoring system is active.","Open it first each session: it points you straight to the decisions that matter. For the deep read, go to 🎓 Coach's report.")}
@@ -997,7 +1008,8 @@ function renderProg(){
 }
 
 /* ---------- TACTICS (two tactics) ---------- */
-let tacticSel="tuned";
+let tacticSel=(STATE.ui&&STATE.ui.tacticSel)||"tuned";
+function setTactic(v){ tacticSel=v; (STATE.ui=STATE.ui||{}).tacticSel=v; save(); render(); }
 function squadProfile(){
   const xi=bestXI(); const A=Object.values(xi.assign).map(a=>a.p);
   const ps=A.length>=8?A:players().filter(p=>p.avail);
@@ -1069,7 +1081,7 @@ function vTactics(){
     <h2>🏆 Tactics — stop losing</h2>
     <div class="tipbox"><b>Good news, verified:</b> your <b>Highway Star 4-2-3-1 is the #3 tactic on the FM-Arena Hall of Fame (62.2 pts)</b> — the best-tested 4-2-3-1 in the whole database. <b>Don't change formation.</b> The only problem is the stock build presses too hard for your stamina — the presets below keep the elite shape and just tune the press. <span class="muted">(<a href="https://fm-arena.com/table/fm24-hall-of-fame/" target="_blank" rel="noopener">FM-Arena Hall of Fame ↗</a>)</span></div>
     ${explain("Three complete tactic presets (roles, duties, mentality, instructions) you copy straight into FM — all on your proven Highway Star shape.","🏎️ Tuned is your default (elite shape, press dialled to your stamina). 🪂 Deep-block bus is for tough away days. ⚔️ Full Gegenpress is the stock high-press — only once your squad has the legs. The 🧬 analyser above tells you which fits your players.","You're already on the best-tested 4-2-3-1; the win is FITTING it to your fast, low-stamina squad, not changing it.")}
-    <div class="seg"><button class="${tacticSel=='tuned'?'on':''}" onclick="tacticSel='tuned';render()">🏎️ Tuned (recommended)</button><button class="${tacticSel=='survival'?'on':''}" onclick="tacticSel='survival';render()">🪂 Deep-block bus</button><button class="${tacticSel=='meta'?'on':''}" onclick="tacticSel='meta';render()">⚔️ Full Gegenpress</button></div>
+    <div class="seg"><button class="${tacticSel=='tuned'?'on':''}" onclick="setTactic('tuned')">🏎️ Tuned (recommended)</button><button class="${tacticSel=='survival'?'on':''}" onclick="setTactic('survival')">🪂 Deep-block bus</button><button class="${tacticSel=='meta'?'on':''}" onclick="setTactic('meta')">⚔️ Full Gegenpress</button></div>
     <div class="row" style="justify-content:space-between"><h3 style="margin:0">${t.name}</h3><span class="tag ${t.tone}">${t.mood}</span></div>
     <p class="sub" style="margin-top:6px">${t.blurb}</p>
     <p><b>Mentality:</b> ${t.mentality}</p>
@@ -1344,7 +1356,8 @@ function vSetpiece(){
 const MENT=['Very Defensive','Defensive','Cautious','Balanced','Positive','Attacking','Very Attacking'];
 let MD={min:75, sit:'losing1', opp:'similar', men:'even'};
 let oppArch="possession";
-let mdBase="tuned"; // which tactic he's actually playing — the assistant advises CHANGES from this
+let mdBase=(STATE.ui&&STATE.ui.mdBase)||"tuned"; // which tactic he's actually playing — the assistant advises CHANGES from this
+function setMdBase(v){ mdBase=v; (STATE.ui=STATE.ui||{}).mdBase=v; save(); render(); }
 const MD_BASE={ tuned:{label:"🏎️ Tuned Highway Star",anchor:3,note:"Balanced, mid-block, Counter on"}, survival:{label:"🪂 Deep-block bus",anchor:2,note:"Cautious, low block, Regroup"}, meta:{label:"⚔️ Full Gegenpress",anchor:5,note:"Attacking, high press, Counter-Press"} };
 /* opponent game-plan data — hoisted to module scope so both the pre-match Order of March and the in-match assistant share it */
 const OPP_LABELS={possession:"Possession / plays out from the back",counter:"Counter-attacking & direct",targetman:"Target man & crosses",wingers:"Fast wingers out wide",playmaker:"Star number 10 / playmaker"};
@@ -1435,7 +1448,7 @@ function matchdaySubs(idx){
 }
 /* ===== PRE-MATCH ORDER OF MARCH (Plan A) — kills the per-match "what XI + tactic + instructions?" decision ===== */
 let planFx=0;                                   // which upcoming fixture we're planning (0 = next)
-let planQuick={ha:"H",diff:"even",arch:"possession"}; // used when no fixtures are saved yet
+let planQuick=(STATE.ui&&STATE.ui.planQuick)||{ha:"H",diff:"even",arch:"possession"}; // used when no fixtures are saved yet (persisted)
 const PRESET_META={
   tuned:{label:"🏎️ Highway Star — tuned",note:"your #3-ranked shape, press dialled to your stamina"},
   survival:{label:"🪂 Deep-block bus",note:"defend deep, soak it up, counter on your pace"},
@@ -1468,7 +1481,7 @@ function matchPlan(){
   const preset=planPreset(diff,ha), surv=survivalCalc();
   return {opp,ha,diff,arch:planQuick.arch,preset,ment:planMentality(diff,ha,surv),situ:planSituational(diff,surv),surv,xi:bestXI(),hasFx:!!fx.length};
 }
-function setPlan(k,v){ if(k==="fx")planFx=+v; else planQuick[k]=v; render(); }
+function setPlan(k,v){ if(k==="fx"){planFx=+v;} else {planQuick[k]=v; (STATE.ui=STATE.ui||{}).planQuick=planQuick; save();} render(); }
 function vMatchPlanCard(){
   const mp=matchPlan(), fx=STATE.season.fixtures||[], pm=PRESET_META[mp.preset];
   const venue=mp.ha==="A"?"✈️ Away":"🏠 Home";
@@ -1529,7 +1542,7 @@ function vMatchday(){
     <p class="sub">Set the situation and get exactly what to change — mentality, instructions and the sub to make. Use it live while the match is paused.</p>
     ${explain("A live decision tool: tell it your base tactic + the minute, scoreline, opponent strength and red cards, and it tells you what to change right now.","Pick the tactic you actually started with (below) — the advice is the CHANGE to make from it. The green 'Do this now' card gives a mentality + in/out-of-possession tweaks + the exact named sub (who on, who off, why), adapted to the opponent type.","In-match management wins more points than your starting tactic — reacting correctly at 60-75' is where games are won and lost.")}
     <h3>🎮 Your base tactic (what you kicked off with)</h3>
-    <div class="seg">${[['tuned','🏎️ Tuned'],['survival','🪂 Deep-block'],['meta','⚔️ Gegenpress']].map(([v,l])=>`<button class="${mdBase===v?'on':''}" onclick="mdBase='${v}';render()">${l}</button>`).join("")}</div>
+    <div class="seg">${[['tuned','🏎️ Tuned'],['survival','🪂 Deep-block'],['meta','⚔️ Gegenpress']].map(([v,l])=>`<button class="${mdBase===v?'on':''}" onclick="setMdBase('${v}')">${l}</button>`).join("")}</div>
     <p class="sub" style="margin-top:4px">Advising changes from <b>${MD_BASE[mdBase].label}</b> <span class="muted">(${MD_BASE[mdBase].note})</span>. ${mdBase==='survival'?'Everything is a notch more cautious.':mdBase==='meta'?'Everything is a notch more aggressive.':''}</p>
     <h3 style="margin-top:6px">Minute: <b style="color:var(--brand)">${MD.min}'</b></h3>
     <input type="range" min="0" max="95" value="${MD.min}" style="width:100%" oninput="MD.min=+this.value;render()">
@@ -2034,11 +2047,32 @@ function parseFMHtml(text){
   try{const doc=new DOMParser().parseFromString(text,"text/html");const table=doc.querySelector("table");if(table){const ths=[...table.querySelectorAll("th")].map(t=>t.textContent.trim());[...table.querySelectorAll("tr")].forEach(tr=>{const tds=[...tr.querySelectorAll("td")];if(!tds.length)return;const rec={};tds.forEach((td,i)=>{if(ths[i]!==undefined)rec[ths[i]]=td.textContent.trim();});if(Object.keys(rec).length)recs.push(rec);});}}catch(e){}
   return recs;
 }
+function recName(rec){ return (rec["Name"]||"").trim(); }
+function recPid(rec){ const n=recName(rec), d=(rec["Date of Birth"]||rec["DoB"]||rec["Born"]||"").trim(); return d?(n+"|"+d):n; } // stable identity = name+DoB, fallback name
+function squadDelta(oldRecs,newRecs){
+  const oldMap=new Map(),newMap=new Map();
+  (oldRecs||[]).forEach(r=>{const n=recName(r);if(n)oldMap.set(recPid(r),n);});
+  (newRecs||[]).forEach(r=>{const n=recName(r);if(n)newMap.set(recPid(r),n);});
+  const added=[],removed=[];
+  newMap.forEach((n,k)=>{if(!oldMap.has(k))added.push(n);});
+  oldMap.forEach((n,k)=>{if(!newMap.has(k))removed.push(n);});
+  return {added,removed};
+}
 function applyImport(text,label){
   const recs=parseFMHtml(text);
   if(recs.length<1){toast("Couldn't find a player table");return false;}
-  STATE.current={label:label||("Update "+todayStr()),date:todayStr(),records:recs};save();
-  toast("Loaded "+recs.length+" players");return true;
+  const prev=STATE.current, prevSeed=!prev||prev.label==="Seed squad";
+  const delta=prev?squadDelta(prev.records,recs):{added:[],removed:[]};
+  STATE.current={label:label||("Update "+todayStr()),date:todayStr(),records:recs};
+  // merge by stable identity, never row index: GC role overrides for players no longer in the squad
+  const names=new Set(recs.map(recName).filter(Boolean));
+  for(const nm in STATE.overrides){ if(!names.has(nm)) delete STATE.overrides[nm]; }
+  // remember roster changes so the app surfaces them on the Dashboard (skip the noisy seed -> first-real diff)
+  STATE.lastImport = prevSeed ? {date:todayStr(),seed:true,added:[],removed:[],count:recs.length} : {date:todayStr(),added:delta.added,removed:delta.removed,count:recs.length};
+  save();
+  if(prevSeed) toast("Loaded "+recs.length+" players");
+  else toast("Updated "+recs.length+" players · "+((delta.added.length||delta.removed.length)?("+"+delta.added.length+" in / −"+delta.removed.length+" out"):"no squad changes"));
+  return true;
 }
 function openImport(){
   document.getElementById("modal").innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal">
