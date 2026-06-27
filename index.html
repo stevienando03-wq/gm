@@ -312,7 +312,28 @@ const DEPTH_GROUPS = [
 /* ============================ STATE ============================ */
 const LS_KEY="fm_team_manager_v2";
 let STATE = load();
-function blankState(){ return { current:null, snapshots:[], overrides:{}, honours:[], lastImport:null, ui:{tacticSel:"tuned",mdBase:"tuned",planQuick:{ha:"H",diff:"even",arch:"possession"}}, settings:{youthAge:21,releaseScore:9.0,youthKeep:9.5,benchSize:9,textScale:1,theme:"dark",accent:"emerald",scoreProfile:"fmarena",modelV2:true}, fmConnected:false, season:{results:[],fixtures:[],league:{}} }; }
+function blankState(){ return { current:null, snapshots:[], overrides:{}, honours:[], lastImport:null, ui:{tacticSel:"tuned",mdBase:"tuned",planQuick:{ha:"H",diff:"even",arch:"possession"}}, settings:{youthAge:21,releaseScore:9.0,youthKeep:9.5,benchSize:9,textScale:1,theme:"dark",accent:"emerald",scoreProfile:"fmarena",modelV2:true,ambition:"survival"}, fmConnected:false, season:{results:[],fixtures:[],league:{}} }; }
+/* ============================ SEASON AMBITION (reframes the whole app: target, mentality, preset, formation) ============================ */
+const AMBITIONS={
+  survival:{key:"survival",emoji:"🪂",label:"Survival",target:38,targetLabel:"≈38 pts · beat the drop (17th)",bias:0,preset:"survival",
+    blurb:"Fight relegation — low/mid block, cautious, counter on your pace. A point off a big side is gold."},
+  consolidate:{key:"consolidate",emoji:"🧱",label:"Consolidate",target:50,targetLabel:"≈50 pts · safe mid-table (~10th)",bias:1,preset:"tuned",
+    blurb:"Out of danger — settle in mid-table, develop, play balanced. Win what you should, keep your shape."},
+  push:{key:"push",emoji:"🚀",label:"Push for Europe",target:60,targetLabel:"≈58-66 pts · top half / Europe",bias:1,preset:"tuned",
+    blurb:"You're a threat — front-foot, positive, exploit your pace, press in bursts. Take it to mid-table sides at home."},
+  title:{key:"title",emoji:"🏆",label:"Win it",target:88,targetLabel:"≈88-90 pts · title charge",bias:2,preset:"meta",
+    blurb:"Go for the title — attacking, high press, max ceiling. Sustainable only with the legs: rotate hard and ease the press ~70' until your stamina is elite."}
+};
+function ambition(){ return AMBITIONS[(STATE.settings&&STATE.settings.ambition)||"survival"]||AMBITIONS.survival; }
+function setAmbition(k){ if(AMBITIONS[k]){ STATE.settings.ambition=k; save(); render(); } }
+function ambitionSelectorHTML(){ return `<div class="seg" style="flex-wrap:wrap">${Object.values(AMBITIONS).map(a=>`<button class="${ambition().key===a.key?'on':''}" onclick="setAmbition('${a.key}')" title="${esc(a.blurb)}">${a.emoji} ${a.label}</button>`).join("")}</div>`; }
+/* researched (FM-Arena 24.4.0) — best formations per ambition, matched to a fast squad with growing stamina */
+const FORMATION_GUIDE={
+  survival:[["4-2-3-1 deep block","your bus","Keep your #3-rated shape, just sit deep — no new formation to learn.","low"],["4-1-4-1 · Speed King 451","58.9","The most stamina-efficient elite tactic — a lone DM screens the four, easiest to hold shape when legs tire. Needs a good DM.","med"],["3-4-2-1 · Beryl v1.2","58.2","Three CBs + wing-backs defend transitions with numbers and ride the late-game dip, still springing your quick forwards.","med"]],
+  consolidate:[["4-2-3-1 · Highway Star (tuned)","62.2","The double-pivot 'safety net' — balanced, works everywhere, stabilises bad runs. Your default.","med-high"],["4-1-4-1 · Speed King 451","58.9","Stamina-efficient alternative for congested weeks.","med"]],
+  push:[["4-2-3-1 · Highway Star (front-foot)","62.2","Same shape, braver: positive mentality, press in bursts, exploit pace down the flanks.","high"],["4-3-3 · Triple Striker Force","62.2","Most simultaneous pace outlets (2 wide forwards + a striker in behind) — devastating once your fitness has grown.","high"]],
+  title:[["4-2-4 · EF 424 IF HP","63.2 · #1","The #1-tested tactic: wide overloads that hammer the AI on pace. Very high stamina cost — your title-charge weapon, manage with early subs.","very-high"],["4-2-3-1 · Highway Star (full press)","62.2","Nearly the same ceiling with more midfield control — the title-tier pick if you want solidity over the 4-2-4.","high"]]
+};
 const ACCENTS={emerald:["#10b981","#059669"],blue:["#3b82f6","#2563eb"],purple:["#8b5cf6","#7c3aed"],red:["#f43f5e","#e11d48"],amber:["#f59e0b","#d97706"]};
 function applyTheme(){
   const s=STATE.settings; const root=document.documentElement;
@@ -323,7 +344,7 @@ function applyTheme(){
 function applyTextScale(){ try{ document.documentElement.style.zoom=(STATE.settings.textScale||1); }catch(e){} applyTheme(); }
 function cycleText(){ const cur=STATE.settings.textScale||1; STATE.settings.textScale=cur>=1.25?1:Math.round((cur+0.12)*100)/100; save(); applyTextScale(); toast("Text size "+Math.round(STATE.settings.textScale*100)+"%"); }
 function load(){
-  try{ const s=JSON.parse(localStorage.getItem(LS_KEY)); if(s&&s.settings){ s.season=s.season||{results:[]}; s.season.fixtures=s.season.fixtures||[]; s.season.league=s.season.league||{}; s.honours=s.honours||[]; s.settings.theme=s.settings.theme||"dark"; s.settings.accent=s.settings.accent||"emerald"; s.settings.scoreProfile=s.settings.scoreProfile||"excel"; if(!s.settings.modelV2){ s.settings.scoreProfile="fmarena"; s.settings.modelV2=true; } s.ui=s.ui||{}; s.ui.tacticSel=s.ui.tacticSel||"tuned"; s.ui.mdBase=s.ui.mdBase||"tuned"; s.ui.planQuick=s.ui.planQuick||{ha:"H",diff:"even",arch:"possession"}; if(s.lastImport===undefined)s.lastImport=null; return s; } }catch(e){}
+  try{ const s=JSON.parse(localStorage.getItem(LS_KEY)); if(s&&s.settings){ s.season=s.season||{results:[]}; s.season.fixtures=s.season.fixtures||[]; s.season.league=s.season.league||{}; s.honours=s.honours||[]; s.settings.theme=s.settings.theme||"dark"; s.settings.accent=s.settings.accent||"emerald"; s.settings.scoreProfile=s.settings.scoreProfile||"excel"; if(!s.settings.modelV2){ s.settings.scoreProfile="fmarena"; s.settings.modelV2=true; } s.settings.ambition=s.settings.ambition||"survival"; s.ui=s.ui||{}; s.ui.tacticSel=s.ui.tacticSel||"tuned"; s.ui.mdBase=s.ui.mdBase||"tuned"; s.ui.planQuick=s.ui.planQuick||{ha:"H",diff:"even",arch:"possession"}; if(s.lastImport===undefined)s.lastImport=null; return s; } }catch(e){}
   try{ const o=JSON.parse(localStorage.getItem("fm_team_manager_v1")); if(o&&o.settings){o.fmConnected=false;o.season=o.season||{results:[]};return o;} }catch(e){}
   const st=blankState(); st.current={label:"Seed squad",date:todayStr(),records:SEED}; return st;
 }
@@ -1039,6 +1060,19 @@ function styleRec(pr){
   else { style="⚖️ Balanced 4-2-3-1"; ment="Positive"; why="No standout strength yet — keep it balanced, solid shape, and develop the squad."; instr=["Shorter passing, work into the box","Mid-block, press more often (not 'much')","Keep one IF on Support to protect the full-back"]; }
   return {style,why,ment,instr,fits:hi(pr.pace)&&pr.engine>=12?"meta":"tuned"};
 }
+function formationGuideHTML(){
+  const amb=ambition(), rows=FORMATION_GUIDE[amb.key]||[];
+  const stamCol={"low":"#34d399","med":"#a3e635","med-high":"#fbbf24","high":"#fb923c","very-high":"#fb7185"};
+  return `<div class="card">
+    <h2>🧩 Formations for your ambition — ${amb.emoji} ${amb.label}</h2>
+    <p class="sub">Researched from the FM-Arena 24.4.0 testing table and matched to YOUR squad (fast, young, stamina still growing). Set the formation in FM; pull the roles/duties from the preset sheet below.</p>
+    ${explain("The best-tested FM24 formations for your current ambition, with their FM-Arena score and how much stamina they demand.","Top row (⭐) is the recommended pick for this tier. 'Stamina' tells you if your squad can sustain it yet — green/lime you're fine, amber/orange/red means rotate hard and ease the press at ~70'.","The whole FM-Arena top-15 is within ~7 pts (statistical noise), so the right formation is the one that FITS your legs and solidity, not the one 0.x higher.")}
+    <div class="tablewrap"><table><thead><tr><th>Formation</th><th>FM-Arena</th><th>Why it fits you</th><th>Stamina</th></tr></thead><tbody>
+    ${rows.map((r,i)=>`<tr><td><b>${i===0?'⭐ ':''}${esc(r[0])}</b></td><td>${esc(r[1])}</td><td class="muted" style="white-space:normal">${esc(r[2])}</td><td><span class="tag" style="background:${stamCol[r[3]]||'#fbbf24'};color:#06140d">${esc(r[3])}</span></td></tr>`).join("")}
+    </tbody></table></div>
+    <div class="tipbox" style="margin-top:10px"><b>Your edge, by the numbers:</b> Pace & Acceleration are the two biggest match-engine levers (+64 pts/season each) — Stamina is only +19. You can WIN before your legs are elite; low stamina just means you can't <i>sustain</i> a 90' high press. Lean on pace, rotate, drop the press from ~70'.${amb.key==="title"&&!squadCanPress()?" <br>⚠ Your squad's engine isn't high enough yet to sustain the full 4-2-4 press — the plans keep recommending the tuned 4-2-3-1 until your Stamina/Work-Rate climb.":""}</div>
+  </div>`;
+}
 function vTactics(){
   const pr=squadProfile();
   let analyzer="";
@@ -1077,7 +1111,7 @@ function vTactics(){
     }
   };
   const t=T[tacticSel];
-  return `${analyzer}<div class="card">
+  return `${analyzer}${formationGuideHTML()}<div class="card">
     <h2>🏆 Tactics — stop losing</h2>
     <div class="tipbox"><b>Good news, verified:</b> your <b>Highway Star 4-2-3-1 is the #3 tactic on the FM-Arena Hall of Fame (62.2 pts)</b> — the best-tested 4-2-3-1 in the whole database. <b>Don't change formation.</b> The only problem is the stock build presses too hard for your stamina — the presets below keep the elite shape and just tune the press. <span class="muted">(<a href="https://fm-arena.com/table/fm24-hall-of-fame/" target="_blank" rel="noopener">FM-Arena Hall of Fame ↗</a>)</span></div>
     ${explain("Three complete tactic presets (roles, duties, mentality, instructions) you copy straight into FM — all on your proven Highway Star shape.","🏎️ Tuned is your default (elite shape, press dialled to your stamina). 🪂 Deep-block bus is for tough away days. ⚔️ Full Gegenpress is the stock high-press — only once your squad has the legs. The 🧬 analyser above tells you which fits your players.","You're already on the best-tested 4-2-3-1; the win is FITTING it to your fast, low-stamina squad, not changing it.")}
@@ -1456,19 +1490,30 @@ const PRESET_META={
   survival:{label:"🪂 Deep-block bus",note:"defend deep, soak it up, counter on your pace"},
   meta:{label:"⚔️ Full Gegenpress",note:"only vs weak sides, once they have the legs"}
 };
-function planPreset(diff,ha){ if(diff==="hard") return "survival"; return "tuned"; } // NEVER auto-pick gegenpress — stamina invariant
+function squadCanPress(){ const pr=squadProfile(); return !!(pr && pr.engine>=11.5); } // avg Sta/Wor/Nat high enough to sustain a high press
+function planPreset(diff,ha){
+  const amb=ambition().key;
+  let p;
+  if(amb==="survival"||amb==="consolidate") p = diff==="hard"?"survival":"tuned";
+  else if(amb==="push")                     p = (diff==="hard"&&ha==="A")?"survival":"tuned";
+  else /* title */                          p = diff==="easy"?"meta":"tuned"; // blitz weak sides, go toe-to-toe with the rest
+  if(p==="meta" && !squadCanPress()) p="tuned"; // stamina gate — never auto-recommend full gegenpress your squad can't sustain
+  return p;
+}
 function planMentality(diff,ha,surv){
   let idx; // index into MENT
   if(diff==="hard") idx = ha==="A"?1:2;          // Defensive away / Cautious home vs top sides
   else if(diff==="easy") idx = ha==="H"?4:3;     // Positive at home / Balanced away vs strugglers
   else idx = ha==="H"?3:2;                        // mid-table: Balanced home / Cautious away
+  idx += ambition().bias;                                                       // ambition lifts the whole baseline (survival 0 … title +2)
   if(surv.hasData && surv.needPpg>1.4 && diff!=="hard") idx=Math.min(idx+1,5); // must-win pressure on a winnable game
-  if(surv.hasData && surv.proj>=44 && diff==="hard") idx=Math.max(idx-1,0);    // already comfortable → protect legs
+  if(surv.hasData && surv.proj>=(surv.line+6) && diff==="hard") idx=Math.max(idx-1,0); // target already secured → protect legs
+  idx=Math.max(0,Math.min(6,idx));
   return {idx,label:MENT[idx]};
 }
 function planSituational(diff,surv){
   if(surv.hasData){
-    if(surv.proj>=46 && surv.remaining<=8) return {tag:"🌱 Low stakes — you can blood a kid",note:"You're mathematically near-safe with few games left: give an academy prospect a start for the development minutes."};
+    if(surv.proj>=(surv.line+8) && surv.remaining<=8) return {tag:"🌱 Low stakes — you can blood a kid",note:"Your "+ambition().label+" target looks secured with few games left: give an academy prospect a start for the development minutes."};
     if(surv.needPpg>1.6 && diff!=="hard") return {tag:"🎯 Must-win",note:`The maths demand points — strongest XI, no rotation. You need ${surv.need} from ${surv.remaining} games (${surv.needPpg.toFixed(2)}/game).`};
   }
   if(diff==="easy") return {tag:"⚔️ Six-pointer",note:"A direct relegation rival — these games keep you up. Full strength, go and win it."};
@@ -1484,7 +1529,7 @@ function matchPlan(){
   const xiA=bestXI(), xiB=bestXI({rotate:true});                       // A = strongest, B = rest the tired
   const startersA=Object.values(xiA.assign).map(a=>a.p);
   const tired=startersA.filter(p=>(condRank(rawOf(p,KEYS.con))||5)<=3||/high/i.test(rawOf(p,KEYS.fatigue)||""));
-  const lowStakes = surv.hasData && surv.proj>=46 && surv.remaining<=8; // safe enough to blood youth
+  const lowStakes = surv.hasData && surv.proj>=(surv.line+6) && surv.remaining<=8; // target secured → safe to blood youth
   const recMode = tired.length>=3 ? "B" : (lowStakes && diff!=="easy" ? "C" : "A");
   const eff = planMode==="auto" ? recMode : planMode;
   const xi = eff==="B"?xiB : eff==="C"?bestXI({youthBoost:2.5}) : xiA;
@@ -1537,6 +1582,7 @@ function vMatchPlanCard(){
     <p class="sub">Everything for your next game in one place: who plays, which preset, the mentality, how to handle them — and why. Copy it straight into FM.</p>
     ${explain("Your full pre-match plan, assembled automatically from your available squad + the opponent + your survival maths.","Pick the match (it auto-loads your next fixture from Season, or set venue + opponent level) and their style. You get the XI, the preset to load, the mentality, the opposition instructions and the reason behind it all.","Team selection + tactic is the decision you make every single match — this hands you the answer instead of you working it out each time.")}
     <div class="row" style="gap:10px;flex-wrap:wrap;margin:6px 0 4px">${fxSel}${archSel}</div>
+    <p class="muted" style="font-size:12px;margin:2px 0 2px">Ambition: ${ambition().emoji} <b>${ambition().label}</b> · target ${ambition().targetLabel} <b onclick="go('season')" style="cursor:pointer;color:var(--brand)">— change</b></p>
     ${!fx.length?`<p class="muted" style="font-size:12px;margin:2px 0 8px">💡 Add your real fixtures in <b onclick="go('season')" style="cursor:pointer;color:var(--brand)">📝 Season</b> and this auto-loads the next opponent.</p>`:''}
     <div class="row" style="justify-content:space-between;align-items:center;margin-top:6px">
       <h3 style="margin:0">${venue} vs ${mp.opp?esc(mp.opp):`a ${tl[0].toLowerCase()}`}</h3>
@@ -1850,24 +1896,27 @@ function seasonStats(){ const r=STATE.season.results; let w=0,d=0,l=0,gf=0,ga=0;
 const SURVIVAL_LINE=38;
 function survivalCalc(){
   const L=STATE.season.league||{}; const played=+L.played||0, points=+L.points||0, total=38;
+  const line=ambition().target;
   const remaining=Math.max(0,total-played), ppg=played?points/played:0, proj=Math.round(ppg*total);
-  const need=Math.max(0,SURVIVAL_LINE-points), needPpg=remaining?need/remaining:0;
-  const verdict= proj>=41?["good","On course to stay up"]:proj>=37?["warn","On the line — every point counts"]:["bad","Relegation pace — must improve"];
-  return {position:+L.position||0, points, played, remaining, ppg, proj, need, needPpg, verdict, hasData:!!(L.played||L.points)};
+  const need=Math.max(0,line-points), needPpg=remaining?need/remaining:0;
+  const verdict= proj>=line+3?["good","On course — "+ambition().label]:proj>=line-1?["warn","On the line — every point counts"]:["bad","Off the pace — must improve"];
+  return {position:+L.position||0, points, played, remaining, ppg, proj, need, needPpg, verdict, hasData:!!(L.played||L.points), line};
 }
 function saveLeague(){ STATE.season.league={position:+val("lgPos")||0, points:+val("lgPts")||0, played:+val("lgPld")||0}; save(); toast("League table updated"); render(); }
 function survivalCardHTML(){
-  const s=survivalCalc();
+  const s=survivalCalc(), amb=ambition();
   return `<div class="card" style="background:linear-gradient(135deg,#2a1313,#121821)">
-    <h2>🪂 Survival tracker — Premier League</h2>
-    <p class="sub">You're fighting relegation. ~<b>${SURVIVAL_LINE} points</b> usually stays up. Enter your league standing to track your pace.</p>
+    <h2>🎯 Season target — ${amb.emoji} ${amb.label}</h2>
+    <p class="sub">Pick your ambition for the season — it re-tunes the whole app (mentality, recommended tactic, opponent plans, this target). ${amb.blurb}</p>
+    ${ambitionSelectorHTML()}
+    <p class="sub" style="margin-top:8px">Target: <b>${amb.targetLabel}</b>. Enter your league standing to track your pace.</p>
     ${s.hasData?`<div class="grid kpis">
       <div class="kpi"><div class="n">${s.position||"—"}${s.position?"<span style='font-size:13px'>th</span>":""}</div><div class="l">Position</div></div>
       <div class="kpi"><div class="n">${s.points}</div><div class="l">Points (${s.played} pl)</div></div>
       <div class="kpi"><div class="n">${s.ppg.toFixed(2)}</div><div class="l">Points / game</div></div>
       <div class="kpi"><div class="n" style="color:${s.verdict[0]==='good'?'#34d399':s.verdict[0]==='warn'?'#fbbf24':'#fb7185'}">${s.proj}</div><div class="l">Projected final</div></div>
     </div>
-    <div class="tipbox ${s.verdict[0]==='bad'?'amber':''}" style="margin-top:10px"><b>${s.verdict[1]}.</b> ${s.remaining} games left. You need <b>${s.need} more points</b> to reach ${SURVIVAL_LINE} — that's <b>${s.needPpg.toFixed(2)} pts/game</b> from here (${s.needPpg<=1?'a draw every other game does it':s.needPpg<=1.4?'roughly a draw a game':'you must start winning the six-pointers'}).</div>`:''}
+    <div class="tipbox ${s.verdict[0]==='bad'?'amber':''}" style="margin-top:10px"><b>${s.verdict[1]}.</b> ${s.remaining} games left. You need <b>${s.need} more points</b> to reach ${s.line} — that's <b>${s.needPpg.toFixed(2)} pts/game</b> from here (${s.needPpg<=1?'a draw every other game does it':s.needPpg<=1.4?'roughly a draw a game':'you must start winning the big ones'}).</div>`:''}
     <div class="row" style="margin-top:10px">
       <label class="muted">Pos <input type="number" id="lgPos" value="${STATE.season.league.position||''}" placeholder="20" style="width:56px"></label>
       <label class="muted">Points <input type="number" id="lgPts" value="${STATE.season.league.points||''}" placeholder="14" style="width:64px"></label>
@@ -1902,10 +1951,16 @@ function objectives(){
 function addFixture(){ const opp=val("fxOpp")||"Opponent"; STATE.season.fixtures.push({opp,ha:val("fxHA"),diff:val("fxDiff")}); save(); render(); }
 function delFixture(i){ STATE.season.fixtures.splice(i,1); save(); render(); }
 function fixtureAdvice(d){
-  // survival framing for a 20th-placed side
-  if(d==="hard") return ["🛡️ Damage limitation","Deepest block, Cautious/Defensive, accept a 0-0 or narrow loss, REST key legs for the games that matter",0];
-  if(d==="easy") return ["⚔️ Six-pointer — go for it","Strongest available XI, step up to Balanced, win the midfield — these are the games that keep you up",2.4];
-  return ["🤝 Banker draw","Cautious low block + counter, nick a point off a mid-table side",1];
+  const amb=ambition().key;
+  if(amb==="survival"||amb==="consolidate"){
+    if(d==="hard") return ["🛡️ Damage limitation","Deepest block, Cautious/Defensive, accept a 0-0 or narrow loss, REST key legs for the games that matter",0];
+    if(d==="easy") return ["⚔️ Must-win","Strongest XI, step up to Balanced, win the midfield — the games that decide your season",2.4];
+    return ["🤝 Banker draw","Cautious low block + counter, nick a point off a mid-table side",1];
+  }
+  // push / title — you're the favourite far more often, so go and win games
+  if(d==="hard") return ["⚔️ Statement game","Front-foot at home (Positive), compact-and-counter away — the points that lift you above mid-table",1];
+  if(d==="easy") return ["🔥 Take all 3","Strongest XI, Positive/Attacking, blitz them early — dropping points here costs you the target",2.6];
+  return ["✅ Win expected","Positive, take it to them and exploit your pace — a draw is two points dropped",2];
 }
 function addHonour(){ const season=val("hSeason")||"Season"; const finish=val("hFinish"); const trophies=val("hTrophy"); STATE.honours.unshift({season,finish,trophies}); save(); render(); }
 function delHonour(i){ STATE.honours.splice(i,1); save(); render(); }
