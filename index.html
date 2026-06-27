@@ -308,11 +308,72 @@ const DEPTH_GROUPS = [
   {label:"Left Winger",  role:"IF - Support", need:2, slot:FORMATION.find(s=>s.id=="AML")},
   {label:"Striker",      role:"AF - Attack",  need:2, slot:FORMATION.find(s=>s.id=="ST")},
 ];
+/* ===== FORMATION REGISTRY — pick the shape; roles map onto the 7 scored roles so bestXI works for every one ===== */
+const FORMATIONS={
+  f4231:{short:"4-2-3-1", name:"4-2-3-1 (Highway Star)", slots:FORMATION},
+  f424:{short:"4-2-4", name:"4-2-4 (EF 424)", slots:[
+    {id:"GK",label:"GK",role:"SK - Defend",x:50,y:93,grp:"gk",pos:"Goalkeeper",match:{GK:["C"]}},
+    {id:"DL",label:"D L",role:"FB - Attack",x:12,y:76,grp:"def",pos:"Left Back",match:{D:["L"],WB:["L"]}},
+    {id:"DCL",label:"D C",role:"BPD - Defend",x:36,y:80,grp:"def",pos:"Centre Back",match:{D:["C"]}},
+    {id:"DCR",label:"D C",role:"BPD - Defend",x:64,y:80,grp:"def",pos:"Centre Back",match:{D:["C"]}},
+    {id:"DR",label:"D R",role:"FB - Attack",x:88,y:76,grp:"def",pos:"Right Back",match:{D:["R"],WB:["R"]}},
+    {id:"MCL",label:"M C",role:"DM - Support",x:35,y:55,grp:"mid",pos:"Central Mid",match:{M:["C"],DM:["C"]}},
+    {id:"MCR",label:"M C",role:"DM - Support",x:65,y:55,grp:"mid",pos:"Central Mid",match:{M:["C"],DM:["C"]}},
+    {id:"AML",label:"AM L",role:"IF - Support",x:14,y:30,grp:"att",pos:"Left Wide Forward",match:{AM:["L"],M:["L"]}},
+    {id:"AMR",label:"AM R",role:"IF - Support",x:86,y:30,grp:"att",pos:"Right Wide Forward",match:{AM:["R"],M:["R"]}},
+    {id:"STL",label:"ST",role:"AF - Attack",x:38,y:13,grp:"att",pos:"Striker",match:{ST:["C","L"]}},
+    {id:"STR",label:"ST",role:"AF - Attack",x:62,y:13,grp:"att",pos:"Striker",match:{ST:["C","R"]}}
+  ]},
+  f4141:{short:"4-1-4-1", name:"4-1-4-1 (Speed King)", slots:[
+    {id:"GK",label:"GK",role:"SK - Defend",x:50,y:93,grp:"gk",pos:"Goalkeeper",match:{GK:["C"]}},
+    {id:"DL",label:"D L",role:"FB - Attack",x:12,y:78,grp:"def",pos:"Left Back",match:{D:["L"],WB:["L"]}},
+    {id:"DCL",label:"D C",role:"BPD - Defend",x:37,y:81,grp:"def",pos:"Centre Back",match:{D:["C"]}},
+    {id:"DCR",label:"D C",role:"BPD - Defend",x:63,y:81,grp:"def",pos:"Centre Back",match:{D:["C"]}},
+    {id:"DR",label:"D R",role:"FB - Attack",x:88,y:78,grp:"def",pos:"Right Back",match:{D:["R"],WB:["R"]}},
+    {id:"DMC",label:"DM",role:"DM - Support",x:50,y:62,grp:"mid",pos:"Defensive Mid",match:{DM:["C"],M:["C"]}},
+    {id:"ML",label:"M L",role:"IF - Support",x:14,y:45,grp:"mid",pos:"Left Mid",match:{M:["L"],AM:["L"]}},
+    {id:"MCL",label:"M C",role:"DM - Support",x:38,y:48,grp:"mid",pos:"Central Mid",match:{M:["C"]}},
+    {id:"MCR",label:"M C",role:"AM - Attack",x:62,y:48,grp:"mid",pos:"Central Mid",match:{M:["C"],AM:["C"]}},
+    {id:"MR",label:"M R",role:"IF - Support",x:86,y:45,grp:"mid",pos:"Right Mid",match:{M:["R"],AM:["R"]}},
+    {id:"ST",label:"ST",role:"AF - Attack",x:50,y:14,grp:"att",pos:"Striker",match:{ST:["C","R","L"]}}
+  ]},
+  f3421:{short:"3-4-2-1", name:"3-4-2-1 (Beryl)", slots:[
+    {id:"GK",label:"GK",role:"SK - Defend",x:50,y:93,grp:"gk",pos:"Goalkeeper",match:{GK:["C"]}},
+    {id:"DCL",label:"D C",role:"BPD - Defend",x:28,y:81,grp:"def",pos:"Centre Back",match:{D:["C"]}},
+    {id:"DC",label:"D C",role:"BPD - Defend",x:50,y:83,grp:"def",pos:"Centre Back",match:{D:["C"]}},
+    {id:"DCR",label:"D C",role:"BPD - Defend",x:72,y:81,grp:"def",pos:"Centre Back",match:{D:["C"]}},
+    {id:"WBL",label:"WB L",role:"FB - Attack",x:9,y:56,grp:"mid",pos:"Left Wing-Back",match:{WB:["L"],D:["L"],M:["L"]}},
+    {id:"MCL",label:"M C",role:"DM - Support",x:40,y:58,grp:"mid",pos:"Central Mid",match:{M:["C"],DM:["C"]}},
+    {id:"MCR",label:"M C",role:"DM - Support",x:60,y:58,grp:"mid",pos:"Central Mid",match:{M:["C"],DM:["C"]}},
+    {id:"WBR",label:"WB R",role:"FB - Attack",x:91,y:56,grp:"mid",pos:"Right Wing-Back",match:{WB:["R"],D:["R"],M:["R"]}},
+    {id:"AMCL",label:"AM C",role:"AM - Attack",x:36,y:32,grp:"att",pos:"Attacking Mid",match:{AM:["C","L"]}},
+    {id:"AMCR",label:"AM C",role:"IF - Support",x:64,y:32,grp:"att",pos:"Attacking Mid",match:{AM:["C","R"]}},
+    {id:"ST",label:"ST",role:"AF - Attack",x:50,y:13,grp:"att",pos:"Striker",match:{ST:["C","R","L"]}}
+  ]},
+  f433:{short:"4-3-3", name:"4-3-3 (Triple Striker)", slots:[
+    {id:"GK",label:"GK",role:"SK - Defend",x:50,y:93,grp:"gk",pos:"Goalkeeper",match:{GK:["C"]}},
+    {id:"DL",label:"D L",role:"FB - Attack",x:12,y:78,grp:"def",pos:"Left Back",match:{D:["L"],WB:["L"]}},
+    {id:"DCL",label:"D C",role:"BPD - Defend",x:37,y:81,grp:"def",pos:"Centre Back",match:{D:["C"]}},
+    {id:"DCR",label:"D C",role:"BPD - Defend",x:63,y:81,grp:"def",pos:"Centre Back",match:{D:["C"]}},
+    {id:"DR",label:"D R",role:"FB - Attack",x:88,y:78,grp:"def",pos:"Right Back",match:{D:["R"],WB:["R"]}},
+    {id:"MCL",label:"M C",role:"DM - Support",x:32,y:56,grp:"mid",pos:"Central Mid",match:{M:["C"],DM:["C"]}},
+    {id:"MCC",label:"M C",role:"DM - Support",x:50,y:60,grp:"mid",pos:"Central Mid",match:{M:["C"],DM:["C"]}},
+    {id:"MCR",label:"M C",role:"AM - Attack",x:68,y:50,grp:"mid",pos:"Central Mid",match:{M:["C"],AM:["C"]}},
+    {id:"AML",label:"AM L",role:"IF - Support",x:15,y:28,grp:"att",pos:"Left Winger",match:{AM:["L"],M:["L"]}},
+    {id:"AMR",label:"AM R",role:"IF - Support",x:85,y:28,grp:"att",pos:"Right Winger",match:{AM:["R"],M:["R"]}},
+    {id:"ST",label:"ST",role:"AF - Attack",x:50,y:13,grp:"att",pos:"Striker",match:{ST:["C","R","L"]}}
+  ]}
+};
+function curFormation(){ return (FORMATIONS[(STATE.ui&&STATE.ui.formation)||"f4231"]||FORMATIONS.f4231).slots; }
+function formationName(){ return (FORMATIONS[(STATE.ui&&STATE.ui.formation)||"f4231"]||FORMATIONS.f4231).name; }
+function formationShort(){ return (FORMATIONS[(STATE.ui&&STATE.ui.formation)||"f4231"]||FORMATIONS.f4231).short; }
+function setFormation(k){ if(FORMATIONS[k]){ (STATE.ui=STATE.ui||{}).formation=k; xiPins={}; save(); render(); } }
+function formationSelectorHTML(){ return `<div class="seg" style="flex-wrap:wrap">${Object.entries(FORMATIONS).map(([k,f])=>`<button class="${((STATE.ui&&STATE.ui.formation)||'f4231')===k?'on':''}" onclick="setFormation('${k}')" title="${esc(f.name)}">${f.short}</button>`).join("")}</div>`; }
 
 /* ============================ STATE ============================ */
 const LS_KEY="fm_team_manager_v2";
 let STATE = load();
-function blankState(){ return { current:null, snapshots:[], overrides:{}, honours:[], lastImport:null, ui:{tacticSel:"tuned",mdBase:"tuned",planQuick:{ha:"H",diff:"even",arch:"possession"}}, settings:{youthAge:21,releaseScore:9.0,youthKeep:9.5,benchSize:9,textScale:1,theme:"dark",accent:"emerald",scoreProfile:"fmarena",modelV2:true,ambition:"survival"}, fmConnected:false, season:{results:[],fixtures:[],league:{}} }; }
+function blankState(){ return { current:null, snapshots:[], overrides:{}, honours:[], lastImport:null, ui:{tacticSel:"tuned",mdBase:"tuned",formation:"f4231",planQuick:{ha:"H",diff:"even",arch:"possession"}}, settings:{youthAge:21,releaseScore:9.0,youthKeep:9.5,benchSize:9,textScale:1,theme:"dark",accent:"emerald",scoreProfile:"fmarena",modelV2:true,ambition:"survival"}, fmConnected:false, season:{results:[],fixtures:[],league:{}} }; }
 /* ============================ SEASON AMBITION (reframes the whole app: target, mentality, preset, formation) ============================ */
 const AMBITIONS={
   survival:{key:"survival",emoji:"🪂",label:"Survival",target:38,targetLabel:"≈38 pts · beat the drop (17th)",bias:0,preset:"survival",
@@ -329,10 +390,10 @@ function setAmbition(k){ if(AMBITIONS[k]){ STATE.settings.ambition=k; save(); re
 function ambitionSelectorHTML(){ return `<div class="seg" style="flex-wrap:wrap">${Object.values(AMBITIONS).map(a=>`<button class="${ambition().key===a.key?'on':''}" onclick="setAmbition('${a.key}')" title="${esc(a.blurb)}">${a.emoji} ${a.label}</button>`).join("")}</div>`; }
 /* researched (FM-Arena 24.4.0) — best formations per ambition, matched to a fast squad with growing stamina */
 const FORMATION_GUIDE={
-  survival:[["4-2-3-1 deep block","your bus","Keep your #3-rated shape, just sit deep — no new formation to learn.","low"],["4-1-4-1 · Speed King 451","58.9","The most stamina-efficient elite tactic — a lone DM screens the four, easiest to hold shape when legs tire. Needs a good DM.","med"],["3-4-2-1 · Beryl v1.2","58.2","Three CBs + wing-backs defend transitions with numbers and ride the late-game dip, still springing your quick forwards.","med"]],
-  consolidate:[["4-2-3-1 · Highway Star (tuned)","62.2","The double-pivot 'safety net' — balanced, works everywhere, stabilises bad runs. Your default.","med-high"],["4-1-4-1 · Speed King 451","58.9","Stamina-efficient alternative for congested weeks.","med"]],
-  push:[["4-2-3-1 · Highway Star (front-foot)","62.2","Same shape, braver: positive mentality, press in bursts, exploit pace down the flanks.","high"],["4-3-3 · Triple Striker Force","62.2","Most simultaneous pace outlets (2 wide forwards + a striker in behind) — devastating once your fitness has grown.","high"]],
-  title:[["4-2-4 · EF 424 IF HP","63.2 · #1","The #1-tested tactic: wide overloads that hammer the AI on pace. Very high stamina cost — your title-charge weapon, manage with early subs.","very-high"],["4-2-3-1 · Highway Star (full press)","62.2","Nearly the same ceiling with more midfield control — the title-tier pick if you want solidity over the 4-2-4.","high"]]
+  survival:[["4-2-3-1 deep block","your bus","Keep your #3-rated shape, just sit deep — no new formation to learn.","low","f4231"],["4-1-4-1 · Speed King 451","58.9","The most stamina-efficient elite tactic — a lone DM screens the four, easiest to hold shape when legs tire. Needs a good DM.","med","f4141"],["3-4-2-1 · Beryl v1.2","58.2","Three CBs + wing-backs defend transitions with numbers and ride the late-game dip, still springing your quick forwards.","med","f3421"]],
+  consolidate:[["4-2-3-1 · Highway Star (tuned)","62.2","The double-pivot 'safety net' — balanced, works everywhere, stabilises bad runs. Your default.","med-high","f4231"],["4-1-4-1 · Speed King 451","58.9","Stamina-efficient alternative for congested weeks.","med","f4141"]],
+  push:[["4-2-3-1 · Highway Star (front-foot)","62.2","Same shape, braver: positive mentality, press in bursts, exploit pace down the flanks.","high","f4231"],["4-3-3 · Triple Striker Force","62.2","Most simultaneous pace outlets (2 wide forwards + a striker in behind) — devastating once your fitness has grown.","high","f433"]],
+  title:[["4-2-4 · EF 424 IF HP","63.2 · #1","The #1-tested tactic: wide overloads that hammer the AI on pace. Very high stamina cost — your title-charge weapon, manage with early subs.","very-high","f424"],["4-2-3-1 · Highway Star (full press)","62.2","Nearly the same ceiling with more midfield control — the title-tier pick if you want solidity over the 4-2-4.","high","f4231"]]
 };
 const ACCENTS={emerald:["#10b981","#059669"],blue:["#3b82f6","#2563eb"],purple:["#8b5cf6","#7c3aed"],red:["#f43f5e","#e11d48"],amber:["#f59e0b","#d97706"]};
 function applyTheme(){
@@ -344,7 +405,7 @@ function applyTheme(){
 function applyTextScale(){ try{ document.documentElement.style.zoom=(STATE.settings.textScale||1); }catch(e){} applyTheme(); }
 function cycleText(){ const cur=STATE.settings.textScale||1; STATE.settings.textScale=cur>=1.25?1:Math.round((cur+0.12)*100)/100; save(); applyTextScale(); toast("Text size "+Math.round(STATE.settings.textScale*100)+"%"); }
 function load(){
-  try{ const s=JSON.parse(localStorage.getItem(LS_KEY)); if(s&&s.settings){ s.season=s.season||{results:[]}; s.season.fixtures=s.season.fixtures||[]; s.season.league=s.season.league||{}; s.honours=s.honours||[]; s.settings.theme=s.settings.theme||"dark"; s.settings.accent=s.settings.accent||"emerald"; s.settings.scoreProfile=s.settings.scoreProfile||"excel"; if(!s.settings.modelV2){ s.settings.scoreProfile="fmarena"; s.settings.modelV2=true; } s.settings.ambition=s.settings.ambition||"survival"; s.ui=s.ui||{}; s.ui.tacticSel=s.ui.tacticSel||"tuned"; s.ui.mdBase=s.ui.mdBase||"tuned"; s.ui.planQuick=s.ui.planQuick||{ha:"H",diff:"even",arch:"possession"}; if(s.lastImport===undefined)s.lastImport=null; return s; } }catch(e){}
+  try{ const s=JSON.parse(localStorage.getItem(LS_KEY)); if(s&&s.settings){ s.season=s.season||{results:[]}; s.season.fixtures=s.season.fixtures||[]; s.season.league=s.season.league||{}; s.honours=s.honours||[]; s.settings.theme=s.settings.theme||"dark"; s.settings.accent=s.settings.accent||"emerald"; s.settings.scoreProfile=s.settings.scoreProfile||"excel"; if(!s.settings.modelV2){ s.settings.scoreProfile="fmarena"; s.settings.modelV2=true; } s.settings.ambition=s.settings.ambition||"survival"; s.ui=s.ui||{}; s.ui.tacticSel=s.ui.tacticSel||"tuned"; s.ui.mdBase=s.ui.mdBase||"tuned"; s.ui.formation=s.ui.formation||"f4231"; s.ui.planQuick=s.ui.planQuick||{ha:"H",diff:"even",arch:"possession"}; if(s.lastImport===undefined)s.lastImport=null; return s; } }catch(e){}
   try{ const o=JSON.parse(localStorage.getItem("fm_team_manager_v1")); if(o&&o.settings){o.fmConnected=false;o.season=o.season||{results:[]};return o;} }catch(e){}
   const st=blankState(); st.current={label:"Seed squad",date:todayStr(),records:SEED}; return st;
 }
@@ -373,10 +434,10 @@ function eligible(p,slot){ const mp=parsePos(p.position); for(const tok in slot.
 let xiPins={};
 function bestXI(opts={}){
   const ps=players().filter(p=>opts.includeUnavailable||p.avail), ya=STATE.settings.youthAge, pairs=[];
-  FORMATION.forEach(slot=>ps.forEach(p=>{const s=scoreFor(p,slot.role);const nat=eligible(p,slot);let adj=s-(nat?0:4);if(opts.youthBoost&&p.age<=ya)adj+=opts.youthBoost;if(opts.rotate){const cr=condRank(rawOf(p,KEYS.con));if(cr!=null){if(cr<=2)adj-=6;else if(cr===3)adj-=2.5;}if(/high/i.test(rawOf(p,KEYS.fatigue)||""))adj-=3;}pairs.push({slot,p,score:s,nat,adj});}));
+  curFormation().forEach(slot=>ps.forEach(p=>{const s=scoreFor(p,slot.role);const nat=eligible(p,slot);let adj=s-(nat?0:4);if(opts.youthBoost&&p.age<=ya)adj+=opts.youthBoost;if(opts.rotate){const cr=condRank(rawOf(p,KEYS.con));if(cr!=null){if(cr<=2)adj-=6;else if(cr===3)adj-=2.5;}if(/high/i.test(rawOf(p,KEYS.fatigue)||""))adj-=3;}pairs.push({slot,p,score:s,nat,adj});}));
   pairs.sort((a,b)=>b.adj-a.adj);
   const usedP=new Set(),filled={},assign={};
-  if(!opts.ignorePins){ for(const sid in xiPins){ const slot=FORMATION.find(s=>s.id===sid), p=ps.find(x=>x.name===xiPins[sid]); if(slot&&p&&!filled[sid]&&!usedP.has(p.name)){ filled[sid]=true; usedP.add(p.name); assign[sid]={p,score:scoreFor(p,slot.role),nat:eligible(p,slot),pinned:true}; } } }
+  if(!opts.ignorePins){ for(const sid in xiPins){ const slot=curFormation().find(s=>s.id===sid), p=ps.find(x=>x.name===xiPins[sid]); if(slot&&p&&!filled[sid]&&!usedP.has(p.name)){ filled[sid]=true; usedP.add(p.name); assign[sid]={p,score:scoreFor(p,slot.role),nat:eligible(p,slot),pinned:true}; } } }
   for(const pr of pairs){ if(filled[pr.slot.id]||usedP.has(pr.p.name))continue; filled[pr.slot.id]=true;usedP.add(pr.p.name);assign[pr.slot.id]={p:pr.p,score:pr.score,nat:pr.nat}; }
   const bench=ps.filter(p=>!usedP.has(p.name)).map(p=>({p,...bestRole(p)})).sort((a,b)=>b.score-a.score).slice(0,STATE.settings.benchSize);
   return {assign,bench,used:usedP};
@@ -830,7 +891,7 @@ function openPlayer(name){
     ${attrTrends(p.name,role)}
     <h3>📐 Role fit (all 7 roles)</h3>
     ${fits.map(f=>`<div class="rolefit"><span>${esc(f.r)}</span><span class="barmini"><i style="width:${f.s/20*100}%;background:${scoreColor(f.s)}"></i></span><span style="text-align:right;font-weight:700;color:${scoreColor(f.s)}">${f.s.toFixed(1)}</span></div>`).join("")}
-    ${(()=>{const sl=FORMATION.filter(s=>eligible(p,s));return sl.length?`<h3>🧮 What-if — try him in the XI</h3><p class="sub" style="margin:0 0 6px">Pin him to a slot, then check <b>⚽ Best XI</b> to see who drops and the rating change.</p><div class="row">${sl.map(s=>`<button class="btn sm ${xiPins[s.id]===p.name?'primary':''}" onclick="pinPlayer('${s.id}','${jsq(p.name)}')">${s.label}</button>`).join("")}${Object.keys(xiPins).length?'<button class="btn sm ghost" onclick="clearPins();closeModal()">clear pins</button>':''}</div>`:"";})()}
+    ${(()=>{const sl=curFormation().filter(s=>eligible(p,s));return sl.length?`<h3>🧮 What-if — try him in the XI</h3><p class="sub" style="margin:0 0 6px">Pin him to a slot, then check <b>⚽ Best XI</b> to see who drops and the rating change.</p><div class="row">${sl.map(s=>`<button class="btn sm ${xiPins[s.id]===p.name?'primary':''}" onclick="pinPlayer('${s.id}','${jsq(p.name)}')">${s.label}</button>`).join("")}${Object.keys(xiPins).length?'<button class="btn sm ghost" onclick="clearPins();closeModal()">clear pins</button>':''}</div>`:"";})()}
     <h3>📋 Attributes</h3>
     <div class="attrcols">${attrCol("Technical")}${attrCol("Mental")}${attrCol("Physical")}</div>
     <details style="margin-top:12px"><summary>Goalkeeping attributes</summary><div style="margin-top:8px">${ATTR_GROUPS.Goalkeeping.map(a=>{const v=p.attrs[a]||0;return `<div class="attrrow"><span class="an">${a}</span><span class="barmini"><i style="width:${v/20*100}%;background:${attrColor(v)}"></i></span><span class="av">${v}</span></div>`;}).join("")}</div></details>
@@ -852,19 +913,22 @@ function vXI(){
   const strong=bestXI(); const strongSet=new Set(Object.values(strong.assign).map(a=>a.p.name));
   const usedSet=new Set(Object.values(assign).map(a=>a.p.name));
   const rested=xiMode==="rotate"?Object.values(strong.assign).map(a=>a.p).filter(p=>!usedSet.has(p.name)):[];
-  const slots=FORMATION.map(s=>{const a=assign[s.id];const nm=a?last(a.p.name):"—";const sc=a?a.score:0;const warn=a&&!a.nat?'<span class="tag warn" style="font-size:10px;padding:1px 4px">OOP</span>':'';const pin=a&&a.pinned?'📌':'';const pot=a?potOf(a.p):0;return `<div class="slot" style="left:${s.x}%;top:${s.y}%" onclick="${a?`openPlayer('${jsq(a.p.name)}')`:''}"><div class="dot" style="background:${a?scoreColor(sc):'#445'};${a&&a.pinned?'outline:2px solid var(--gold);outline-offset:1px':''}">${a?sc.toFixed(1):'–'}</div><div class="nm">${pin}${esc(nm)} ${warn}</div><div class="ro">${s.label}${a?` · <span style="color:${scoreColor(pot)}">↗${pot.toFixed(1)}</span>`:""}</div></div>`;}).join("");
+  const slots=curFormation().map(s=>{const a=assign[s.id];const nm=a?last(a.p.name):"—";const sc=a?a.score:0;const warn=a&&!a.nat?'<span class="tag warn" style="font-size:10px;padding:1px 4px">OOP</span>':'';const pin=a&&a.pinned?'📌':'';const pot=a?potOf(a.p):0;return `<div class="slot" style="left:${s.x}%;top:${s.y}%" onclick="${a?`openPlayer('${jsq(a.p.name)}')`:''}"><div class="dot" style="background:${a?scoreColor(sc):'#445'};${a&&a.pinned?'outline:2px solid var(--gold);outline-offset:1px':''}">${a?sc.toFixed(1):'–'}</div><div class="nm">${pin}${esc(nm)} ${warn}</div><div class="ro">${s.label}${a?` · <span style="color:${scoreColor(pot)}">↗${pot.toFixed(1)}</span>`:""}</div></div>`;}).join("");
   const vals=Object.values(assign).map(a=>a.score);const avg=vals.length?vals.reduce((x,y)=>x+y,0)/vals.length:0;
   const nPins=Object.keys(xiPins).length;
   let pinBanner="";
   if(nPins){ const opt=bestXI(Object.assign({ignorePins:true},xiMode==="youth"?{youthBoost:2.5}:xiMode==="rotate"?{rotate:true}:{})); const ov=Object.values(opt.assign).map(a=>a.score); const optAvg=ov.length?ov.reduce((x,y)=>x+y,0)/ov.length:0; const d=avg-optAvg;
     pinBanner=`<div class="tipbox amber"><b>🧮 What-if active:</b> ${nPins} player(s) pinned (📌). Rating <b>${avg.toFixed(2)}</b> vs optimal ${optAvg.toFixed(2)} (<b style="color:${d>=0?'#34d399':'#fb7185'}">${d>=0?'+':''}${d.toFixed(2)}</b>). <button class="btn sm ghost" onclick="clearPins()">Clear experiment</button></div>`; }
   const benchRows=bench.map(b=>`<tr onclick="openPlayer('${jsq(b.p.name)}')"><td><b>${esc(b.p.name)}</b></td><td>${b.p.age}</td><td class="muted">${esc(b.p.position)}</td><td>${rolePill(b.role)}</td><td>${scoreBadge(b.score,b.p)}</td></tr>`).join("");
-  const youthAlt=FORMATION.map(s=>{const start=assign[s.id]?.p.name;const c=ps.filter(p=>p.age<=ya&&eligible(p,s)&&p.name!==start).map(p=>({p,score:scoreFor(p,s.role)})).sort((a,b)=>b.score-a.score)[0];if(!c)return"";return `<tr onclick="openPlayer('${jsq(c.p.name)}')"><td>${s.label}</td><td><b>${esc(c.p.name)}</b></td><td>${c.p.age}</td><td>${scoreBadge(c.score)}</td><td class="muted">${assign[s.id]?('−'+(assign[s.id].score-c.score).toFixed(1)+' vs starter'):''}</td></tr>`;}).filter(Boolean).join("");
+  const youthAlt=curFormation().map(s=>{const start=assign[s.id]?.p.name;const c=ps.filter(p=>p.age<=ya&&eligible(p,s)&&p.name!==start).map(p=>({p,score:scoreFor(p,s.role)})).sort((a,b)=>b.score-a.score)[0];if(!c)return"";return `<tr onclick="openPlayer('${jsq(c.p.name)}')"><td>${s.label}</td><td><b>${esc(c.p.name)}</b></td><td>${c.p.age}</td><td>${scoreBadge(c.score)}</td><td class="muted">${assign[s.id]?('−'+(assign[s.id].score-c.score).toFixed(1)+' vs starter'):''}</td></tr>`;}).filter(Boolean).join("");
   const modeDesc={strong:"Your strongest legal line-up by role fit.",rotate:"Tired & fatigued players benched for the next match — keeps your stars fresh.",youth:"Prospects (≤"+ya+"y) get a boost so you can blood them while staying competitive."};
   return `<div class="card">
-    <h2>⚽ Best XI — 4-2-3-1</h2>
+    <h2>⚽ Best XI — ${formationName()}</h2>
     <p class="sub">${modeDesc[xiMode]} <span class="tag warn">OOP</span> = out of natural position. Tap a player for details.</p>
     ${explain("Your strongest legal 4-2-3-1, picked automatically — best fit per position, injured/unavailable excluded.","Each dot shows the player's role-fit score (green = good). 'Team rating' is the XI's average. Switch modes: 💪 Strongest, 🔄 rest-tired (for a fresh next-match XI), 🌱 blood youth. 📌 = a what-if pin you set.","It removes guesswork from selection and shows where you're weak (an OOP slot = a hole to fix by promoting/retraining).")}
+    <h3 style="margin:10px 0 4px">Formation <span class="muted" style="font-size:12px;font-weight:400">— the whole XI re-picks for the shape you choose (see 🏆 Tactics for which fits your ambition)</span></h3>
+    ${formationSelectorHTML()}
+    <h3 style="margin:10px 0 4px">Selection</h3>
     <div class="seg"><button class="${xiMode=='strong'?'on':''}" onclick="xiMode='strong';render()">💪 Strongest</button><button class="${xiMode=='rotate'?'on':''}" onclick="xiMode='rotate';render()">🔄 Next match (rest tired)</button><button class="${xiMode=='youth'?'on':''}" onclick="xiMode='youth';render()">🌱 Blood youth</button></div>
     <div class="row" style="margin-bottom:12px"><span class="muted">Team rating ${scoreBadge(avg)}</span>${rested.length?`<span class="spacer"></span><span class="muted">Rested: ${rested.map(p=>esc(last(p.name))).join(", ")}</span>`:''}</div>
     ${(()=>{const out=players().filter(p=>!p.avail);return out.length?`<div class="tipbox amber"><b>🤕 Unavailable (auto-excluded from the XI):</b> ${out.map(p=>esc(last(p.name))+(p.injury&&p.injury!=='-'?' <span class="muted">('+esc(p.injury)+')</span>':' <span class="muted">(ineligible)</span>')).join(", ")}.</div>`:'';})()}
@@ -1065,10 +1129,12 @@ function formationGuideHTML(){
   const stamCol={"low":"#34d399","med":"#a3e635","med-high":"#fbbf24","high":"#fb923c","very-high":"#fb7185"};
   return `<div class="card">
     <h2>🧩 Formations for your ambition — ${amb.emoji} ${amb.label}</h2>
-    <p class="sub">Researched from the FM-Arena 24.4.0 testing table and matched to YOUR squad (fast, young, stamina still growing). Set the formation in FM; pull the roles/duties from the preset sheet below.</p>
-    ${explain("The best-tested FM24 formations for your current ambition, with their FM-Arena score and how much stamina they demand.","Top row (⭐) is the recommended pick for this tier. 'Stamina' tells you if your squad can sustain it yet — green/lime you're fine, amber/orange/red means rotate hard and ease the press at ~70'.","The whole FM-Arena top-15 is within ~7 pts (statistical noise), so the right formation is the one that FITS your legs and solidity, not the one 0.x higher.")}
+    <p class="sub">Researched from the FM-Arena 24.4.0 testing table and matched to YOUR squad (fast, young, stamina still growing). The app now <b>builds the XI in the shape you pick</b> — set the same one in FM, and pull roles/duties from the preset sheet below.</p>
+    ${explain("The best-tested FM24 formations for your current ambition, with their FM-Arena score and how much stamina they demand. Tap one to make the whole app build your XI in that shape.","Top row (⭐) is the recommended pick for this tier. 'Stamina' tells you if your squad can sustain it yet — green/lime you're fine, amber/orange/red means rotate hard and ease the press at ~70'.","The whole FM-Arena top-15 is within ~7 pts (statistical noise), so the right formation is the one that FITS your legs and solidity, not the one 0.x higher.")}
+    <p class="sub" style="margin-top:4px">Building your XI as <b style="color:var(--brand)">${formationShort()}</b> — tap a formation to switch:</p>
+    ${formationSelectorHTML()}
     <div class="tablewrap"><table><thead><tr><th>Formation</th><th>FM-Arena</th><th>Why it fits you</th><th>Stamina</th></tr></thead><tbody>
-    ${rows.map((r,i)=>`<tr><td><b>${i===0?'⭐ ':''}${esc(r[0])}</b></td><td>${esc(r[1])}</td><td class="muted" style="white-space:normal">${esc(r[2])}</td><td><span class="tag" style="background:${stamCol[r[3]]||'#fbbf24'};color:#06140d">${esc(r[3])}</span></td></tr>`).join("")}
+    ${rows.map((r,i)=>{const active=((STATE.ui&&STATE.ui.formation)||'f4231')===r[4];return `<tr style="${active?'background:rgba(16,185,129,.08)':''}"><td>${i===0?'⭐ ':''}<b onclick="setFormation('${r[4]}')" style="cursor:pointer;color:var(--brand)">${esc(r[0])}</b>${active?' <span class="tag good" style="font-size:10px">active</span>':''}</td><td>${esc(r[1])}</td><td class="muted" style="white-space:normal">${esc(r[2])}</td><td><span class="tag" style="background:${stamCol[r[3]]||'#fbbf24'};color:#06140d">${esc(r[3])}</span></td></tr>`;}).join("")}
     </tbody></table></div>
     <div class="tipbox" style="margin-top:10px"><b>Your edge, by the numbers:</b> Pace & Acceleration are the two biggest match-engine levers (+64 pts/season each) — Stamina is only +19. You can WIN before your legs are elite; low stamina just means you can't <i>sustain</i> a 90' high press. Lean on pace, rotate, drop the press from ~70'.${amb.key==="title"&&!squadCanPress()?" <br>⚠ Your squad's engine isn't high enough yet to sustain the full 4-2-4 press — the plans keep recommending the tuned 4-2-3-1 until your Stamina/Work-Rate climb.":""}</div>
   </div>`;
@@ -1470,8 +1536,9 @@ function matchdaySubs(idx){
   const oppWhy = oppReason[oppArch]||"a fresh defensive-minded player";
   const byFresh=bench.slice().sort((x,y)=>cr(y)-cr(x));
   const tiredOff=entries.map(e=>e.p).slice().sort((x,y)=>cr(x)-cr(y))[0];
-  const wideOff=entries.filter(e=>["AML","AMR","AMC","ST"].includes(e.sid)).map(e=>e.p).sort((x,y)=>cr(x)-cr(y))[0];
-  const dmOff=entries.filter(e=>["DML","DMR"].includes(e.sid)).map(e=>e.p).sort((x,y)=>cr(x)-cr(y))[0];
+  const grpOf=sid=>{const s=curFormation().find(x=>x.id===sid);return s?s.grp:"";};
+  const wideOff=entries.filter(e=>grpOf(e.sid)==="att").map(e=>e.p).sort((x,y)=>cr(x)-cr(y))[0];
+  const dmOff=entries.filter(e=>grpOf(e.sid)==="mid").map(e=>e.p).sort((x,y)=>cr(x)-cr(y))[0];
   const ln=(on,off,why)=>on?`<div style="margin:4px 0">⬆️ <b onclick="openPlayer('${jsq(on.name)}')" style="cursor:pointer;color:var(--brand)">${esc(on.name)}</b> <span class="muted">(pace ${A(on,"Pac")}, ${esc(rawOf(on,KEYS.con)||"fresh")})</span>${off?` &nbsp;⬇️ for <b onclick="openPlayer('${jsq(off.name)}')" style="cursor:pointer">${esc(last(off.name))}</b>`:""} — <span class="muted">${why}</span></div>`:"";
   // give several options so it works whatever your actual XI is
   const opts=(list,off,why,n)=>{ const seen=new Set(); const picks=list.filter(p=>{if(seen.has(p.name))return false;seen.add(p.name);return true;}).slice(0,n||3); if(!picks.length)return "<span class='muted'>No fresh outfield option on the bench.</span>"; return picks.map((p,i)=>ln(p, i===0?off:null, i===0?why:"or — alternative if he's not in your XI / already on")).join(""); };
@@ -1546,14 +1613,16 @@ function vMatchPlanCard(){
   const venue=mp.ha==="A"?"✈️ Away":"🏠 Home";
   const typeMap={easy:["Six-pointer","good"],even:["Mid-table","warn"],hard:["Top side","bad"]};
   const tl=typeMap[mp.diff]||typeMap.even;
-  const LINES=[["🥅 Goal",["GK"]],["🛡️ Back four",["DL","DCL","DCR","DR"]],["⚙️ Double pivot",["DML","DMR"]],["🎨 Attacking three",["AML","AMC","AMR"]],["🎯 Striker",["ST"]]];
-  const chip=(id)=>{ const a=mp.xi.assign[id], slot=FORMATION.find(s=>s.id===id);
+  const F=curFormation();
+  const chip=(slot)=>{ const a=mp.xi.assign[slot.id];
     if(!a) return `<span class="muted" style="margin-right:10px">${slot.label}: —</span>`;
     const oop=a.nat?"":` <span title="out of natural position" style="color:#fbbf24">⚠</span>`;
     return `<span style="display:inline-block;margin:0 12px 4px 0"><span class="muted" style="font-size:11px">${slot.label}</span> <b onclick="openPlayer('${jsq(a.p.name)}')" style="cursor:pointer;color:var(--brand)">${esc(last(a.p.name))}</b> <span class="muted" style="font-size:11px">${(a.score||0).toFixed(1)}</span>${oop}</span>`;
   };
-  const xiHtml=LINES.map(([lbl,ids])=>`<div style="margin:6px 0"><b style="font-size:12px">${lbl}</b><br>${ids.map(chip).join("")}</div>`).join("");
-  const strikerA=mp.xi.assign["ST"], strikerName=strikerA?last(strikerA.p.name):"your striker";
+  const GRP=[["gk","🥅 Goal"],["def","🛡️ Defence"],["mid","⚙️ Midfield"],["att","🎯 Attack"]];
+  const xiHtml=GRP.map(([g,lbl])=>{const ss=F.filter(s=>s.grp===g);return ss.length?`<div style="margin:6px 0"><b style="font-size:12px">${lbl}</b><br>${ss.map(chip).join("")}</div>`:"";}).join("");
+  const attA=F.filter(s=>s.grp==="att").map(s=>mp.xi.assign[s.id]).filter(Boolean)[0];
+  const strikerName=attA?last(attA.p.name):"your forwards";
   let why;
   if(mp.diff==="hard") why=`${mp.opp?esc(mp.opp):"A top side"} are better than you${mp.ha==="A"?", and you're away":""}. Don't get into a foot race — sit in a low block, deny the space behind your slow-recovering line, and use ${esc(strikerName)}'s pace to nick one on the counter. A point is a great result.`;
   else if(mp.diff==="easy") why=`${mp.opp?esc(mp.opp):"This"} is a relegation six-pointer — the games that actually keep you up. Win the midfield with your double pivot and hurt them in transition. ${mp.ha==="H"?"At home, go and win it.":"Take the game to them but stay alert on the break."}`;
@@ -1596,7 +1665,7 @@ function vMatchPlanCard(){
     <h3 style="margin:12px 0 2px">Team selection</h3>
     ${planSel}
     ${planNote}
-    <h3 style="margin:12px 0 2px">Your XI <span class="muted" style="font-size:12px;font-weight:400">(${subtitle})</span></h3>
+    <h3 style="margin:12px 0 2px">Your XI <span class="muted" style="font-size:12px;font-weight:400">(${formationShort()} · ${subtitle})</span></h3>
     <p class="muted" style="font-size:11px;margin:0 0 4px">Injured &amp; ineligible players are already filtered out. ⚠ = out of natural position.</p>
     ${xiHtml}
     ${contiHtml?`<h3 style="margin:10px 0 2px">🆘 Contingencies</h3>${contiHtml}`:""}
