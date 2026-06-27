@@ -1214,6 +1214,9 @@ function pickTop(fn,n){ return players().map(p=>({p,v:fn(p)})).sort((a,b)=>b.v-a
 function inXIset(){ return new Set(Object.values(bestXI().assign).map(a=>a.p.name)); }
 function spTag(name,set){ return set.has(name)?'<span class="tag good" style="margin-left:6px">XI</span>':'<span class="tag warn" style="margin-left:6px">bench</span>'; }
 function spTable(list,set,fmt){ return `<div class="tablewrap"><table><tbody>${list.map((o,i)=>`<tr onclick="openPlayer('${jsq(o.p.name)}')"><td style="width:26px;color:var(--mut)">${i+1}</td><td><b>${esc(o.p.name)}</b>${spTag(o.p.name,set)}</td><td class="muted">${esc(o.p.position)}</td><td style="text-align:right">${fmt(o)}</td></tr>`).join("")}</tbody></table></div>`; }
+/* reusable "2 options + why" cell for set-piece job tables */
+function spOpt2(list,fmt){ return list.filter(Boolean).slice(0,2).map((o,i)=>`${i>0?' <span class="muted">or</span> ':''}<b onclick="openPlayer('${jsq((o.p||o).name)}')" style="cursor:pointer;color:var(--brand)">${esc(last((o.p||o).name))}</b> <span class="muted">(${fmt(o)})</span>`).join("")||'<span class="muted">—</span>'; }
+function spJobTable(rows){ return `<div class="tablewrap"><table><thead><tr><th>Job</th><th>Options</th><th>Why</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="muted">${r[0]}</td><td>${r[1]}</td><td class="muted" style="white-space:normal;font-size:12px">${r[2]}</td></tr>`).join("")}</tbody></table></div>`; }
 function vSetpiece(){
   const set=inXIset();
   const pen=pickTop(p=>A(p,'Pen')*0.45+A(p,'Cmp')*0.25+A(p,'Tec')*0.15+A(p,'Fin')*0.15,5);
@@ -1248,7 +1251,45 @@ function vSetpiece(){
         ["Mark keeper", opt2(aerial.filter(o=>A(o.p,'Str')>=11).slice(0,2),o=>'Str '+A(o.p,'Str')), "A strong body blocks the keeper from claiming the inswinger"]
       ];
       return `<div class="tablewrap"><table><thead><tr><th>Job</th><th>Options</th><th>Why</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="muted">${r[0]}</td><td>${r[1]}</td><td class="muted" style="white-space:normal;font-size:12px">${r[2]}</td></tr>`).join("")}</tbody></table></div>`;})()}
-    <p class="sub">Keep <b>2 men back</b> (your slowest defenders) so a cleared corner doesn't become their counter. Mirror this for wide free kicks. <b>SHORT-corner option</b> (better for your pace): taker short + a full-back <i>Come short</i> to drag a marker out, then cut-back to the edge man for a shot.</p>
+    <p class="sub">Keep <b>2 men back</b> (your slowest defenders) so a cleared corner doesn't become their counter. <b>SHORT-corner option</b> (better for your pace): taker short + a full-back <i>Come short</i> to drag a marker out, then cut-back to the edge man for a shot.</p>
+
+    <h3>📐 Wide / indirect free kick — who goes where</h3>
+    ${(()=>{
+      const wTaker=pickTop(p=>A(p,"Fre")*0.45+A(p,"Cro")*0.3+A(p,"Tec")*0.25,3);
+      const slowDef=players().filter(p=>/D|GK/.test(p.position)).map(p=>({p,s:A(p,"Pac")})).sort((a,b)=>a.s-b.s);
+      return spJobTable([
+        ["Taker / delivery", spOpt2(wTaker,o=>'FK '+A(o.p,'Fre')+' · Cro '+A(o.p,'Cro')), "Best whipped/inswinging delivery — like a corner from the flank"],
+        ["Attack near post", spOpt2(aerial.slice(0,2),o=>'Jump '+A(o.p,'Jum')+' · Head '+A(o.p,'Hea')), "First contact on the in-swinger — a flick-on near post beats the AI"],
+        ["Attack far post", spOpt2(aerial.slice(1,3),o=>'Jump '+A(o.p,'Jum')), "Gobbles the flick-on / over-hit ball at the back post"],
+        ["Lurk on the edge", spOpt2(pickTop(p=>A(p,"Lon")*0.7+A(p,"Tec")*0.3,2),o=>'Long '+A(o.p,'Lon')), "Second ball & rebound shooter"],
+        ["Stay forward (counter)", spOpt2([fast[0],fast[1]],o=>'Pace '+A(o.p,'Pac')), "Your pace punishes a cleared FK on the break"],
+        ["Recovery — keep 2 back", spOpt2(slowDef,o=>'Pace '+A(o.p,'Pac')), "Your slowest defenders stay back, and set your Defensive Line LOWER so a clearance isn't played in behind"]
+      ]);})()}
+
+    <h3>🎯 Direct (central) free kick — who shoots</h3>
+    ${(()=>{
+      const dTaker=pickTop(p=>A(p,"Fre")*0.5+A(p,"Lon")*0.25+A(p,"Tec")*0.15+A(p,"Cmp")*0.1,3);
+      const slowDef=players().filter(p=>/D|GK/.test(p.position)).map(p=>({p,s:A(p,"Pac")})).sort((a,b)=>a.s-b.s);
+      const best=dTaker[0];
+      return spJobTable([
+        ["Direct taker (shoot when in range)", spOpt2(dTaker,o=>'FK '+A(o.p,'Fre')+' · Long '+A(o.p,'Lon')+' · Tec '+A(o.p,'Tec')), best&&(A(best.p,'Fre')>=12||A(best.p,'Lon')>=13)?"You have a real threat here — let him shoot when it's central & in range":"No specialist (best FK "+(best?A(best.p,'Fre'):0)+") — clip it into the box rather than shoot"],
+        ["Attack the box if not shooting", spOpt2(aerial.slice(0,2),o=>'Jump '+A(o.p,'Jum')), "If out of shooting range, float/clip it to your aerial men at the near post"],
+        ["Recovery — keep 2 back", spOpt2(slowDef,o=>'Pace '+A(o.p,'Pac')), "A saved/blocked direct FK is a fast-break risk for a 20th side — always keep cover"]
+      ]);})()}
+    <p class="sub">Build a separate FM routine for <b>'shooting range'</b> vs <b>'wide & deep'</b> free kicks (FM lets you save both). Set a <b>backup taker</b> for each.</p>
+
+    <h3>🤾 Attacking throw-in (final third) — who goes where</h3>
+    ${(()=>{
+      const flick=pickTop(p=>A(p,"Jum")*0.4+A(p,"Hea")*0.4+A(p,"Str")*0.2,2);
+      if(throwWeapon||lthrow.length&&lthrow[0].v>=12){
+        return spJobTable([
+          ["Long-throw thrower", spOpt2(lthrow,o=>'L Th '+o.v), "Treat it like a free corner — only worth it because you have a specialist"],
+          ["Near-post flick-on", spOpt2(flick,o=>'Jump '+A(o.p,'Jum')+' · Head '+A(o.p,'Hea')), "Flicks the long throw on across the six-yard box"],
+          ["Far-post lurker", spOpt2(aerial.slice(0,2),o=>'Jump '+A(o.p,'Jum')), "Attacks the flick-on at the back stick"]
+        ]);
+      }
+      return `<div class="tipbox"><b>No long-throw specialist</b> (best ${lthrow.length?esc(last(lthrow[0].p.name))+" "+lthrow[0].v:"—"}). Set attacking-third throws to <b>'Work the ball into the box'</b> and use your <b>pace down the line</b> (e.g. ${esc(last(fast[0].p.name))}). In the defensive & middle third, set <b>'Retain Possession'</b> — don't gift the ball back.</div>`;
+    })()}
     ${throwWeapon?`<div class="tipbox amber"><b>Long-throw weapon:</b> ${esc(lthrow[0].p.name)} has Long Throws ${lthrow[0].v} — set throw-ins near the box to <b>launch into the area</b> like an extra corner.</div>`:lthrow.length?`<p class="muted">Best long throw: ${esc(lthrow[0].p.name)} (${lthrow[0].v}) — usable but not a weapon.</p>`:''}
     <h3>©️ Captain candidates</h3>
     ${spTable(captain,set,o=>'Ldr '+A(o.p,'Ldr')+' · Det '+A(o.p,'Det'))}
@@ -1305,6 +1346,22 @@ let MD={min:75, sit:'losing1', opp:'similar', men:'even'};
 let oppArch="possession";
 let mdBase="tuned"; // which tactic he's actually playing — the assistant advises CHANGES from this
 const MD_BASE={ tuned:{label:"🏎️ Tuned Highway Star",anchor:3,note:"Balanced, mid-block, Counter on"}, survival:{label:"🪂 Deep-block bus",anchor:2,note:"Cautious, low block, Regroup"}, meta:{label:"⚔️ Full Gegenpress",anchor:5,note:"Attacking, high press, Counter-Press"} };
+/* opponent game-plan data — hoisted to module scope so both the pre-match Order of March and the in-match assistant share it */
+const OPP_LABELS={possession:"Possession / plays out from the back",counter:"Counter-attacking & direct",targetman:"Target man & crosses",wingers:"Fast wingers out wide",playmaker:"Star number 10 / playmaker"};
+const OPP_OI={
+  possession:["Press their centre-backs & deep midfielder hard","Higher defensive line, close down the goalkeeper's short distribution","Tight-mark their deepest playmaker"],
+  counter:["Sit a touch deeper, don't over-commit both full-backs","Stay compact between the lines — deny the space they run into","Lower the tempo of YOUR build-up so you're set when you lose it"],
+  targetman:["Man-mark their target man with your best aerial CB","Defend crosses (not the cross) · drop your line a little","Show their wide men down the line, away from the box"],
+  wingers:["Show wingers INSIDE onto their weaker foot","Have the inside forward + full-back double up on them","Don't get caught with high full-backs — pick Support duty"],
+  playmaker:["Tight-mark + hard-tackle their number 10","Your nearest defensive mid picks him up everywhere","Cut the supply: press the man feeding him"]
+};
+const OPP_APP={
+  possession:["Beat their press: <b>Positive</b>, play quick & direct past their high line — your pacey IFs/AF run in behind.","Win the midfield: your double pivot outnumbers their build-up."],
+  counter:["Don't over-commit: <b>Balanced/Positive</b>, full-backs on Support, keep two men back.","Patience — they want you to chase. Recycle and strike when set."],
+  targetman:["Keep it low: pass through midfield, deny them crosses & second balls.","<b>Positive</b>, work the ball into the box rather than crossing into their big men."],
+  wingers:["Pin their full-backs back: get YOUR wide men high so theirs must defend.","<b>Positive</b>; if they're rapid, don't push your line too high."],
+  playmaker:["Kill the supply, then it's <b>Positive</b> and front-foot — without their 10 they're blunt.","Counter through the space their advanced 10 leaves."]
+};
 function setMD(k,v){ MD[k]=v; render(); }
 function mdAdvice(){
   const {min,sit,opp,men}=MD;
@@ -1376,28 +1433,98 @@ function matchdaySubs(idx){
   if(idx<=2) return opts(byDef, wideOff||tiredOff, "shore it up — "+oppWhy+" on for a tiring attacker to see it out", 3);
   return opts(byFresh, tiredOff, "like-for-like refresh of your most tired starter — keeps intensity up & cuts injury risk", 3);
 }
+/* ===== PRE-MATCH ORDER OF MARCH (Plan A) — kills the per-match "what XI + tactic + instructions?" decision ===== */
+let planFx=0;                                   // which upcoming fixture we're planning (0 = next)
+let planQuick={ha:"H",diff:"even",arch:"possession"}; // used when no fixtures are saved yet
+const PRESET_META={
+  tuned:{label:"🏎️ Highway Star — tuned",note:"your #3-ranked shape, press dialled to your stamina"},
+  survival:{label:"🪂 Deep-block bus",note:"defend deep, soak it up, counter on your pace"},
+  meta:{label:"⚔️ Full Gegenpress",note:"only vs weak sides, once they have the legs"}
+};
+function planPreset(diff,ha){ if(diff==="hard") return "survival"; return "tuned"; } // NEVER auto-pick gegenpress — stamina invariant
+function planMentality(diff,ha,surv){
+  let idx; // index into MENT
+  if(diff==="hard") idx = ha==="A"?1:2;          // Defensive away / Cautious home vs top sides
+  else if(diff==="easy") idx = ha==="H"?4:3;     // Positive at home / Balanced away vs strugglers
+  else idx = ha==="H"?3:2;                        // mid-table: Balanced home / Cautious away
+  if(surv.hasData && surv.needPpg>1.4 && diff!=="hard") idx=Math.min(idx+1,5); // must-win pressure on a winnable game
+  if(surv.hasData && surv.proj>=44 && diff==="hard") idx=Math.max(idx-1,0);    // already comfortable → protect legs
+  return {idx,label:MENT[idx]};
+}
+function planSituational(diff,surv){
+  if(surv.hasData){
+    if(surv.proj>=46 && surv.remaining<=8) return {tag:"🌱 Low stakes — you can blood a kid",note:"You're mathematically near-safe with few games left: give an academy prospect a start for the development minutes."};
+    if(surv.needPpg>1.6 && diff!=="hard") return {tag:"🎯 Must-win",note:`The maths demand points — strongest XI, no rotation. You need ${surv.need} from ${surv.remaining} games (${surv.needPpg.toFixed(2)}/game).`};
+  }
+  if(diff==="easy") return {tag:"⚔️ Six-pointer",note:"A direct relegation rival — these games keep you up. Full strength, go and win it."};
+  if(diff==="hard") return {tag:"🛡️ Damage limitation",note:"A loss here is forgivable; throwing legs at it isn't. Soak it up, nick one on the break, rest key men if it gets away."};
+  return {tag:"🤝 Banker draw",note:"Mid-table side — a point is fine, three is a bonus. Stay compact and pounce on mistakes."};
+}
+function matchPlan(){
+  const fx=STATE.season.fixtures||[];
+  let opp,ha,diff;
+  if(fx.length){ const f=fx[Math.min(planFx,fx.length-1)]; opp=f.opp; ha=f.ha; diff=f.diff; }
+  else { opp=null; ha=planQuick.ha; diff=planQuick.diff; }
+  const preset=planPreset(diff,ha), surv=survivalCalc();
+  return {opp,ha,diff,arch:planQuick.arch,preset,ment:planMentality(diff,ha,surv),situ:planSituational(diff,surv),surv,xi:bestXI(),hasFx:!!fx.length};
+}
+function setPlan(k,v){ if(k==="fx")planFx=+v; else planQuick[k]=v; render(); }
+function vMatchPlanCard(){
+  const mp=matchPlan(), fx=STATE.season.fixtures||[], pm=PRESET_META[mp.preset];
+  const venue=mp.ha==="A"?"✈️ Away":"🏠 Home";
+  const typeMap={easy:["Six-pointer","good"],even:["Mid-table","warn"],hard:["Top side","bad"]};
+  const tl=typeMap[mp.diff]||typeMap.even;
+  const LINES=[["🥅 Goal",["GK"]],["🛡️ Back four",["DL","DCL","DCR","DR"]],["⚙️ Double pivot",["DML","DMR"]],["🎨 Attacking three",["AML","AMC","AMR"]],["🎯 Striker",["ST"]]];
+  const chip=(id)=>{ const a=mp.xi.assign[id], slot=FORMATION.find(s=>s.id===id);
+    if(!a) return `<span class="muted" style="margin-right:10px">${slot.label}: —</span>`;
+    const oop=a.nat?"":` <span title="out of natural position" style="color:#fbbf24">⚠</span>`;
+    return `<span style="display:inline-block;margin:0 12px 4px 0"><span class="muted" style="font-size:11px">${slot.label}</span> <b onclick="openPlayer('${jsq(a.p.name)}')" style="cursor:pointer;color:var(--brand)">${esc(last(a.p.name))}</b> <span class="muted" style="font-size:11px">${(a.score||0).toFixed(1)}</span>${oop}</span>`;
+  };
+  const xiHtml=LINES.map(([lbl,ids])=>`<div style="margin:6px 0"><b style="font-size:12px">${lbl}</b><br>${ids.map(chip).join("")}</div>`).join("");
+  const strikerA=mp.xi.assign["ST"], strikerName=strikerA?last(strikerA.p.name):"your striker";
+  let why;
+  if(mp.diff==="hard") why=`${mp.opp?esc(mp.opp):"A top side"} are better than you${mp.ha==="A"?", and you're away":""}. Don't get into a foot race — sit in a low block, deny the space behind your slow-recovering line, and use ${esc(strikerName)}'s pace to nick one on the counter. A point is a great result.`;
+  else if(mp.diff==="easy") why=`${mp.opp?esc(mp.opp):"This"} is a relegation six-pointer — the games that actually keep you up. Win the midfield with your double pivot and hurt them in transition. ${mp.ha==="H"?"At home, go and win it.":"Take the game to them but stay alert on the break."}`;
+  else why=`A mid-table side. Stay compact in a mid-block, keep Counter ON, and break with pace. ${mp.ha==="H"?"At home you can step up and take it to them.":"Away, bank the point and pounce on their mistakes."}`;
+  const fxSel = fx.length
+    ? `<label class="muted">Match: <select onchange="setPlan('fx',this.value)">${fx.map((f,i)=>`<option value="${i}" ${i===Math.min(planFx,fx.length-1)?'selected':''}>${f.ha==="H"?"🏠":"✈️"} ${esc(f.opp)} (${(typeMap[f.diff]||typeMap.even)[0]})</option>`).join("")}</select></label>`
+    : `<label class="muted">Venue <select onchange="setPlan('ha',this.value)"><option value="H" ${mp.ha==="H"?"selected":""}>🏠 Home</option><option value="A" ${mp.ha==="A"?"selected":""}>✈️ Away</option></select></label> <label class="muted">Opponent <select onchange="setPlan('diff',this.value)"><option value="easy" ${mp.diff==="easy"?"selected":""}>Six-pointer</option><option value="even" ${mp.diff==="even"?"selected":""}>Mid-table</option><option value="hard" ${mp.diff==="hard"?"selected":""}>Top side</option></select></label>`;
+  const archSel=`<label class="muted">Their style <select onchange="setPlan('arch',this.value)">${Object.keys(OPP_LABELS).map(k=>`<option value="${k}" ${mp.arch===k?'selected':''}>${OPP_LABELS[k]}</option>`).join("")}</select></label>`;
+  const mentColor=mp.ment.idx>=5?'#f43f5e':mp.ment.idx>=4?'#fbbf24':mp.ment.idx<=2?'#38bdf8':'#10b981';
+  return `<div class="card" style="background:linear-gradient(135deg,#0c2b20,#121821)">
+    <h2>🧭 Order of march — next match</h2>
+    <p class="sub">Everything for your next game in one place: who plays, which preset, the mentality, how to handle them — and why. Copy it straight into FM.</p>
+    ${explain("Your full pre-match plan, assembled automatically from your available squad + the opponent + your survival maths.","Pick the match (it auto-loads your next fixture from Season, or set venue + opponent level) and their style. You get the XI, the preset to load, the mentality, the opposition instructions and the reason behind it all.","Team selection + tactic is the decision you make every single match — this hands you the answer instead of you working it out each time.")}
+    <div class="row" style="gap:10px;flex-wrap:wrap;margin:6px 0 4px">${fxSel}${archSel}</div>
+    ${!fx.length?`<p class="muted" style="font-size:12px;margin:2px 0 8px">💡 Add your real fixtures in <b onclick="go('season')" style="cursor:pointer;color:var(--brand)">📝 Season</b> and this auto-loads the next opponent.</p>`:''}
+    <div class="row" style="justify-content:space-between;align-items:center;margin-top:6px">
+      <h3 style="margin:0">${venue} vs ${mp.opp?esc(mp.opp):`a ${tl[0].toLowerCase()}`}</h3>
+      <span class="tag ${tl[1]}">${tl[0]}</span>
+    </div>
+    <div class="tipbox" style="margin-top:10px">
+      <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:6px"><span><b>Tactic to load:</b> ${pm.label}</span><span class="score" style="background:${mentColor};color:#06140d">${mp.ment.label}</span></div>
+      <div class="muted" style="font-size:12px;margin-top:3px">${pm.note}. <b onclick="go('tactics')" style="cursor:pointer;color:var(--brand)">→ open the full role &amp; duty sheet</b></div>
+    </div>
+    <div class="tipbox ${mp.diff==='easy'?'':'amber'}" style="margin-top:8px"><b>${mp.situ.tag}.</b> ${mp.situ.note}</div>
+    <h3 style="margin:12px 0 2px">Your XI <span class="muted" style="font-size:12px;font-weight:400">(strongest available)</span></h3>
+    <p class="muted" style="font-size:11px;margin:0 0 4px">Injured &amp; ineligible players are already filtered out. ⚠ = out of natural position.</p>
+    ${xiHtml}
+    <h3 style="margin:12px 0 2px">🛡️ Shut them down</h3>
+    <ul class="notice">${OPP_OI[mp.arch].map(i=>`<li>${i}</li>`).join("")}</ul>
+    <h3 style="margin:8px 0 2px">⚔️ Hurt them</h3>
+    <ul class="notice">${OPP_APP[mp.arch].map(i=>`<li>${i}</li>`).join("")}</ul>
+    <div class="tipbox" style="margin-top:10px"><b>Why this plan:</b> ${why}</div>
+    <p class="muted" style="font-size:12px;margin-top:8px">Before kickoff: confirm set-piece takers in <b onclick="go('setpiece')" style="cursor:pointer;color:var(--brand)">🎯 Set Pieces</b> (~⅓ of your goals if you exploit them), then team-talk ${mp.diff==='hard'?'calm / underdog':'assertive / favourite'}. In-match changes → the assistant below.</p>
+  </div>`;
+}
 function vMatchday(){
   const a=mdAdvice();
   const seg=(k,opts)=>opts.map(([v,l])=>`<button class="${MD[k]===v?'on':''}" onclick="setMD('${k}','${v}')">${l}</button>`).join("");
   // fitness watch from XI starters
   const starters=Object.values(bestXI().assign).map(x=>x.p);
   const tired=starters.filter(p=>A(p,'Sta')<13||A(p,'Nat')<11).map(p=>`${esc(last(p.name))} <span class="muted">(Sta ${A(p,'Sta')}/Nat ${A(p,'Nat')})</span>`);
-  const OI={
-    possession:["Press their centre-backs & deep midfielder hard","Higher defensive line, close down the goalkeeper's short distribution","Tight-mark their deepest playmaker"],
-    counter:["Sit a touch deeper, don't over-commit both full-backs","Stay compact between the lines — deny the space they run into","Lower the tempo of YOUR build-up so you're set when you lose it"],
-    targetman:["Man-mark their target man with your best aerial CB","Defend crosses (not the cross) · drop your line a little","Show their wide men down the line, away from the box"],
-    wingers:["Show wingers INSIDE onto their weaker foot","Have the inside forward + full-back double up on them","Don't get caught with high full-backs — pick Support duty"],
-    playmaker:["Tight-mark + hard-tackle their number 10","Your nearest defensive mid picks him up everywhere","Cut the supply: press the man feeding him"]
-  };
-  const archLabels={possession:"Possession / plays out from the back",counter:"Counter-attacking & direct",targetman:"Target man & crosses",wingers:"Fast wingers out wide",playmaker:"Star number 10 / playmaker"};
-  const APP={
-    possession:["Beat their press: <b>Positive</b>, play quick & direct past their high line — your pacey IFs/AF run in behind.","Win the midfield: your double pivot outnumbers their build-up."],
-    counter:["Don't over-commit: <b>Balanced/Positive</b>, full-backs on Support, keep two men back.","Patience — they want you to chase. Recycle and strike when set."],
-    targetman:["Keep it low: pass through midfield, deny them crosses & second balls.","<b>Positive</b>, work the ball into the box rather than crossing into their big men."],
-    wingers:["Pin their full-backs back: get YOUR wide men high so theirs must defend.","<b>Positive</b>; if they're rapid, don't push your line too high."],
-    playmaker:["Kill the supply, then it's <b>Positive</b> and front-foot — without their 10 they're blunt.","Counter through the space their advanced 10 leaves."]
-  };
-  return `<div class="card">
+  // OI / APP / labels are hoisted to module scope (OPP_OI / OPP_APP / OPP_LABELS) and shared with the Order of March
+  return `${vMatchPlanCard()}<div class="card">
     <h2>⚡ In-Match Assistant</h2>
     <p class="sub">Set the situation and get exactly what to change — mentality, instructions and the sub to make. Use it live while the match is paused.</p>
     ${explain("A live decision tool: tell it your base tactic + the minute, scoreline, opponent strength and red cards, and it tells you what to change right now.","Pick the tactic you actually started with (below) — the advice is the CHANGE to make from it. The green 'Do this now' card gives a mentality + in/out-of-possession tweaks + the exact named sub (who on, who off, why), adapted to the opponent type.","In-match management wins more points than your starting tactic — reacting correctly at 60-75' is where games are won and lost.")}
@@ -1443,11 +1570,11 @@ function vMatchday(){
         <p class="sub" style="margin:8px 0 0"><b>Why it matters:</b> the right Opposition Instruction shuts down their main weapon for free — e.g. tight-mark a slow playmaker, but <i>never</i> tight-mark a fast winger (close down + show onto his weak foot instead, or he skins you). Wrong OIs backfire. <span class="muted">(passion4fm, FM Stag)</span></p>
       </div>
     </details>
-    <div class="row" style="margin-top:8px"><label>Opponent style: <select onchange="oppArch=this.value;render()">${Object.keys(archLabels).map(k=>`<option value="${k}" ${oppArch===k?'selected':''}>${archLabels[k]}</option>`).join("")}</select></label></div>
+    <div class="row" style="margin-top:8px"><label>Opponent style: <select onchange="oppArch=this.value;render()">${Object.keys(OPP_LABELS).map(k=>`<option value="${k}" ${oppArch===k?'selected':''}>${OPP_LABELS[k]}</option>`).join("")}</select></label></div>
     <h3>🛡️ Shut them down (opposition instructions)</h3>
-    <ul class="notice">${OI[oppArch].map(i=>`<li>${i}</li>`).join("")}</ul>
+    <ul class="notice">${OPP_OI[oppArch].map(i=>`<li>${i}</li>`).join("")}</ul>
     <h3>⚔️ Hurt them (your approach)</h3>
-    <ul class="notice">${APP[oppArch].map(i=>`<li>${i}</li>`).join("")}</ul>
+    <ul class="notice">${OPP_APP[oppArch].map(i=>`<li>${i}</li>`).join("")}</ul>
   </div>
   <div class="card notice">
     <h2>🧠 Principles that beat the match engine</h2>
