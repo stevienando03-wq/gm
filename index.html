@@ -768,19 +768,21 @@ function vTips(){
 }
 
 /* ---------- SQUAD ---------- */
-let squadSort={key:"score",dir:-1}, squadFilter={role:"",q:"",attr:"",minVal:0,ageMax:99};
+let squadSort={key:"score",dir:-1}, squadFilter={role:"",q:"",attr:"",minVal:0,ageMax:99,team:""};
 function squadRows(){
   let rows=players().map(p=>{const r=assignedRole(p);return{p,role:r,score:scoreFor(p,r),best:bestRole(p)};});
   if(squadFilter.role)rows=rows.filter(r=>r.role===squadFilter.role);
+  if(squadFilter.team){const t=squadFilter.team;rows=rows.filter(r=>t==="first"?r.p.age>=22:t==="u21"?(r.p.age>=19&&r.p.age<=21):t==="u18"?r.p.age<=18:true);}
   if(squadFilter.q){const q=squadFilter.q.toLowerCase();rows=rows.filter(r=>r.p.name.toLowerCase().includes(q));}
   if(squadFilter.attr&&squadFilter.minVal>0)rows=rows.filter(r=>(r.p.attrs[squadFilter.attr]||0)>=squadFilter.minVal);
   if(squadFilter.ageMax<99)rows=rows.filter(r=>r.p.age<=squadFilter.ageMax);
   const k=squadSort.key,d=squadSort.dir;
-  rows.sort((a,b)=>{let va,vb;if(k==="name"){return a.p.name<b.p.name?-d:a.p.name>b.p.name?d:0;}if(k==="age"){va=a.p.age;vb=b.p.age;}else if(k==="role"){return a.role<b.role?-d:a.role>b.role?d:0;}else if(k==="pos"){return a.p.position<b.p.position?-d:a.p.position>b.p.position?d:0;}else{va=a.score;vb=b.score;}return(va-vb)*d;});
+  rows.sort((a,b)=>{let va,vb;if(k==="name"){const c=last(a.p.name).toLowerCase().localeCompare(last(b.p.name).toLowerCase())||a.p.name.localeCompare(b.p.name);return c*d;}if(k==="age"){va=a.p.age;vb=b.p.age;}else if(k==="role"){return a.role<b.role?-d:a.role>b.role?d:0;}else if(k==="pos"){return a.p.position<b.p.position?-d:a.p.position>b.p.position?d:0;}else{va=a.score;vb=b.score;}return(va-vb)*d;});
   return rows;
 }
 function vSquad(){
   const rows=squadRows();
+  const allps=players(),cF=allps.filter(p=>p.age>=22).length,c21=allps.filter(p=>p.age>=19&&p.age<=21).length,c18=allps.filter(p=>p.age<=18).length;
   const opts=`<option value="">All roles</option>`+ROLES.map(r=>`<option ${squadFilter.role===r?'selected':''}>${r}</option>`).join("");
   return `<div class="card">
     <h2>👥 Squad — ${rows.length} players</h2>
@@ -791,6 +793,16 @@ function vSquad(){
       <input type="text" id="sq" placeholder="🔍 Search name…" value="${esc(squadFilter.q)}">
       <select id="sr">${opts}</select>
     </div>
+    <div class="row" style="margin-bottom:4px;align-items:center;gap:8px">
+      <span class="muted" style="font-size:12px">Squad:</span>
+      <div class="seg" style="flex-wrap:wrap">
+        <button class="${!squadFilter.team?'on':''}" onclick="squadFilter.team='';render()">All ${allps.length}</button>
+        <button class="${squadFilter.team==='first'?'on':''}" onclick="squadFilter.team='first';render()">First team · 22+ (${cF})</button>
+        <button class="${squadFilter.team==='u21'?'on':''}" onclick="squadFilter.team='u21';render()">U21 · 19-21 (${c21})</button>
+        <button class="${squadFilter.team==='u18'?'on':''}" onclick="squadFilter.team='u18';render()">U18 · ≤18 (${c18})</button>
+      </div>
+    </div>
+    <p class="muted" style="font-size:11px;margin:0 0 12px">Split by <b>age</b> — FM doesn't export your actual squad registration. To filter by your real First-team / U21 / U18 lists, add a squad/division column to your FM view and re-export.</p>
     <div class="row" style="margin-bottom:12px;font-size:12px">
       <span class="muted">Filter:</span>
       <select id="fAttr"><option value="">attribute…</option>${ATTRS.map(a=>`<option value="${a}" ${squadFilter.attr===a?'selected':''}>${a} — ${ATTR_FULL[a]||a}</option>`).join("")}</select>
