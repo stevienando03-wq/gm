@@ -1448,6 +1448,8 @@ function matchdaySubs(idx){
 }
 /* ===== PRE-MATCH ORDER OF MARCH (Plan A) — kills the per-match "what XI + tactic + instructions?" decision ===== */
 let planFx=0;                                   // which upcoming fixture we're planning (0 = next)
+let planMode="auto";                            // auto | A (strongest) | B (rotate) | C (situational)
+function setPlanMode(m){ planMode=m; render(); }
 let planQuick=(STATE.ui&&STATE.ui.planQuick)||{ha:"H",diff:"even",arch:"possession"}; // used when no fixtures are saved yet (persisted)
 const PRESET_META={
   tuned:{label:"🏎️ Highway Star — tuned",note:"your #3-ranked shape, press dialled to your stamina"},
@@ -1479,7 +1481,19 @@ function matchPlan(){
   if(fx.length){ const f=fx[Math.min(planFx,fx.length-1)]; opp=f.opp; ha=f.ha; diff=f.diff; }
   else { opp=null; ha=planQuick.ha; diff=planQuick.diff; }
   const preset=planPreset(diff,ha), surv=survivalCalc();
-  return {opp,ha,diff,arch:planQuick.arch,preset,ment:planMentality(diff,ha,surv),situ:planSituational(diff,surv),surv,xi:bestXI(),hasFx:!!fx.length};
+  const xiA=bestXI(), xiB=bestXI({rotate:true});                       // A = strongest, B = rest the tired
+  const startersA=Object.values(xiA.assign).map(a=>a.p);
+  const tired=startersA.filter(p=>(condRank(rawOf(p,KEYS.con))||5)<=3||/high/i.test(rawOf(p,KEYS.fatigue)||""));
+  const lowStakes = surv.hasData && surv.proj>=46 && surv.remaining<=8; // safe enough to blood youth
+  const recMode = tired.length>=3 ? "B" : (lowStakes && diff!=="easy" ? "C" : "A");
+  const eff = planMode==="auto" ? recMode : planMode;
+  const xi = eff==="B"?xiB : eff==="C"?bestXI({youthBoost:2.5}) : xiA;
+  return {opp,ha,diff,arch:planQuick.arch,preset,ment:planMentality(diff,ha,surv),situ:planSituational(diff,surv),surv,xi,xiA,xiB,eff,recMode,tired,lowStakes,hasFx:!!fx.length};
+}
+function keyContingencies(xi){
+  const ent=Object.entries(xi.assign).map(([sid,a])=>({slot:FORMATION.find(s=>s.id===sid),p:a.p,score:a.score})).filter(e=>e.slot).sort((a,b)=>b.score-a.score).slice(0,2);
+  const used=new Set();
+  return ent.map(e=>{ const back=(xi.bench||[]).map(b=>({p:b.p,s:scoreFor(b.p,e.slot.role)})).filter(b=>!used.has(b.p.name)).sort((a,b)=>b.s-a.s)[0]; if(back)used.add(back.p.name); return {pos:e.slot.label,starter:e.p.name,back:back&&back.p.name,backScore:back&&back.s}; });
 }
 function setPlan(k,v){ if(k==="fx"){planFx=+v;} else {planQuick[k]=v; (STATE.ui=STATE.ui||{}).planQuick=planQuick; save();} render(); }
 function vMatchPlanCard(){
@@ -1504,6 +1518,20 @@ function vMatchPlanCard(){
     : `<label class="muted">Venue <select onchange="setPlan('ha',this.value)"><option value="H" ${mp.ha==="H"?"selected":""}>🏠 Home</option><option value="A" ${mp.ha==="A"?"selected":""}>✈️ Away</option></select></label> <label class="muted">Opponent <select onchange="setPlan('diff',this.value)"><option value="easy" ${mp.diff==="easy"?"selected":""}>Six-pointer</option><option value="even" ${mp.diff==="even"?"selected":""}>Mid-table</option><option value="hard" ${mp.diff==="hard"?"selected":""}>Top side</option></select></label>`;
   const archSel=`<label class="muted">Their style <select onchange="setPlan('arch',this.value)">${Object.keys(OPP_LABELS).map(k=>`<option value="${k}" ${mp.arch===k?'selected':''}>${OPP_LABELS[k]}</option>`).join("")}</select></label>`;
   const mentColor=mp.ment.idx>=5?'#f43f5e':mp.ment.idx>=4?'#fbbf24':mp.ment.idx<=2?'#38bdf8':'#10b981';
+  // Plan A/B/C selector (auto-recommends, you can override)
+  const modes=[["A","💪 Plan A"],["B","🔄 Plan B"],["C",mp.lowStakes?"🌱 Plan C":"🔥 Plan C"]];
+  const planSel=`<div class="seg">${modes.map(([m,l])=>`<button class="${mp.eff===m?'on':''}" onclick="setPlanMode('${m}')">${l}${mp.recMode===m?' ✓':''}</button>`).join("")}</div>`;
+  const aNames=new Set(Object.values(mp.xiA.assign).map(a=>a.p.name));
+  const chosenNames=new Set(Object.values(mp.xi.assign).map(a=>a.p.name));
+  const rested=[...aNames].filter(n=>!chosenNames.has(n));
+  const planNote = mp.eff==="A"
+    ? (mp.tired.length>=3?`<div class="tipbox amber" style="margin-top:8px">⚠ ${mp.tired.length} starters are tired (${mp.tired.slice(0,3).map(p=>esc(last(p.name))).join(", ")}) — tap <b>🔄 Plan B</b> to rotate and save their legs.</div>`:"")
+    : mp.eff==="B"
+    ? `<div class="tipbox" style="margin-top:8px"><b>Rotation:</b> resting ${rested.length?rested.map(n=>esc(last(n))).join(", "):"the most tired legs"} — same 4-2-3-1 shape, fresh legs in.${mp.recMode==="B"?" <b>Recommended</b> — your XI is tired.":""}</div>`
+    : `<div class="tipbox" style="margin-top:8px"><b>${mp.lowStakes?"Blood the kids":"All-in"}:</b> ${mp.lowStakes?"survival looks safe — give academy prospects the start for development minutes.":"throw your strongest at it; rest can wait."}</div>`;
+  const subtitle = mp.eff==="B"?"rotated — fresh legs":mp.eff==="C"?(mp.lowStakes?"youth blooded":"all-in"):"strongest available";
+  const contis=keyContingencies(mp.xi);
+  const contiHtml=contis.filter(c=>c.back).map(c=>`<div style="margin:3px 0">🔁 If <b>${esc(last(c.starter))}</b> <span class="muted">(${c.pos})</span> is a late doubt → <b onclick="openPlayer('${jsq(c.back)}')" style="cursor:pointer;color:var(--brand)">${esc(last(c.back))}</b> <span class="muted">(${(c.backScore||0).toFixed(1)})</span></div>`).join("");
   return `<div class="card" style="background:linear-gradient(135deg,#0c2b20,#121821)">
     <h2>🧭 Order of march — next match</h2>
     <p class="sub">Everything for your next game in one place: who plays, which preset, the mentality, how to handle them — and why. Copy it straight into FM.</p>
@@ -1519,9 +1547,13 @@ function vMatchPlanCard(){
       <div class="muted" style="font-size:12px;margin-top:3px">${pm.note}. <b onclick="go('tactics')" style="cursor:pointer;color:var(--brand)">→ open the full role &amp; duty sheet</b></div>
     </div>
     <div class="tipbox ${mp.diff==='easy'?'':'amber'}" style="margin-top:8px"><b>${mp.situ.tag}.</b> ${mp.situ.note}</div>
-    <h3 style="margin:12px 0 2px">Your XI <span class="muted" style="font-size:12px;font-weight:400">(strongest available)</span></h3>
+    <h3 style="margin:12px 0 2px">Team selection</h3>
+    ${planSel}
+    ${planNote}
+    <h3 style="margin:12px 0 2px">Your XI <span class="muted" style="font-size:12px;font-weight:400">(${subtitle})</span></h3>
     <p class="muted" style="font-size:11px;margin:0 0 4px">Injured &amp; ineligible players are already filtered out. ⚠ = out of natural position.</p>
     ${xiHtml}
+    ${contiHtml?`<h3 style="margin:10px 0 2px">🆘 Contingencies</h3>${contiHtml}`:""}
     <h3 style="margin:12px 0 2px">🛡️ Shut them down</h3>
     <ul class="notice">${OPP_OI[mp.arch].map(i=>`<li>${i}</li>`).join("")}</ul>
     <h3 style="margin:8px 0 2px">⚔️ Hurt them</h3>
