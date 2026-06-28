@@ -538,12 +538,15 @@ function render(){
 }
 /* Generic click-to-sort for any table in the view (skips the Squad table, which sorts itself) */
 function cellSortVal(td){ const t=(td.textContent||"").trim(); if(t===""||t==="—"||t==="–")return {n:-Infinity,t:""}; const cleaned=t.replace(/[^0-9.\-]/g,""); const hasDigit=/[0-9]/.test(t); const n=parseFloat(cleaned); return (hasDigit&&!isNaN(n))?{n,t}:{n:null,t:t.toLowerCase()}; }
+/* name columns sort by SURNAME (last word of the player's name, taken from the cell's bold name) */
+function nameSortKey(td){ const b=td.querySelector("b"); const t=((b||td).textContent||"").trim(); const parts=t.split(/\s+/).filter(Boolean); return (parts[parts.length-1]||"").toLowerCase(); }
 function makeSortable(){
   document.querySelectorAll("#view .tablewrap table").forEach(table=>{
     const thead=table.tHead; if(!thead||!thead.rows.length||!table.tBodies.length) return;
     const hcells=[...thead.rows[0].cells];
     hcells.forEach((th,i)=>{
       if(th.dataset.k||th.dataset.sortable) return; // squad headers handle their own sorting
+      const hdr=th.textContent.replace(/[↕▲▼]/g,"").trim().toLowerCase(); const isName=hdr==="name"||hdr==="player"||hdr==="young player"||hdr==="tutor"||hdr==="scorer";
       th.dataset.sortable="1"; th.style.cursor="pointer"; if(!/↕|▲|▼/.test(th.textContent)) th.insertAdjacentHTML("beforeend"," <span style='opacity:.35'>↕</span>");
       th.title="Click to sort";
       th.onclick=()=>{
@@ -551,7 +554,7 @@ function makeSortable(){
         const cur=th.dataset.dir==="1"?1:th.dataset.dir==="-1"?-1:0; const dir=cur===1?-1:1;
         hcells.forEach(x=>{x.dataset.dir="";x.querySelectorAll("span").forEach(s=>{if(/↕|▲|▼/.test(s.textContent))s.textContent="↕",s.style.opacity=".35";});});
         th.dataset.dir=dir; const arrow=th.querySelector("span"); if(arrow){arrow.textContent=dir===1?"▲":"▼";arrow.style.opacity="1";}
-        rows.sort((a,b)=>{const av=cellSortVal(a.cells[i]),bv=cellSortVal(b.cells[i]); if(av.n!==null&&bv.n!==null)return (av.n-bv.n)*dir; return (""+av.t).localeCompare(""+bv.t)*dir;});
+        rows.sort((a,b)=>{ if(isName) return nameSortKey(a.cells[i]).localeCompare(nameSortKey(b.cells[i]))*dir; const av=cellSortVal(a.cells[i]),bv=cellSortVal(b.cells[i]); if(av.n!==null&&bv.n!==null)return (av.n-bv.n)*dir; return (""+av.t).localeCompare(""+bv.t)*dir;});
         rows.forEach(r=>tbody.appendChild(r));
       };
     });
