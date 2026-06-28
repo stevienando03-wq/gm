@@ -431,7 +431,42 @@ function players(){ return (STATE.current?.records||[]).map(normalize).filter(p=
 function scoreExcel(p,role){ if(!SCORING.weights[role])return 0; let D=footScore(p.lf)+footScore(p.rf); const w=SCORING.weights[role]; for(const a of ATTRS) D+=(p.attrs[a]||0)*(w[a]||0); return Math.round(D/SCORING.rolemax[role]*20*100)/100; }
 function scoreFA(p,role){ const w=FA_WEIGHTS[role]; if(!w)return 0; let num=0,den=0; for(const a in w){ num+=(p.attrs[a]||0)*w[a]; den+=w[a]; } return den?Math.round(num/den*100)/100:0; }
 function scoreFor(p,role){ return scoreProfile()==="fmarena"?scoreFA(p,role):scoreExcel(p,role); }
-function bestRole(p){ const isGK=/(^|[ ,/])GK/.test(p.position||""); let best=null,bs=-1; for(const r of ROLES){ if((r.indexOf("SK")===0)!==isGK) continue; const s=scoreFor(p,r); if(s>bs){bs=s;best=r;} } if(best===null){ for(const r of ROLES){const s=scoreFor(p,r);if(s>bs){bs=s;best=r;}} } return {role:best,score:bs}; }
+/* ---- Position familiarity (research: FM-Arena) — soft weighting so best-role respects natural position without hard-excluding secondaries ---- */
+const ROLE_MATCH = {
+  "SK - Defend":{GK:["C","L","R"]},
+  "BPD - Defend":{D:["C"]},
+  "FB - Attack":{D:["L","R"],WB:["L","R"]},
+  "DM - Support":{DM:["C"],M:["C"]},
+  "IF - Support":{AM:["L","R"],M:["L","R"]},
+  "AM - Attack":{AM:["C"]},
+  "AF - Attack":{ST:["C","L","R"]}
+};
+const ROLE_ZONE = {"SK - Defend":[0,"C"],"BPD - Defend":[1,"C"],"FB - Attack":[1,"W"],"DM - Support":[2,"C"],"IF - Support":[3,"W"],"AM - Attack":[3,"C"],"AF - Attack":[4,"C"]};
+function roleEligible(p,r){ return eligible(p,{match:ROLE_MATCH[r]||{}}); }
+function roleDist(a,b){ const x=ROLE_ZONE[a],y=ROLE_ZONE[b]; if(!x||!y)return 9; return Math.abs(x[0]-y[0])+(x[1]!==y[1]?0.5:0); }
+/* familiarity multiplier for playing player p in role r (1.0 natural … 0.50 ineffectual) — FM-Arena tested penalties */
+function famMult(p,r){
+  const isGK=/(^|[ ,/])GK/.test(p.position||""), roleGK=r.indexOf("SK")===0;
+  if(isGK!==roleGK) return 0;                       // GK and outfield never mix
+  if(roleEligible(p,r)) return 1.0;                 // a position he is listed for → natural/accomplished
+  const elig=ROLES.filter(x=>(x.indexOf("SK")===0)===isGK && roleEligible(p,x));
+  if(!elig.length) return 0.82;                     // position unknown → neutral
+  const d=Math.min(...elig.map(x=>roleDist(r,x)));  // distance to his nearest natural position
+  return d<=0.5?0.90: d<=1?0.82: d<=1.5?0.72: d<=2?0.62: 0.50; // Accomplished→Ineffectual
+}
+/* Best role = the role where he is most EFFECTIVE (raw fit × familiarity), so a fast CB is no longer crowned a striker.
+   Returns the raw fit IN that role (familiarity-adjusted only decides which role wins). */
+function bestRole(p){
+  const isGK=/(^|[ ,/])GK/.test(p.position||"");
+  let best=null,bestEff=-1,bestRaw=0;
+  for(const r of ROLES){ if((r.indexOf("SK")===0)!==isGK) continue;
+    const m=famMult(p,r); if(m<=0) continue;
+    const raw=scoreFor(p,r), eff=raw*m;
+    if(eff>bestEff){ bestEff=eff; best=r; bestRaw=raw; }
+  }
+  if(best===null){ for(const r of ROLES){ const s=scoreFor(p,r); if(s>bestRaw){bestRaw=s;best=r;} } }
+  return {role:best, score:bestRaw};
+}
 function assignedRole(p){ if(STATE.overrides[p.name]&&ROLES.includes(STATE.overrides[p.name]))return STATE.overrides[p.name]; if(p.role)return p.role; return bestRole(p).role; }
 function parsePos(str){ const map={}; (str||"").split(",").forEach(seg=>{seg=seg.trim();if(!seg)return;const m=seg.match(/^([A-Za-z\/]+)\s*(?:\(([^)]*)\))?/);if(!m)return;const toks=m[1].split("/");let sides=(m[2]||"").replace(/[^LRC]/g,"").split("");if(!sides.length)sides=["C"];toks.forEach(t=>{t=t.toUpperCase();map[t]=map[t]||new Set();sides.forEach(s=>map[t].add(s));});}); return map; }
 function eligible(p,slot){ const mp=parsePos(p.position); for(const tok in slot.match){ if(mp[tok]) for(const s of slot.match[tok]) if(mp[tok].has(s)) return true; } return false; }
@@ -780,14 +815,14 @@ function vTips(){
 /* ---------- SQUAD ---------- */
 let squadSort={key:"score",dir:-1}, squadFilter={role:"",q:"",attr:"",minVal:0,ageMax:99,team:""};
 function squadRows(){
-  let rows=players().map(p=>{const r=assignedRole(p);return{p,role:r,score:scoreFor(p,r),best:bestRole(p)};});
+  let rows=players().map(p=>{const r=assignedRole(p);return{p,role:r,score:scoreFor(p,r),best:bestRole(p),pot:potOf(p)};});
   if(squadFilter.role)rows=rows.filter(r=>r.role===squadFilter.role);
   if(squadFilter.team){const t=squadFilter.team;rows=rows.filter(r=>t==="first"?r.p.age>=22:t==="u21"?(r.p.age>=19&&r.p.age<=21):t==="u18"?r.p.age<=18:true);}
   if(squadFilter.q){const q=squadFilter.q.toLowerCase();rows=rows.filter(r=>r.p.name.toLowerCase().includes(q));}
   if(squadFilter.attr&&squadFilter.minVal>0)rows=rows.filter(r=>(r.p.attrs[squadFilter.attr]||0)>=squadFilter.minVal);
   if(squadFilter.ageMax<99)rows=rows.filter(r=>r.p.age<=squadFilter.ageMax);
   const k=squadSort.key,d=squadSort.dir;
-  rows.sort((a,b)=>{let va,vb;if(k==="name"){const c=last(a.p.name).toLowerCase().localeCompare(last(b.p.name).toLowerCase())||a.p.name.localeCompare(b.p.name);return c*d;}if(k==="age"){va=a.p.age;vb=b.p.age;}else if(k==="role"){return a.role<b.role?-d:a.role>b.role?d:0;}else if(k==="pos"){return a.p.position<b.p.position?-d:a.p.position>b.p.position?d:0;}else{va=a.score;vb=b.score;}return(va-vb)*d;});
+  rows.sort((a,b)=>{let va,vb;if(k==="name"){const c=last(a.p.name).toLowerCase().localeCompare(last(b.p.name).toLowerCase())||a.p.name.localeCompare(b.p.name);return c*d;}if(k==="age"){va=a.p.age;vb=b.p.age;}else if(k==="role"){return a.role<b.role?-d:a.role>b.role?d:0;}else if(k==="pos"){return a.p.position<b.p.position?-d:a.p.position>b.p.position?d:0;}else if(k==="pot"){va=a.pot;vb=b.pot;}else{va=a.score;vb=b.score;}return(va-vb)*d;});
   return rows;
 }
 function vSquad(){
@@ -822,10 +857,10 @@ function vSquad(){
     </div>
     <div class="row" style="margin-bottom:12px"><button class="btn sm primary" onclick="optimizeRoles()">✨ Auto-assign best roles</button><button class="btn sm ghost" onclick="resetRoles()">reset to FM roles</button><span class="muted" style="font-size:12px">Sets each player to the role he scores highest in (under the active model).</span></div>
     <div class="tablewrap"><table>
-      <thead><tr><th data-k="name">Name</th><th data-k="age">Age</th><th data-k="pos">Position</th><th data-k="role">Role</th><th data-k="score">Score</th><th>Best</th></tr></thead>
+      <thead><tr><th data-k="name">Name</th><th data-k="age">Age</th><th data-k="pos">Position</th><th data-k="role">Role</th><th data-k="score">Score</th><th data-k="pot">Pot. ↗</th><th>Best</th></tr></thead>
       <tbody>${rows.map(r=>`<tr onclick="openPlayer('${jsq(r.p.name)}')">
         <td><b>${esc(r.p.name)}</b>${r.p.injury&&r.p.injury!=="-"?' <span title="'+esc(r.p.injury)+'">🤕</span>':""}${r.p.loanFrom&&r.p.loanFrom!=="-"?' <span title="On loan from '+esc(r.p.loanFrom)+'">🔁</span>':""}</td><td>${r.p.age||""}</td><td class="muted">${esc(r.p.position)}</td>
-        <td>${rolePill(r.role)}</td><td>${scoreBadge(r.score,r.p)}</td>
+        <td>${rolePill(r.role)}</td><td>${scoreBadge(r.score)}</td><td>${potBadge(r.p)}</td>
         <td>${r.best.role!==r.role?`<span class="muted">${r.best.role.split(" ")[0]} ${r.best.score.toFixed(1)}</span>`:'<span class="tag good">best fit</span>'}</td>
       </tr>`).join("")}</tbody>
     </table></div>
@@ -1004,16 +1039,17 @@ function persScore(pers){
   if(/easily discouraged|casual|temperamental|slack|unambitious|mercenary|low determination|realist/.test(s)) return 2;
   return 5;
 }
-/* Refined potential ceiling (research-weighted; FM hides true PA so this is an estimate).
-   Weights: Professionalism(personality) >> Determination > current ability, all gated by AGE. */
+/* Age growth curve (0–1), research-aligned (FM-Arena 13924 + fmstats): front-loaded, near-zero after 24. */
+function ageFac(age){ return age<=16?1.0:age===17?0.95:age===18?0.90:age===19?0.82:age===20?0.74:age===21?0.67:age===22?0.60:age===23?0.55:age===24?0.33:age===25?0.22:age===26?0.13:age===27?0.07:0.03; }
+/* Potential ceiling estimate (FM hides true PA so this is a proxy). Research-weighted (fmstats / FM-Arena / strikerless):
+   hidden PROFESSIONALISM dominates growth (~2× anything else), Determination is MINOR (on-pitch, not a training driver),
+   age is front-loaded, and the PA-CA gap throttles it (more headroom when current ability is low). */
 function devProxy(p,best){
-  const age=p.age;
-  const Afac = age<=17?10: age===18?9: age===19?8: age===20?6: age===21?4: age===22?3: age===23?2:1; // 0–10 age window
-  const P=persScore(rawOf(p,KEYS.pers));      // 0–10 professionalism proxy
-  const D=Math.max(0,Math.min(20,A(p,'Det')))/2; // 0–10
-  const C=Math.max(0,Math.min(20,best))/2;    // 0–10 current-ability proxy
-  const quality=(0.55*P + 0.30*D + 0.15*C)/10; // 0–1
-  const headroom = quality * (Afac/10) * 7;    // up to ~7 pts of growth for an ideal 16-17yo
+  const P=persScore(rawOf(p,KEYS.pers));                      // 0–10 professionalism/ambition proxy (dominant)
+  const D=Math.max(0,Math.min(20,A(p,'Det')))/2;             // 0–10 determination (minor — plateaus above ~10)
+  const quality=(0.80*P + 0.20*D)/10;                        // 0–1
+  const gapFac=Math.max(0.35,Math.min(1.15,(17-best)/9));   // PA-CA gap proxy: more room when current fit is low
+  const headroom = quality * ageFac(p.age) * 7.5 * gapFac;  // up to ~8 pts for an ideal young high-professional with room
   return Math.round((best + headroom)*100)/100;
 }
 function vYouth(){
@@ -1030,7 +1066,7 @@ function vYouth(){
     return `<tr onclick="openPlayer('${jsq(o.p.name)}')"><td><b>${esc(o.p.name)}</b></td><td>${o.p.age}</td><td class="muted">${esc(o.fmRole||o.p.position)}</td><td>${rolePill(o.role)}</td><td>${scoreBadge(o.score)}</td><td><b style="color:${scoreColor(o.dev)}">${o.dev.toFixed(1)}</b></td><td><span class="tag ${tag}">${txt}</span>${hasPers?risk:''}</td></tr>`;
   }).join("");
   return `<div class="card"><h2>🌟 Wonderkids & development (≤ ${ya})</h2>
-    <p class="sub"><b>Ceiling est.</b> = research-weighted growth estimate (FM hides true PA, so NOT FM's Potential). Driven mainly by <b>Personality</b> (proxy for hidden Professionalism — the #1 growth factor per SI-mechanics testing), then <b>Determination</b>, then current ability, all <b>gated by age</b> (a 16yo keeps almost all his headroom; a 24yo almost none). Higher = more room to grow. Change the age cut-off in <b>Data → Settings</b>.</p>
+    <p class="sub"><b>Ceiling est.</b> = research-weighted growth estimate (FM hides true PA, so NOT FM's Potential). Driven mainly by <b>Personality</b> (proxy for hidden Professionalism — the #1 growth driver, ~2× anything else per fmstats testing), with only a <b>small nudge from Determination</b> (it mostly affects on-pitch play, not training), throttled by <b>age</b> (near-zero new growth after 24) and by <b>how much room he has left</b> (a low current rating means more headroom — the PA-CA gap). Higher = more room to grow. Change the age cut-off in <b>Data → Settings</b>.</p>
     ${explain("Your young players (≤ the age cut-off) ranked by how much they could still grow.","'Now' = current role-fit; 'Ceiling est.' = my growth estimate (FM hides real Potential). Verdict tags: ⭐ wonderkid, high ceiling, decent, limited. An 'attitude' tag = bad personality to mentor.","It tells you which kids to invest minutes and training in — the players who'll carry this save long-term.")}
     <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>FM best role / pos</th><th>My role</th><th>Now</th><th>Ceiling est.</th><th>Verdict</th></tr></thead><tbody>${rows||'<tr><td colspan=7 class="muted">No players ≤'+ya+'.</td></tr>'}</tbody></table></div>
     <div class="tipbox"><b>How to use it:</b> give your ⭐ Wonderkids real minutes + the role training from the <b>🏋️ Training</b> tab. ${hasPers?'A <span class="tag bad">attitude</span> tag (bad personality like Mercenary) means pair him with a pro mentor in <b>Reports → Personality</b> before he infects the dressing room.':'Add the <b>Personality</b> column to your export to flag attitude risks here.'}</div>
