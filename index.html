@@ -373,6 +373,8 @@ function formationName(){ return (FORMATIONS[(STATE.ui&&STATE.ui.formation)||"f4
 function formationShort(){ return (FORMATIONS[(STATE.ui&&STATE.ui.formation)||"f4231"]||FORMATIONS.f4231).short; }
 function setFormation(k){ if(FORMATIONS[k]){ (STATE.ui=STATE.ui||{}).formation=k; xiPins={}; save(); render(); } }
 function formationSelectorHTML(){ return `<div class="seg" style="flex-wrap:wrap">${Object.entries(FORMATIONS).map(([k,f])=>`<button class="${((STATE.ui&&STATE.ui.formation)||'f4231')===k?'on':''}" onclick="setFormation('${k}')" title="${esc(f.name)}">${f.short}</button>`).join("")}</div>`; }
+/* the 3 match-day slots (A/B/C) — picking one sets its tactic + formation (shared with the In-Match Assistant via setMdBase) */
+function slotSelectorHTML(){ const f=(STATE.ui&&STATE.ui.formation)||"f4231"; return `<div class="seg" style="flex-wrap:wrap">${Object.entries(MD_BASE).map(([k,b])=>`<button class="${MD_FORMATION[k]===f?'on':''}" onclick="setMdBase('${k}')" title="${esc(b.note)}">${esc(b.label)}</button>`).join("")}</div>`; }
 
 /* ============================ STATE ============================ */
 const LS_KEY="fm_team_manager_v2";
@@ -1024,7 +1026,9 @@ function vXI(){
     <h2>⚽ Best XI — ${formationName()}</h2>
     <p class="sub">${modeDesc[xiMode]} <span class="tag warn">OOP</span> = out of natural position. Tap a player for details.</p>
     ${explain("Your strongest legal 4-2-3-1, picked automatically — best fit per position, injured/unavailable excluded.","Each dot shows the player's role-fit score (green = good). 'Team rating' is the XI's average. Switch modes: 💪 Strongest, 🔄 rest-tired (for a fresh next-match XI), 🌱 blood youth. 📌 = a what-if pin you set.","It removes guesswork from selection and shows where you're weak (an OOP slot = a hole to fix by promoting/retraining).")}
-    <h3 style="margin:10px 0 4px">Formation <span class="muted" style="font-size:12px;font-weight:400">— the whole XI re-picks for the shape you choose (see 🏆 Tactics for which fits your ambition)</span></h3>
+    <h3 style="margin:10px 0 4px">Your 3 match-day slots <span class="muted" style="font-size:12px;font-weight:400">— picks the tactic + its formation (full instructions in 🏆 Tactics)</span></h3>
+    ${slotSelectorHTML()}
+    <h3 style="margin:10px 0 4px">…or any of the 5 shapes</h3>
     ${formationSelectorHTML()}
     <h3 style="margin:10px 0 4px">Selection</h3>
     <div class="seg"><button class="${xiMode=='strong'?'on':''}" onclick="xiMode='strong';render()">💪 Strongest</button><button class="${xiMode=='rotate'?'on':''}" onclick="xiMode='rotate';render()">🔄 Next match (rest tired)</button><button class="${xiMode=='youth'?'on':''}" onclick="xiMode='youth';render()">🌱 Blood youth</button></div>
@@ -1877,6 +1881,7 @@ function matchTimeplanHTML(){
   return `<div class="card">
     <h2>⏱️ Minute-by-minute match plan</h2>
     <p class="sub">The shape of a match for your fast, moderate-stamina side — when to drop the press, when to sub, and what to do by scoreline.</p>
+    <p class="sub" style="margin-top:2px">For your active slot <b>${MD_BASE[mdBase].label}</b> <span class="muted">(${MD_BASE[mdBase].note})</span> — the ~60' subs and the late lockdown apply whatever slot you're on; the mentality bands start from this slot's baseline.</p>
     ${explain("A fixed timeline you run every match (the live assistant above reacts to the exact situation; this is the plan around it).","Top table = what to do in each time band; bottom = how to react to the scoreline. The ~60' row is your key moment — first subs before the stamina cliff.","Managing the clock + the stamina cliff wins more points than your starting XI — most dropped points are late goals from tired legs.")}
     <div class="tablewrap"><table><thead><tr><th>Moment</th><th>What you do</th></tr></thead><tbody>${MATCH_TIME.map(r=>`<tr><td><b>${esc(r[0])}</b></td><td class="muted" style="white-space:normal">${esc(r[1])}</td></tr>`).join("")}</tbody></table></div>
     <h3 style="margin:12px 0 4px">React to the scoreline</h3>
