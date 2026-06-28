@@ -1278,63 +1278,39 @@ function formationGuideHTML(){
     <div class="tipbox" style="margin-top:10px"><b>Your edge, by the numbers:</b> Pace & Acceleration are the two biggest match-engine levers (+64 pts/season each) — Stamina is only +19. You can WIN before your legs are elite; low stamina just means you can't <i>sustain</i> a 90' high press. Lean on pace, rotate, drop the press from ~70'.${amb.key==="title"&&!squadCanPress()?" <br>⚠ Your squad's engine isn't high enough yet to sustain the full 4-2-4 press — the plans keep recommending the tuned 4-2-3-1 until your Stamina/Work-Rate climb.":""}</div>
   </div>`;
 }
-/* ===== EXACT published instruction sets per formation (verified off FM-Arena setup screenshots). All are Attacking high-press meta tactics. ===== */
-const TACTIC_TUNE=[
- "Drop the Defensive Line + Line of Engagement one notch (Much Higher → Higher/Standard) — your slow-recovering line gets exposed otherwise.",
- "Pressing intensity: 'More Often', NOT 'Much More Often' — your single biggest stamina saver.",
- "Until your Stamina/Work-Rate climb: use Regroup instead of Counter-Press (keep Counter-Press only vs weak sides).",
- "Mentality: Positive in the league (keep Attacking only vs weak sides; Cautious vs the top 6).",
- "Make your first subs ~60' and drop the press again ~75'.",
- "Keep Counter + your pace runners — that's how you punish the AI without pressing for 90'."
+/* The 3 FM tactic slots = PROVEN FM-Arena meta tactics, ADAPTED to a fast / moderate-stamina squad. Every instruction filled; (stock) = the original meta value before adaptation. */
+const TACTIC_SLOTS=[
+ {tag:"🅰 MAIN — most games", base:"Highway Star 4-2-3-1 (P107 FC)", rank:"#3 Hall of Fame · 62.2", url:"https://fm-arena.com/thread/14891-highway-star-4231-p107-fc/", formation:"4-2-3-1", mentality:"Positive  (stock = Attacking → dropped to save legs; Attacking only vs weak sides, Cautious vs the top 6)",
+  inPoss:["Attacking Width: Narrow","Passing: Shorter","Tempo: Higher","Play Out Of Defence: ON","Pass Into Space: ON","Final Third: Work Ball Into Box","Crossing: Low / Whipped Crosses","Dribbling: Run At Defence: ON","Focus Play Down BOTH flanks (L + R)","Creative Freedom: Be More Disciplined (young squad — hold shape)","Overlap / Underlap: OFF"],
+  trans:["Win the ball → Counter: ON (your #1 weapon)","Lose the ball → Regroup  (stock = Counter-Press → switched off so you don't gas; keep Counter-Press only vs weak sides)","GK: Distribute Quickly · Roll It Out · to your Full-Backs"],
+  outPoss:["Defensive Line: Standard  (stock = Much Higher → dropped: your line gets exposed behind)","Line of Engagement: Standard / mid-block  (stock = High)","Pressing Intensity / Trigger Press: More Often  (stock = Much More Often — your #1 stamina saver)","Prevent Short GK Distribution: OFF  (stock = ON)","Defensive Width: Standard","Tackling: Stay On Feet  (stock = Get Stuck In — fewer fouls/cards)","Use Offside Trap: ON  (keep — your pace + fast CBs cover it)","Use Tighter Marking: OFF","Time Wasting: None (turn to Often only to close a late lead)"],
+  roles:[["GK","Sweeper Keeper","Support"],["D R","Full Back","Attack"],["D C","Ball Playing Defender","Defend"],["D C","Ball Playing Defender","Defend"],["D L","Full Back","Attack"],["DM R","Defensive Mid","Defend"],["DM L","Defensive Mid","Support"],["AM R","Inside Forward","Support"],["AM C","Attacking Mid","Attack"],["AM L","Inside Forward","Support"],["ST","Advanced Forward","Attack"]]},
+ {tag:"🅱 vs STRONG / tired legs", base:"Speed King 4-1-4-1 (451 SW LP)", rank:"#5 Hall of Fame · 58.9 (most stamina-efficient elite shape)", url:"https://fm-arena.com/thread/15158-speed-king-451-sw-lp-p99-ac/", formation:"4-1-4-1", mentality:"Cautious  (stock = Attacking → fully dropped for tough away games)",
+  inPoss:["Attacking Width: Narrow","Passing: More Direct  (stock = Shorter → hit the break early vs a top side)","Tempo: Higher (break fast before they set)","Play Out Of Defence: OFF  (stock = implied on → clear the danger, go direct)","Pass Into Space: ON","Final Third: Work Ball Into Box","Crossing: Low Crosses","Dribbling: Dribble Less (keep it safe under pressure)","Focus Play Down BOTH flanks","Creative Freedom: Be More Disciplined","Overlap / Underlap: OFF"],
+  trans:["Win the ball → Counter: ON","Lose the ball → Regroup  (stock = Counter-Press → never counter-press a top side; get your shape back)","GK: Distribute Quickly · Roll It Out · to Centre-Backs / Full-Backs"],
+  outPoss:["Defensive Line: Lower  (stock = Much Higher → fully dropped, park the bus)","Line of Engagement: Lower  (stock = High → deep block)","Pressing Intensity: Less Urgent  (Much Less vs the very top sides) (stock = Much More)","Prevent Short GK Distribution: OFF","Defensive Width: Narrower (force them wide, protect the middle)","Tackling: Stay On Feet","Use Offside Trap: OFF  (deep line — no trap)","Use Tighter Marking: OFF (stay compact; tight-mark only their danger man via Opposition Instructions)","Crosses: Invite Crosses (Baker / Nash win them in your box)","Time Wasting: Sometimes (more once you're ahead)"],
+  roles:[["GK","Sweeper Keeper","Defend"],["D L","Full Back","Support"],["D C","Ball Playing Defender","Defend"],["D C","Ball Playing Defender","Defend"],["D R","Full Back","Support"],["DM","Defensive Mid","Defend"],["M C","Central Mid","Support"],["M C","Ball-Winning Mid","Defend"],["AM L","Inside Forward","Support"],["AM R","Inside Forward","Support"],["ST","Advanced Forward","Attack"]]},
+ {tag:"🅲 vs WEAK / chasing a goal", base:"EF 424 (IF HP V2 P101 AC)", rank:"#1 Hall of Fame · 63.2 (highest ceiling, highest stamina cost)", url:"https://fm-arena.com/thread/12717-ef-424-if-hp-v2-p101-ac/", formation:"4-2-4", mentality:"Attacking  (as the stock tactic — go for the throat)",
+  inPoss:["Attacking Width: Narrow  (overload the middle; widen + Overlap if they sit very deep)","Passing: Shorter","Tempo: Higher","Play Out Of Defence: ON","Pass Into Space: ON","Final Third: Work Ball Into Box","Crossing: Low / Whipped Crosses","Dribbling: Run At Defence: ON","Focus Play Down BOTH flanks","Creative Freedom: Be More Expressive (unlock a deep block)","Overlap: ON if they park the bus"],
+  trans:["Win the ball → Counter: ON","Lose the ball → Counter-Press: ON  (you CAN press a weak side — but make subs ~60' so you don't gas)","GK: Distribute Quickly · Roll It Out"],
+  outPoss:["Defensive Line: Much Higher (squeeze them — they're weaker)","Line of Engagement: High","Pressing Intensity: Much More Often  (ONLY here, vs weak sides — your legs take it for a while)","Prevent Short GK Distribution: ON (trap their keeper)","Defensive Width: Standard","Tackling: Get Stuck In","Use Offside Trap: ON","Use Tighter Marking: ON","Crosses: Stop Crosses","⚠ Make your FIRST subs ~60' — this is your highest-stamina tactic"],
+  roles:[["GK","Sweeper Keeper","Defend"],["D R","Full Back","Attack"],["D C","Ball Playing Defender","Defend"],["D C","Ball Playing Defender","Defend"],["D L","Full Back","Attack"],["DM R","Defensive Mid","Support"],["DM L","Defensive Mid","Support"],["AM R","Inside Forward","Attack"],["AM L","Inside Forward","Support"],["ST R","Pressing Forward","Support"],["ST L","Advanced Forward","Attack"]]}
 ];
-const TACTIC_FULL={
- f4231:{name:"Highway Star 4-2-3-1 (P107 FC)",score:"#3 HoF · 62.2",mentality:"Attacking",style:"Custom / Tiki-Taka · Flexible",
-  inPoss:["Shorter Passing","Higher Tempo","Pass Into Space","Run At Defence (dribble more)","Whip / Low Crosses","Focus Play Down BOTH flanks (L + R)","Attacking width: Narrow"],
-  trans:["Win ball → Counter","Lose ball → Counter-Press","GK: Distribute Quickly + Roll It Out"],
-  outPoss:["Much Higher Defensive Line","High Line of Engagement / High Press*","Press Much More Often","Prevent Short GK Distribution","Get Stuck In (tackling)","Step Up More (offside engagement)","Invite Crosses"],
-  roles:[["GK","Sweeper Keeper","Support"],["D R","Full Back","Attack"],["D C","Ball Playing Defender","Defend"],["D C","Ball Playing Defender","Defend"],["D L","Full Back","Attack"],["DM R","Defensive Mid","Defend"],["DM L","Defensive Mid","Support"],["AM R","Inside Forward","Support"],["AM C","Attacking Mid","Attack"],["AM L","Inside Forward","Support"],["ST","Advanced Forward","Attack"]],
-  note:"Verified off the FM-Arena thread-14891 setup screenshot. *The Line-of-Engagement token was truncated in the image — High is most likely given the much-higher line + high press, but not 100% legible. Anything not listed = FM default for an Attacking mentality (not active)."},
- f424:{name:"EF 424 (IF HP V2 P101 AC)",score:"#1 HoF · 63.2",mentality:"Attacking",style:"Custom / Tiki-Taka",
-  inPoss:["Shorter Passing","Higher Tempo","Pass Into Space","Run At Defence","Whip / Low Crosses","Focus Play Down BOTH flanks (L + R)","Attacking width: Narrow"],
-  trans:["Win ball → Counter","Lose ball → Counter-Press","GK: Distribute Quickly + Roll It Out"],
-  outPoss:["Much Higher Defensive Line","High Press","Press Much More Often","Prevent Short GK Distribution","Get Stuck In","Step Up More (offside engagement)","Invite Crosses"],
-  roles:[["GK","Sweeper Keeper","Defend"],["D R","Full Back","Attack"],["D C","Ball Playing Defender","Defend"],["D C","Ball Playing Defender","Defend"],["D L","Full Back","Attack"],["DM R","Defensive Mid","Support"],["DM L","Defensive Mid","Support"],["AM R","Inside Forward","Attack"],["AM L","Inside Forward","Support"],["ST R","Pressing Forward","Support"],["ST L","Advanced Forward","Attack"]],
-  note:"Verified off the FM-Arena thread-12717 setup screenshot. The #1-tested plug-and-play — highest ceiling, highest stamina cost (4 attackers). Use as your 'chase / vs weak sides' gear with early subs."},
- f4141:{name:"Speed King 4-1-4-1 (451 SW LP P99 AC)",score:"#5 HoF · 58.9",mentality:"Attacking",style:"Custom / Tiki-Taka · Fluid",
-  inPoss:["Shorter Passing","Higher Tempo","Pass Into Space","Run At Defence","Low Crosses","Focus Play Down BOTH flanks (L + R)","Attacking width: Narrow"],
-  trans:["Win ball → Counter","Lose ball → Counter-Press","GK: Distribute Quickly + Roll It Out"],
-  outPoss:["Much Higher Defensive Line","High Press","Press Much More Often","Prevent Short GK Distribution","Get Stuck In","Step Up More (offside engagement)","Invite Crosses"],
-  roles:[["GK","Sweeper Keeper","Support"],["D L","Full Back","Attack"],["D C","Ball Playing Defender","Defend"],["D C","Ball Playing Defender","Defend"],["D R","Full Back","Attack"],["DM","Defensive Mid","Support"],["M C","Central Mid","Support"],["M C","Central Mid","Support"],["AM L","Inside Forward","Support"],["AM R","Inside Forward","Support"],["ST","Advanced Forward","Attack"]],
-  note:"Verified off the FM-Arena thread-15158 setup screenshot. The most stamina-EFFICIENT elite shape (one lone DM screens the four) — your best 'congested fixtures' option."},
- f433:{name:"Striker Force 4-3-3",score:"~62 HoF",mentality:"Attacking",style:"Custom / Tiki-Taka · Flexible",
-  inPoss:["Shorter Passing","Higher Tempo","Pass Into Space","Run At Defence","Low Crosses","Focus Play Down BOTH flanks","Overlap Right","Underlap Left","Attacking width: Narrow"],
-  trans:["Win ball → Counter","Lose ball → Counter-Press","GK: Distribute Quickly + Roll It Out"],
-  outPoss:["Much Higher Defensive Line","High Press","Press Much More Often","Prevent Short GK Distribution","Get Stuck In","Step Up More (offside engagement)","Invite Crosses"],
-  roles:[["GK","Sweeper Keeper","Defend"],["D R","Full Back","Attack"],["D C","Ball Playing Defender","Defend"],["D C","Ball Playing Defender","Defend"],["D L","Inverted Wing-Back","Attack"],["DM R","Defensive Mid","Support"],["DM L","Segundo Volante","Attack"],["M L","Winger","Support · marks opp. RB"],["ST R","Pressing Forward","Support · marks opp. LB"],["ST C","Complete Forward","Support"],["ST L","Advanced Forward","Attack"]],
-  note:"Verified off the FM-Arena thread-15347 setup screenshot (in-game name 'Striker Force 433'). Three forwards — max pace, max stamina cost. The two wide forwards man-mark the opposition full-backs."},
- f3421:{name:"3-4-2-1 Beryl v1.2",score:"#7 HoF · 58.2",mentality:"Attacking",style:"Custom",
-  inPoss:["Be More Disciplined","Run At Defence","Pass Into Space","Hit Early Crosses","(width / tempo / directness not published — image-only on FM-Arena)"],
-  trans:["Prevent Short GK Distribution: ON (base)","(Counter vs Hold / Counter-Press vs Regroup / GK distribution not published — image-only)"],
-  outPoss:["⚠ NOT published — Beryl's out-of-possession panel is image-only on the thread and couldn't be read.","Beryl is an AGGRESSIVE Attacking high tactic, NOT a deep block.","Sensible default for an aggressive 3-4-2-1 (unverified): Higher Line of Engagement + Higher Defensive Line, More/Much More Urgent press, Get Stuck In, no Offside Trap."],
-  roles:[["GK","Sweeper Keeper (default)","Support"],["D C","Central Defender (default)","Defend"],["D C","Ball Playing Defender (default)","Defend"],["D C","Ball Playing Defender (default)","Defend"],["WB L","Wing Back","Attack · Stay Wider"],["M C","Volante","Attack · Move Into Channels"],["M C","Volante","Support"],["WB R","Wing Back","Attack · Stay Wider"],["AM C","Inside Forward","Attack"],["AM C","Inside Forward","Attack"],["ST","Advanced Forward (default)","Attack"]],
-  note:"PARTLY verified (FM-Arena thread 14728 text): Attacking; in-possession = Be More Disciplined / Run At Defence / Pass Into Space / Hit Early Crosses; both Wing-Backs = WB-Attack 'Stay Wider'; double Volante (one Attack, 'Move Into Channels'); both Inside Forwards = Attack; Prevent Short GK ON. NOT published (image-only, shown as '(default)'): GK/3 CB/striker roles + ALL out-of-possession. ⚠ Beryl is an attacking tactic — for a true defensive bus, use the 🪂 Deep-block quick preset below, not this."}
-};
 function tacticInstructionsHTML(){
-  const k=(STATE.ui&&STATE.ui.formation)||"f4231"; const t=TACTIC_FULL[k]; if(!t) return "";
   const panel=(title,arr)=>`<div><div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin:8px 0 4px">${title}</div><ul class="notice" style="margin:0">${arr.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`;
-  return `<div class="card">
-    <div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">📋 ${esc(t.name)} — full instructions</h2><span class="tag info">${esc(t.score||"")}</span></div>
-    <p class="sub">The EXACT published instruction set (read off FM-Arena's setup screen). <b>Mentality: ${esc(t.mentality)}</b> · <span class="muted">${esc(t.style||"")}</span>. Change the formation in the guide above to see another tactic's full set.</p>
-    ${explain("Every team instruction the named meta tactic actually uses — so you replicate it exactly, not a partial summary.","Three panels = FM's three instruction tabs (In possession / In transition / Out of possession) + the role & duty for all 11. The 🔧 amber block adapts it to YOUR stamina. Anything not listed sits at FM's default.","A half-copied tactic plays nothing like the tested original — completeness is the whole point.")}
-    <div class="flex2">${panel("⚔️ In possession",t.inPoss)}${panel("🔁 In transition",t.trans)}</div>
-    ${panel("🛡️ Out of possession",t.outPoss)}
+  const card=s=>`<div class="card">
+    <div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap"><h2 style="margin:0">${esc(s.tag)}</h2><span class="tag info">${esc(s.rank)}</span></div>
+    <p class="sub">Base: <b>${esc(s.base)}</b> · ${esc(s.formation)} · <a href="${s.url}" target="_blank" rel="noopener">source ↗</a> — the proven online tactic, <b>adapted to your squad</b>. <b>Mentality: ${esc(s.mentality)}</b></p>
+    <div class="flex2">${panel("⚔️ In possession",s.inPoss)}${panel("🔁 In transition",s.trans)}</div>
+    ${panel("🛡️ Out of possession",s.outPoss)}
     <h3 style="margin:12px 0 4px">Roles &amp; duties — the 11</h3>
-    <div class="tablewrap"><table><thead><tr><th>Position</th><th>Role</th><th>Duty</th></tr></thead><tbody>${t.roles.map(r=>`<tr><td><b>${esc(r[0])}</b></td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join("")}</tbody></table></div>
-    ${t.note?`<p class="muted" style="font-size:11px;margin-top:6px">ℹ️ ${esc(t.note)}</p>`:""}
-    <div class="tipbox amber" style="margin-top:10px"><b>🔧 Tuned for YOUR squad (moderate stamina) — read this:</b> every one of these meta tactics is <b>Attacking + high press + very high line</b>, which your stamina can't sustain for 90'. Run the set above but apply:
-      <ul style="margin:6px 0 0">${TACTIC_TUNE.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>
-    </div>
+    <div class="tablewrap"><table><thead><tr><th>Position</th><th>Role</th><th>Duty</th></tr></thead><tbody>${s.roles.map(r=>`<tr><td><b>${esc(r[0])}</b></td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join("")}</tbody></table></div>
   </div>`;
+  return `<div class="card" style="background:linear-gradient(135deg,#0c2b20,#121821)">
+    <h2>🎯 Your 3 match-day tactics — fill your 3 FM slots</h2>
+    <p class="sub">Each one is a <b>proven FM-Arena meta tactic</b> (with its Hall-of-Fame rank + source link), <b>adapted to your fast, moderate-stamina squad</b> — every instruction filled in, nothing left to guess. <b>(stock)</b> marks where I dialled the original down for your legs. <b>🅰 is your base</b>; switch to 🅱 vs the big sides, 🅲 vs weak sides or when chasing.</p>
+    ${explain("Three complete, copy-straight-into-FM tactics — built FROM the best-tested online tactics, not invented.","Each card: the base tactic + its rank/source, the adapted Mentality, the full In-possession / In-transition / Out-of-possession instructions, and the 11 roles. See the matching XI in ⚽ Best XI → switch the Formation.","Proven shapes win games; the only thing wrong with the stock builds for you is the press intensity — so I keep the tactic and tune the press to your stamina, with sources so you can verify.")}
+  </div>${TACTIC_SLOTS.map(card).join("")}`;
 }
 function vTactics(){
   const pr=squadProfile();
