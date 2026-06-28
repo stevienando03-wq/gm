@@ -986,6 +986,18 @@ function closeModal(){ document.getElementById("modal").innerHTML=""; }
 function setRole(name,val){ if(val==="__best__"){ const p=players().find(x=>x.name===name); val=p?bestRole(p).role:""; } if(val)STATE.overrides[name]=val; else delete STATE.overrides[name]; save(); openPlayer(name); }
 function optimizeRoles(){ players().forEach(p=>{STATE.overrides[p.name]=bestRole(p).role;}); save(); toast("Every player set to his best-fit role"); render(); }
 function resetRoles(){ STATE.overrides={}; save(); toast("Roles reset to your FM export"); render(); }
+/* Remove stale/absurd role overrides (e.g. a full-back stuck as AF from an old pre-fix "auto-assign", or a position he can't play) */
+function cleanStaleOverrides(){
+  if(!STATE.current||!STATE.overrides) return 0;
+  let n=0; const ps=players();
+  for(const name in STATE.overrides){
+    const p=ps.find(x=>x.name===name); if(!p) continue;
+    const r=STATE.overrides[name];
+    if(!ROLES.includes(r) || famMult(p,r)<0.75){ delete STATE.overrides[name]; n++; } // clearly off-position → drop it
+  }
+  if(n) save();
+  return n;
+}
 function pinPlayer(sid,name){ if(xiPins[sid]===name) delete xiPins[sid]; else xiPins[sid]=name; closeModal(); go("xi"); }
 function clearPins(){ xiPins={}; if(TAB==="xi") render(); }
 
@@ -2339,6 +2351,7 @@ function applyImport(text,label){
   // merge by stable identity, never row index: GC role overrides for players no longer in the squad
   const names=new Set(recs.map(recName).filter(Boolean));
   for(const nm in STATE.overrides){ if(!names.has(nm)) delete STATE.overrides[nm]; }
+  cleanStaleOverrides(); // also drop any override that is now clearly off-position
   // remember roster changes so the app surfaces them on the Dashboard (skip the noisy seed -> first-real diff)
   STATE.lastImport = prevSeed ? {date:todayStr(),seed:true,added:[],removed:[],count:recs.length} : {date:todayStr(),added:delta.added,removed:delta.removed,count:recs.length};
   save();
@@ -2422,7 +2435,9 @@ function printReport(){
 document.getElementById("restoreFile").onchange=e=>{const f=e.target.files[0];if(!f)return;f.text().then(t=>{try{const s=JSON.parse(t);if(s.settings){STATE=s;save();toast("Restored");go("dash");}else toast("Not a valid backup");}catch(err){toast("Bad file");}});};
 
 /* ============================ BOOT ============================ */
+const _fixedRoles=cleanStaleOverrides();
 renderTabs(); applyTextScale(); go("dash");
+if(_fixedRoles) toast(_fixedRoles+" out-of-position role"+(_fixedRoles>1?"s":"")+" auto-corrected");
 if(STATE.current && !STATE.settings.welcomeSeen) welcomeModal();
 /* ============================ SWIPE NAV (mobile) ============================ */
 /* Flick left/right to move between the 8 sections — but NOT when the swipe
