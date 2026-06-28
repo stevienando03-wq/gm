@@ -1034,22 +1034,23 @@ function vXI(){
 let trainingQ="";
 function wireTraining(){ const i=document.getElementById("trq"); if(!i)return; i.oninput=()=>{trainingQ=i.value;const pos=i.selectionStart;render();const el=document.getElementById("trq");if(el){el.focus();el.setSelectionRange(pos,pos);}}; }
 function vTraining(){
-  let rows=players().map(p=>{const tr=trainingFor(p);return{p,tr,score:scoreFor(p,tr.role)};}).sort((a,b)=>b.score-a.score);
+  let rows=players().map(p=>{const tr=trainingFor(p);return{p,tr,score:scoreFor(p,tr.role),tra:traitAdvice(p)};}).sort((a,b)=>b.score-a.score);
   if(trainingQ){const q=trainingQ.toLowerCase();rows=rows.filter(r=>r.p.name.toLowerCase().includes(q));}
   return `<div class="card">
     <h2>🎯 Training plan</h2>
     <p class="sub">For each player: the FM <b>individual role training</b> to set, plus an <b>additional focus</b> targeting his weakest important attributes for that role. Tap a row for the full breakdown.</p>
-    ${explain("A per-player training plan: which Individual Training role to set in FM, and which extra focus area will fix his biggest gaps.","'Role training' = set it on his Training screen. 'Additional focus' = the attribute group he's weakest in for his role. 'Weak in role' lists the specific low attributes.","Targeted training turns raw academy kids into useful players — your only no-transfer way to get better.")}
+    ${explain("A per-player training plan: which Individual Training role to set in FM, and which extra focus area will fix his biggest gaps.","'Role training' = set it on his Training screen. 'Additional focus' = the attribute group he's weakest in for his role. 'Trait to teach' = the priority Player Trait (PPM) for his role in our counter style — under-18s show '🤝 wait · U18' (don't coach traits yet, let them absorb via mentoring). 'Weak in role' lists the specific low attributes. Tap a row for the full teach/avoid trait list.","Targeted training turns raw academy kids into useful players — your only no-transfer way to get better.")}
     <div class="tipbox" style="margin:6px 0 10px"><b>Why most focuses are physical — that's deliberate, not a bug.</b> Two reasons: (1) your squad is young, so its physicals (Strength, Jumping, Stamina, and the kids' Pace/Acc) are still underdeveloped — those are their real weak spots. (2) The FM24 match engine is won by <b>Pace, Acceleration & Jumping Reach</b> (FM-Arena's top attributes), while training the technical stats your kids are "worst" at (Passing, Crossing, Technique, Finishing, Marking) has near-zero match impact — so the app steers training to what actually wins games. Every focus is always one of his <b>role's own key/important attributes</b> — it matches his role training, never an off-role attribute (e.g. it won't tell a winger to train heading).</div>
     <div class="row" style="margin-bottom:10px"><input type="text" id="trq" placeholder="🔍 Search a player…" value="${esc(trainingQ)}" style="flex:1;min-width:160px"></div>
-    <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>Role training (FM)</th><th>Additional focus</th><th>Weak in role</th></tr></thead>
+    <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>Role training (FM)</th><th>Additional focus</th><th>Trait to teach</th><th>Weak in role</th></tr></thead>
       <tbody>${rows.map(r=>`<tr onclick="openPlayer('${jsq(r.p.name)}')">
         <td><b>${esc(r.p.name)}</b></td><td>${r.p.age}</td>
         <td class="muted">${esc(r.tr.fmRole)}</td>
         <td>${r.tr.primary?`<span class="tag info" title="set this Additional Focus in FM">${esc(r.tr.primary.focus)}</span>${r.tr.secondary.length?' <span class="muted" style="font-size:11px">+ '+r.tr.secondary.map(s=>esc(s.focus)).join(", ")+'</span>':''}`:'<span class="tag good">strong</span>'}</td>
+        <td>${(()=>{const ta=r.tra;if(!ta.teach.length)return '<span class="muted">—</span>';const top=esc(ta.teach[0].split(" (")[0]);const tip=esc(ta.teach.map(x=>x.split(" (")[0]).join(" · "));return ta.when.tag==='bad'?`<span class="tag" title="Under 18 — don't coach traits yet; let him absorb them via a mentoring group. Priority traits for his role: ${tip}">🤝 wait · U18</span>`:`<span class="tag ${ta.when.tag==='good'?'good':'warn'}" title="Priority Player Trait to coach for our counter style (${ta.when.tag==='good'?'good age to coach':'caution — core attributes first'}). All for his role: ${tip}. Tap the row for the full teach/avoid list.">${top}</span>`;})()}</td>
         <td class="muted" style="white-space:normal">${r.tr.weak.length?r.tr.weak.map(w=>`${w.a} ${w.v}`).join(", "):'—'}</td>
       </tr>`).join("")}</tbody></table></div>
-    <div class="tipbox"><b>How to apply in FM:</b> Player → <b>Training</b> tab → set <b>Individual Training → Role</b> to the one shown, and add the <b>Additional Focus</b> for ~6 weeks, then re-check here after your next import. Young players gain fastest with focus + real minutes.</div>
+    <div class="tipbox"><b>How to apply in FM:</b> Player → <b>Training</b> tab → set <b>Individual Training → Role</b> to the one shown, and add the <b>Additional Focus</b> for ~6 weeks, then re-check here after your next import. Young players gain fastest with focus + real minutes.<br><b>Traits:</b> Player → <b>Development → Individual Training</b> → ask a coach to <b>Add</b> the trait shown — only from ~18 (a coach must rate him "suited"); for under-18s, let him pick traits up via a <b>mentoring group</b> instead (it costs no training slot). Traits cost no CA.</div>
     ${focusGlossaryHTML()}
   </div>`;
 }
