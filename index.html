@@ -212,6 +212,10 @@ const ATTR_FOCUS = {
   Cmd:"Tactical (GK)",Com:"Tactical (GK)",Han:"Technique (GK)",Kic:"Distribution (GK)",Thr:"Distribution (GK)",TRO:"Sweeping (GK)"
 };
 const NO_FOCUS_ATTRS = new Set(["Ant","Cnt","Dec","Vis","Wor","Agg","Bra","Det","Fla","Tea","Ecc"]);
+/* Match-engine value of each focus-able attribute (FM-Arena FM24 testing) — so training targets a weakness that ALSO wins games,
+   not a low-impact technical stat. Pace/Acc dominate; Jumping/Dribbling next; pure technical (Pas/Fin/Mar/Tck/Cro/Tec) ~minimal. */
+const ENGINE_VAL = {Acc:3.5,Pac:3.5,Jum:2.0,Dri:1.8,Agi:1.4,Bal:1.4,Str:1.3,Sta:1.2,Hea:1.0,Cmp:0.8,OtB:0.7,Fir:0.6,Tec:0.6,Fin:0.5,Pas:0.5,Cro:0.5,Tck:0.5,Pos:0.5,Mar:0.4,Lon:0.4,
+  Ref:3.5,"1v1":3.2,Han:3.0,Aer:2.6,Cmd:2.2,Kic:1.6,Pun:1.6,Com:1.4,TRO:1.1,Thr:1.1};  // GK attrs only appear in the keeper role, so these rank keeper training without affecting outfielders
 /* Complete FM24 team instructions by phase (with a one-line note each) + the recommended survival set */
 const TEAM_INSTR = {
  "⚔️ In possession":[
@@ -443,9 +447,12 @@ function bestXI(opts={}){
   return {assign,bench,used:usedP};
 }
 function trainingFor(p){
-  const role=assignedRole(p), w=SCORING.weights[role]||{};
-  // weakest important attributes for the role, ordered by how much they cost (weight × deficit)
-  const items=ATTRS.filter(a=>(w[a]||0)>=0.4).map(a=>({a,w:w[a],v:p.attrs[a]||0,gap:(w[a]||0)*Math.max(0,15-(p.attrs[a]||0))}));
+  const role=assignedRole(p);
+  const ra=ROLE_ATTRS[role]||{key:[],imp:[]};
+  // candidates = ONLY this role's key + important attributes, so the additional focus always matches the role training
+  const relevant=[...new Set([...(ra.key||[]),...(ra.imp||[])])];
+  const items=relevant.map(a=>({a,v:p.attrs[a]||0,key:(ra.key||[]).includes(a),
+    gap:((ra.key||[]).includes(a)?1.25:1)*(ENGINE_VAL[a]||0.6)*Math.max(0,15-(p.attrs[a]||0))})); // role-relevant × match-engine value × deficit
   items.sort((x,y)=>y.gap-x.gap);
   const weak=items.filter(i=>i.v<13).slice(0,5);
   // PRIMARY focus = the exact FM24 Additional Focus for the single most-costly weak attribute that HAS a focus
@@ -970,7 +977,7 @@ function vTraining(){
     <h2>🎯 Training plan</h2>
     <p class="sub">For each player: the FM <b>individual role training</b> to set, plus an <b>additional focus</b> targeting his weakest important attributes for that role. Tap a row for the full breakdown.</p>
     ${explain("A per-player training plan: which Individual Training role to set in FM, and which extra focus area will fix his biggest gaps.","'Role training' = set it on his Training screen. 'Additional focus' = the attribute group he's weakest in for his role. 'Weak in role' lists the specific low attributes.","Targeted training turns raw academy kids into useful players — your only no-transfer way to get better.")}
-    <div class="tipbox" style="margin:6px 0 10px"><b>Why most focuses are physical — that's deliberate, not a bug.</b> Two reasons: (1) your squad is young, so its physicals (Strength, Jumping, Stamina, and the kids' Pace/Acc) are still underdeveloped — those are their real weak spots. (2) The FM24 match engine is won by <b>Pace, Acceleration & Jumping Reach</b> (FM-Arena's top attributes), while training the technical stats your kids are "worst" at (Passing, Crossing, Technique, Finishing, Marking) has near-zero match impact — so the app steers training to what actually wins games. It still recommends Dribbling/Composure when that's a player's biggest useful gap.</div>
+    <div class="tipbox" style="margin:6px 0 10px"><b>Why most focuses are physical — that's deliberate, not a bug.</b> Two reasons: (1) your squad is young, so its physicals (Strength, Jumping, Stamina, and the kids' Pace/Acc) are still underdeveloped — those are their real weak spots. (2) The FM24 match engine is won by <b>Pace, Acceleration & Jumping Reach</b> (FM-Arena's top attributes), while training the technical stats your kids are "worst" at (Passing, Crossing, Technique, Finishing, Marking) has near-zero match impact — so the app steers training to what actually wins games. Every focus is always one of his <b>role's own key/important attributes</b> — it matches his role training, never an off-role attribute (e.g. it won't tell a winger to train heading).</div>
     <div class="row" style="margin-bottom:10px"><input type="text" id="trq" placeholder="🔍 Search a player…" value="${esc(trainingQ)}" style="flex:1;min-width:160px"></div>
     <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>Role training (FM)</th><th>Additional focus</th><th>Weak in role</th></tr></thead>
       <tbody>${rows.map(r=>`<tr onclick="openPlayer('${jsq(r.p.name)}')">
