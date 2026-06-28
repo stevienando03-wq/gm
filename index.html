@@ -1278,6 +1278,64 @@ function formationGuideHTML(){
     <div class="tipbox" style="margin-top:10px"><b>Your edge, by the numbers:</b> Pace & Acceleration are the two biggest match-engine levers (+64 pts/season each) — Stamina is only +19. You can WIN before your legs are elite; low stamina just means you can't <i>sustain</i> a 90' high press. Lean on pace, rotate, drop the press from ~70'.${amb.key==="title"&&!squadCanPress()?" <br>⚠ Your squad's engine isn't high enough yet to sustain the full 4-2-4 press — the plans keep recommending the tuned 4-2-3-1 until your Stamina/Work-Rate climb.":""}</div>
   </div>`;
 }
+/* ===== EXACT published instruction sets per formation (verified off FM-Arena setup screenshots). All are Attacking high-press meta tactics. ===== */
+const TACTIC_TUNE=[
+ "Drop the Defensive Line + Line of Engagement one notch (Much Higher → Higher/Standard) — your slow-recovering line gets exposed otherwise.",
+ "Pressing intensity: 'More Often', NOT 'Much More Often' — your single biggest stamina saver.",
+ "Until your Stamina/Work-Rate climb: use Regroup instead of Counter-Press (keep Counter-Press only vs weak sides).",
+ "Mentality: Positive in the league (keep Attacking only vs weak sides; Cautious vs the top 6).",
+ "Make your first subs ~60' and drop the press again ~75'.",
+ "Keep Counter + your pace runners — that's how you punish the AI without pressing for 90'."
+];
+const TACTIC_FULL={
+ f4231:{name:"Highway Star 4-2-3-1 (P107 FC)",score:"#3 HoF · 62.2",mentality:"Attacking",style:"Custom / Tiki-Taka · Flexible",
+  inPoss:["Shorter Passing","Higher Tempo","Pass Into Space","Run At Defence (dribble more)","Whip / Low Crosses","Focus Play Down BOTH flanks (L + R)","Attacking width: Narrow"],
+  trans:["Win ball → Counter","Lose ball → Counter-Press","GK: Distribute Quickly + Roll It Out"],
+  outPoss:["Much Higher Defensive Line","High Line of Engagement / High Press*","Press Much More Often","Prevent Short GK Distribution","Get Stuck In (tackling)","Step Up More (offside engagement)","Invite Crosses"],
+  roles:[["GK","Sweeper Keeper","Support"],["D R","Full Back","Attack"],["D C","Ball Playing Defender","Defend"],["D C","Ball Playing Defender","Defend"],["D L","Full Back","Attack"],["DM R","Defensive Mid","Defend"],["DM L","Defensive Mid","Support"],["AM R","Inside Forward","Support"],["AM C","Attacking Mid","Attack"],["AM L","Inside Forward","Support"],["ST","Advanced Forward","Attack"]],
+  note:"Verified off the FM-Arena thread-14891 setup screenshot. *The Line-of-Engagement token was truncated in the image — High is most likely given the much-higher line + high press, but not 100% legible. Anything not listed = FM default for an Attacking mentality (not active)."},
+ f424:{name:"EF 424 (IF HP V2 P101 AC)",score:"#1 HoF · 63.2",mentality:"Attacking",style:"Custom / Tiki-Taka",
+  inPoss:["Shorter Passing","Higher Tempo","Pass Into Space","Run At Defence","Whip / Low Crosses","Focus Play Down BOTH flanks (L + R)","Attacking width: Narrow"],
+  trans:["Win ball → Counter","Lose ball → Counter-Press","GK: Distribute Quickly + Roll It Out"],
+  outPoss:["Much Higher Defensive Line","High Press","Press Much More Often","Prevent Short GK Distribution","Get Stuck In","Step Up More (offside engagement)","Invite Crosses"],
+  roles:[["GK","Sweeper Keeper","Defend"],["D R","Full Back","Attack"],["D C","Ball Playing Defender","Defend"],["D C","Ball Playing Defender","Defend"],["D L","Full Back","Attack"],["DM R","Defensive Mid","Support"],["DM L","Defensive Mid","Support"],["AM R","Inside Forward","Attack"],["AM L","Inside Forward","Support"],["ST R","Pressing Forward","Support"],["ST L","Advanced Forward","Attack"]],
+  note:"Verified off the FM-Arena thread-12717 setup screenshot. The #1-tested plug-and-play — highest ceiling, highest stamina cost (4 attackers). Use as your 'chase / vs weak sides' gear with early subs."},
+ f4141:{name:"Speed King 4-1-4-1 (451 SW LP P99 AC)",score:"#5 HoF · 58.9",mentality:"Attacking",style:"Custom / Tiki-Taka · Fluid",
+  inPoss:["Shorter Passing","Higher Tempo","Pass Into Space","Run At Defence","Low Crosses","Focus Play Down BOTH flanks (L + R)","Attacking width: Narrow"],
+  trans:["Win ball → Counter","Lose ball → Counter-Press","GK: Distribute Quickly + Roll It Out"],
+  outPoss:["Much Higher Defensive Line","High Press","Press Much More Often","Prevent Short GK Distribution","Get Stuck In","Step Up More (offside engagement)","Invite Crosses"],
+  roles:[["GK","Sweeper Keeper","Support"],["D L","Full Back","Attack"],["D C","Ball Playing Defender","Defend"],["D C","Ball Playing Defender","Defend"],["D R","Full Back","Attack"],["DM","Defensive Mid","Support"],["M C","Central Mid","Support"],["M C","Central Mid","Support"],["AM L","Inside Forward","Support"],["AM R","Inside Forward","Support"],["ST","Advanced Forward","Attack"]],
+  note:"Verified off the FM-Arena thread-15158 setup screenshot. The most stamina-EFFICIENT elite shape (one lone DM screens the four) — your best 'congested fixtures' option."},
+ f433:{name:"Striker Force 4-3-3",score:"~62 HoF",mentality:"Attacking",style:"Custom / Tiki-Taka · Flexible",
+  inPoss:["Shorter Passing","Higher Tempo","Pass Into Space","Run At Defence","Low Crosses","Focus Play Down BOTH flanks","Overlap Right","Underlap Left","Attacking width: Narrow"],
+  trans:["Win ball → Counter","Lose ball → Counter-Press","GK: Distribute Quickly + Roll It Out"],
+  outPoss:["Much Higher Defensive Line","High Press","Press Much More Often","Prevent Short GK Distribution","Get Stuck In","Step Up More (offside engagement)","Invite Crosses"],
+  roles:[["GK","Sweeper Keeper","Defend"],["D R","Full Back","Attack"],["D C","Ball Playing Defender","Defend"],["D C","Ball Playing Defender","Defend"],["D L","Inverted Wing-Back","Attack"],["DM R","Defensive Mid","Support"],["DM L","Segundo Volante","Attack"],["M L","Winger","Support · marks opp. RB"],["ST R","Pressing Forward","Support · marks opp. LB"],["ST C","Complete Forward","Support"],["ST L","Advanced Forward","Attack"]],
+  note:"Verified off the FM-Arena thread-15347 setup screenshot (in-game name 'Striker Force 433'). Three forwards — max pace, max stamina cost. The two wide forwards man-mark the opposition full-backs."},
+ f3421:{name:"3-4-2-1 Beryl v1.2",score:"#7 HoF · 58.2",mentality:"Attacking",style:"Custom",
+  inPoss:["Be More Disciplined","Run At Defence","Pass Into Space","Hit Early Crosses","(width / tempo / directness not published — image-only on FM-Arena)"],
+  trans:["Prevent Short GK Distribution: ON (base)","(Counter vs Hold / Counter-Press vs Regroup / GK distribution not published — image-only)"],
+  outPoss:["⚠ NOT published — Beryl's out-of-possession panel is image-only on the thread and couldn't be read.","Beryl is an AGGRESSIVE Attacking high tactic, NOT a deep block.","Sensible default for an aggressive 3-4-2-1 (unverified): Higher Line of Engagement + Higher Defensive Line, More/Much More Urgent press, Get Stuck In, no Offside Trap."],
+  roles:[["GK","Sweeper Keeper (default)","Support"],["D C","Central Defender (default)","Defend"],["D C","Ball Playing Defender (default)","Defend"],["D C","Ball Playing Defender (default)","Defend"],["WB L","Wing Back","Attack · Stay Wider"],["M C","Volante","Attack · Move Into Channels"],["M C","Volante","Support"],["WB R","Wing Back","Attack · Stay Wider"],["AM C","Inside Forward","Attack"],["AM C","Inside Forward","Attack"],["ST","Advanced Forward (default)","Attack"]],
+  note:"PARTLY verified (FM-Arena thread 14728 text): Attacking; in-possession = Be More Disciplined / Run At Defence / Pass Into Space / Hit Early Crosses; both Wing-Backs = WB-Attack 'Stay Wider'; double Volante (one Attack, 'Move Into Channels'); both Inside Forwards = Attack; Prevent Short GK ON. NOT published (image-only, shown as '(default)'): GK/3 CB/striker roles + ALL out-of-possession. ⚠ Beryl is an attacking tactic — for a true defensive bus, use the 🪂 Deep-block quick preset below, not this."}
+};
+function tacticInstructionsHTML(){
+  const k=(STATE.ui&&STATE.ui.formation)||"f4231"; const t=TACTIC_FULL[k]; if(!t) return "";
+  const panel=(title,arr)=>`<div><div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin:8px 0 4px">${title}</div><ul class="notice" style="margin:0">${arr.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`;
+  return `<div class="card">
+    <div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">📋 ${esc(t.name)} — full instructions</h2><span class="tag info">${esc(t.score||"")}</span></div>
+    <p class="sub">The EXACT published instruction set (read off FM-Arena's setup screen). <b>Mentality: ${esc(t.mentality)}</b> · <span class="muted">${esc(t.style||"")}</span>. Change the formation in the guide above to see another tactic's full set.</p>
+    ${explain("Every team instruction the named meta tactic actually uses — so you replicate it exactly, not a partial summary.","Three panels = FM's three instruction tabs (In possession / In transition / Out of possession) + the role & duty for all 11. The 🔧 amber block adapts it to YOUR stamina. Anything not listed sits at FM's default.","A half-copied tactic plays nothing like the tested original — completeness is the whole point.")}
+    <div class="flex2">${panel("⚔️ In possession",t.inPoss)}${panel("🔁 In transition",t.trans)}</div>
+    ${panel("🛡️ Out of possession",t.outPoss)}
+    <h3 style="margin:12px 0 4px">Roles &amp; duties — the 11</h3>
+    <div class="tablewrap"><table><thead><tr><th>Position</th><th>Role</th><th>Duty</th></tr></thead><tbody>${t.roles.map(r=>`<tr><td><b>${esc(r[0])}</b></td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join("")}</tbody></table></div>
+    ${t.note?`<p class="muted" style="font-size:11px;margin-top:6px">ℹ️ ${esc(t.note)}</p>`:""}
+    <div class="tipbox amber" style="margin-top:10px"><b>🔧 Tuned for YOUR squad (moderate stamina) — read this:</b> every one of these meta tactics is <b>Attacking + high press + very high line</b>, which your stamina can't sustain for 90'. Run the set above but apply:
+      <ul style="margin:6px 0 0">${TACTIC_TUNE.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>
+    </div>
+  </div>`;
+}
 function vTactics(){
   const pr=squadProfile();
   let analyzer="";
@@ -1316,8 +1374,8 @@ function vTactics(){
     }
   };
   const t=T[tacticSel];
-  return `${analyzer}${formationGuideHTML()}<div class="card">
-    <h2>🏆 Tactics — stop losing</h2>
+  return `${analyzer}${formationGuideHTML()}${tacticInstructionsHTML()}<div class="card">
+    <h2>🏆 Stamina-tuned quick presets</h2>
     <div class="tipbox"><b>Good news, verified:</b> your <b>Highway Star 4-2-3-1 is the #3 tactic on the FM-Arena Hall of Fame (62.2 pts)</b> — the best-tested 4-2-3-1 in the whole database. <b>Don't change formation.</b> The only problem is the stock build presses too hard for your stamina — the presets below keep the elite shape and just tune the press. <span class="muted">(<a href="https://fm-arena.com/table/fm24-hall-of-fame/" target="_blank" rel="noopener">FM-Arena Hall of Fame ↗</a>)</span></div>
     ${explain("Three complete tactic presets (roles, duties, mentality, instructions) you copy straight into FM — all on your proven Highway Star shape.","🏎️ Tuned is your default (elite shape, press dialled to your stamina). 🪂 Deep-block bus is for tough away days. ⚔️ Full Gegenpress is the stock high-press — only once your squad has the legs. The 🧬 analyser above tells you which fits your players.","You're already on the best-tested 4-2-3-1; the win is FITTING it to your fast, low-stamina squad, not changing it.")}
     <div class="seg"><button class="${tacticSel=='tuned'?'on':''}" onclick="setTactic('tuned')">🏎️ Tuned (recommended)</button><button class="${tacticSel=='survival'?'on':''}" onclick="setTactic('survival')">🪂 Deep-block bus</button><button class="${tacticSel=='meta'?'on':''}" onclick="setTactic('meta')">⚔️ Full Gegenpress</button></div>
@@ -1818,6 +1876,37 @@ function vMatchPlanCard(){
     <p class="muted" style="font-size:12px;margin-top:8px">Before kickoff: confirm set-piece takers in <b onclick="go('setpiece')" style="cursor:pointer;color:var(--brand)">🎯 Set Pieces</b> (~⅓ of your goals if you exploit them), then team-talk ${mp.diff==='hard'?'calm / underdog':'assertive / favourite'}. In-match changes → the assistant below.</p>
   </div>`;
 }
+/* Minute-by-minute + scoreline match plan (verified: FM-Arena 'managing matches' + substitutions + stamina-curve threads) */
+const MATCH_TIME=[
+ ["Pre-match","Pick the fast XI but cap pressing/tempo for moderate stamina. Plan who you refresh at ~60' and who stays to ~75'."],
+ ["0–15' (settling)","Tempo −1 notch, trigger-press −1, sit in a mid-block. Make NO reactive change before 15' — read the patterns first."],
+ ["15–30'","Hold shape; only small tweaks if a clear pattern shows (tempo, press intensity, width). Note any orange-condition or booked player."],
+ ["30–45'","Decide your half-time moves now: flag tired / yellow-risk / underperforming players to sub at the break."],
+ ["Half-time (team talk + subs)","Best sub window — a break sub costs the least fatigue, so make MULTIPLE here (up to 3–4) for anyone tired/booked/poor. Keep tweaks small."],
+ ["45–60'","Stay in your scoreline branch (below). Keep the press capped. Calm before the cliff — bank a goal or stabilise."],
+ ["~60' (STAMINA CLIFF — first subs)","Make your FIRST sub wave NOW (condition drops after 60'; stamina <11 = orange/red by 65–70'). Refresh your pacey wide men / pressers first. Hold one sub for ~75'."],
+ ["70–80'","Notch down again: tempo −1, trigger-press −1, mid-block. Use your reserved sub for an injury, fresh legs, or a booking risk."],
+ ["80–90'+ (closing)","Execute your scoreline branch hard. Protecting a lead at 85'+: Cautious, tempo & press −1 again, Stay On Feet, drop the line, and REMOVE Counter-Press / Counter / Distribute Quickly / Pass Into Space / Run At Defence / Prevent Short GK. Burn the clock."]
+];
+const MATCH_SCORE=[
+ ["🟢 Winning by 1 (final ~20')","Go Cautious, drop the defensive line, reduce pressing, mid-block / Drop Off More. Sub a DM/CM ON for an attacker to add a body in front of the back line."],
+ ["🟢 Just after YOU score (10 min)","Cautious for 10 min, tempo & trigger-press −1, back to a mid-block. Re-praise the team only after the first 15'."],
+ ["🟡 Drawing (60–80')","Hold Balanced/Positive, press capped. Make the ~60' fresh-legs subs to keep your pace alive; only push to Attacking to chase a win late."],
+ ["🔴 Losing by 1","Shift to Attacking + Be More Expressive. Add Pass Into Space, Work Ball Into Box, higher tempo, go Wider, Distribute Quickly; bring a pacey attacker ON for a defensive player."],
+ ["🔴 Just after THEY score (10 min)","Attacking + Be More Expressive for 10 min, then reassess and settle if it over-exposes you."],
+ ["🔴 Losing by 2+ (from ~45–60')","Full chase: Attacking, Pass Into Space, Work Ball Into Box, Overlap, Wider, higher tempo, Distribute Quickly. Extra attacker(s) at ~60' and ~75' — accept the stamina hit, you need goals."]
+];
+function matchTimeplanHTML(){
+  return `<div class="card">
+    <h2>⏱️ Minute-by-minute match plan</h2>
+    <p class="sub">The shape of a match for your fast, moderate-stamina side — when to drop the press, when to sub, and what to do by scoreline.</p>
+    ${explain("A fixed timeline you run every match (the live assistant above reacts to the exact situation; this is the plan around it).","Top table = what to do in each time band; bottom = how to react to the scoreline. The ~60' row is your key moment — first subs before the stamina cliff.","Managing the clock + the stamina cliff wins more points than your starting XI — most dropped points are late goals from tired legs.")}
+    <div class="tablewrap"><table><thead><tr><th>Moment</th><th>What you do</th></tr></thead><tbody>${MATCH_TIME.map(r=>`<tr><td><b>${esc(r[0])}</b></td><td class="muted" style="white-space:normal">${esc(r[1])}</td></tr>`).join("")}</tbody></table></div>
+    <h3 style="margin:12px 0 4px">React to the scoreline</h3>
+    <div class="tablewrap"><table><thead><tr><th>Situation</th><th>Reaction</th></tr></thead><tbody>${MATCH_SCORE.map(r=>`<tr><td><b style="white-space:nowrap">${esc(r[0])}</b></td><td class="muted" style="white-space:normal">${esc(r[1])}</td></tr>`).join("")}</tbody></table></div>
+    <p class="muted" style="font-size:11px;margin-top:6px">Sources: FM-Arena "Mentality & managing matches" + "Substitutions" threads; stamina curve (condition drops after ~60', stamina &lt;11 → tired by 65–70'). The "losing" instruction lists are from the fmwonderkid FM24 match-plans guide.</p>
+  </div>`;
+}
 function vMatchday(){
   const a=mdAdvice();
   const seg=(k,opts)=>opts.map(([v,l])=>`<button class="${MD[k]===v?'on':''}" onclick="setMD('${k}','${v}')">${l}</button>`).join("");
@@ -1848,6 +1937,7 @@ function vMatchday(){
     </div>
     ${tired.length?`<div class="tipbox amber"><b>Fitness watch:</b> these starters tire fast — plan to sub around 60-65': ${tired.join(", ")}.</div>`:''}
   </div>
+  ${matchTimeplanHTML()}
   <div class="card">
     <h2>🆚 Game plan vs opponent</h2>
     <p class="sub">Pick how your opponent plays → how to stop them <i>and</i> how to hurt them.</p>
