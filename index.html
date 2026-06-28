@@ -502,6 +502,24 @@ function trainingFor(p){
   const noFocus = weak.filter(i=>NO_FOCUS_ATTRS.has(i.a)).map(i=>i.a);
   return {role, fmRole:ROLE_FM[role]||role, weak, primary, secondary, noFocus};
 }
+/* ---- Player traits (PPMs) for our deep-block / pace counter-attack, by role (researched FM24, position-locks respected) ---- */
+const TRAITS_STYLE = {
+ "SK - Defend":{teach:["Uses Long Throws To Start Counter Attacks (GK-only — launches the break)"],avoid:["Dwells On Ball"]},
+ "BPD - Defend":{teach:["Brings Ball Out Of Defence (carry into midfield, skip the transition)","Tries Long Range Passes (hit runners early)","Stays Back At All Times (stay anchored vs the counter)"],avoid:["Dwells On Ball","Plays Short Simple Passes"],mentor:["Tries To Play Way Out Of Trouble"]},
+ "FB - Attack":{teach:["Knocks Ball Past Opponent (beat the man on pace)","Gets Forward Whenever Possible","Runs With Ball Down his flank","Tries Killer Balls Often"],avoid:["Stays Back At All Times (kills your attack from full-back)","Dwells On Ball"]},
+ "DM - Support":{teach:["Stays Back At All Times (the anchor — on ONE of the pivot)","Tries Long Range Passes","Runs With Ball Through Centre (on the carrier of the two)"],avoid:["Dwells On Ball","Dictates Tempo (slows your break)","Plays Short Simple Passes"]},
+ "IF - Support":{teach:["Knocks Ball Past Opponent","Gets Into The Opposition Area","Moves Into Channels","Runs With Ball Down his flank","Tries First Time Shots","Plays One-Twos"],avoid:["Comes Deep To Get Ball","Hugs Line","Plays With Back To Goal","Dwells On Ball"]},
+ "AM - Attack":{teach:["Gets Into The Opposition Area","Tries Killer Balls Often","Plays One-Twos","Tries First Time Shots"],avoid:["Comes Deep To Get Ball","Plays Short Simple Passes","Dwells On Ball"]},
+ "AF - Attack":{teach:["Likes To Try To Beat Offside Trap (run in behind)","Gets Into The Opposition Area","Moves Into Channels","Tries First Time Shots","Knocks Ball Past Opponent"],avoid:["Comes Deep To Get Ball","Plays With Back To Goal","Holds Up Ball","Looks For Pass Rather Than Attempting To Score"]}
+};
+function traitAdvice(p){
+  const role=assignedRole(p), t=TRAITS_STYLE[role]||{teach:[],avoid:[]}, age=p.age;
+  let when;
+  if(age<18) when={tag:"bad",txt:"Under 18 — DON'T coach traits yet. Let him absorb them via a mentoring group, and spend his training slot on attributes + role."};
+  else if(age<=20) when={tag:"warn",txt:age+"y — round out his core attributes first; coach only his single most useful trait, and only if a coach rates him 'suited'."};
+  else when={tag:"good",txt:age+"y — good age to coach these traits (use a category-matched coach; he must be 'suited')."};
+  return {role,teach:t.teach||[],avoid:t.avoid||[],mentor:t.mentor||[],when};
+}
 
 /* ============================ UI HELPERS ============================ */
 function scoreColor(s){ if(s>=14)return"#22c55e"; if(s>=12)return"#4ade80"; if(s>=10)return"#a3e635"; if(s>=8)return"#fbbf24"; if(s>=6)return"#fb923c"; return"#f43f5e"; }
@@ -943,6 +961,14 @@ function openPlayer(name){
       ${tr.secondary&&tr.secondary.length?`<br><span class="muted">Next focuses after that: ${tr.secondary.map(s=>esc(s.focus)).join(", ")}</span>`:""}
       ${tr.noFocus&&tr.noFocus.length?`<br><span class="muted">⚠️ ${tr.noFocus.join(", ")} have no Additional Focus in FM — they only improve through role training + real match minutes.</span>`:""}
     </div>
+    ${(()=>{const ta=traitAdvice(p);return `<h3>🧠 Player traits to teach <span class="muted" style="font-size:12px;font-weight:400">— for our counter/pace style, as a ${esc(ta.role.split(" - ")[0])}</span></h3>
+    <div class="tipbox">
+      <div style="margin-bottom:6px"><span class="tag ${ta.when.tag}">timing</span> ${ta.when.txt}</div>
+      <b>✅ Teach (fits the style):</b><ul style="margin:4px 0 6px;padding-left:18px">${ta.teach.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>
+      ${ta.mentor&&ta.mentor.length?`<b>🤝 Via mentoring only (can't be coached):</b> ${ta.mentor.map(esc).join(", ")}<br>`:""}
+      <b>⛔ Avoid (clashes with the counter):</b> ${ta.avoid.map(esc).join(", ")}
+      <div class="muted" style="font-size:11px;margin-top:6px">Traits cost <b>no CA</b> — but coaching one uses his training slot &amp; adds workload, and opposite traits cancel out. Learn/remove via <b>Development → individual training</b>.</div>
+    </div>`;})()}
     ${p.age<=STATE.settings.youthAge?`<h3>🎓 Development plan</h3><div class="tipbox">${devPlan(p).map(s=>`<div style="margin:4px 0"><b>${s[0]}</b> — ${s[1]}</div>`).join("")}</div>`:""}
     <h3>🕸️ Role profile <span class="muted" style="font-size:12px;font-weight:400">— his 8 key attributes for ${esc(role)}</span></h3>
     ${radarSVG(p,role)}
@@ -1601,12 +1627,14 @@ function matchdaySubs(idx){
   const wideOff=entries.filter(e=>grpOf(e.sid)==="att").map(e=>e.p).sort((x,y)=>cr(x)-cr(y))[0];
   const dmOff=entries.filter(e=>grpOf(e.sid)==="mid").map(e=>e.p).sort((x,y)=>cr(x)-cr(y))[0];
   const ln=(on,off,why)=>on?`<div style="margin:4px 0">⬆️ <b onclick="openPlayer('${jsq(on.name)}')" style="cursor:pointer;color:var(--brand)">${esc(on.name)}</b> <span class="muted">(pace ${A(on,"Pac")}, ${esc(rawOf(on,KEYS.con)||"fresh")})</span>${off?` &nbsp;⬇️ for <b onclick="openPlayer('${jsq(off.name)}')" style="cursor:pointer">${esc(last(off.name))}</b>`:""} — <span class="muted">${why}</span></div>`:"";
-  // give several options so it works whatever your actual XI is
-  const opts=(list,off,why,n)=>{ const seen=new Set(); const picks=list.filter(p=>{if(seen.has(p.name))return false;seen.add(p.name);return true;}).slice(0,n||3); if(!picks.length)return "<span class='muted'>No fresh outfield option on the bench.</span>"; return picks.map((p,i)=>ln(p, i===0?off:null, i===0?why:"or — alternative if he's not in your XI / already on")).join(""); };
-  if(idx>=6) return opts(byAtk, dmOff||tiredOff, "your best impact sub — fresh legs to chase the game"+atkWhy, 3)+`<div class="muted" style="font-size:11px;margin-top:4px">…and go 4-2-4: sacrifice a holder, flood the box.</div>`;
-  if(idx===5) return opts(byAtk, dmOff||tiredOff, "fresh goal threat for the last 25-30 mins"+atkWhy, 3);
-  if(idx<=2) return opts(byDef, wideOff||tiredOff, "shore it up — "+oppWhy+" on for a tiring attacker to see it out", 3);
-  return opts(byFresh, tiredOff, "like-for-like refresh of your most tired starter — keeps intensity up & cuts injury risk", 3);
+  // a MENU of strategic options (2 named candidates each + why); the one that fits the scoreline is starred
+  const optList=(list,off,why)=>{ const seen=new Set(); const picks=list.filter(p=>{if(seen.has(p.name))return false;seen.add(p.name);return true;}).slice(0,2); if(!picks.length)return "<div class='muted' style='margin:2px 0'>No fresh option on the bench for this.</div>"; return picks.map((p,i)=>ln(p, i===0?off:null, i===0?why:"or — alternative")).join(""); };
+  const star = idx>=5?"chase": idx<=2?"protect":"fresh";
+  const block=(key,emoji,label,list,off,why)=>`<div style="margin:8px 0"><b>${star===key?'★ ':''}${emoji} ${label}${star===key?' <span class="tag good" style="font-size:10px">recommended now</span>':''}</b>${optList(list,off,why)}</div>`;
+  return block("chase","🔥","Chase the game",byAtk,dmOff||tiredOff,"fresh goal threat / impact sub"+atkWhy)
+    + block("protect","🛡️","Protect the result",byDef,wideOff||tiredOff,oppWhy+" on for a tiring attacker to see it out")
+    + block("fresh","🔄","Freshen up",byFresh,tiredOff,"like-for-like refresh of your most tired starter — keeps intensity, cuts injury risk")
+    + (idx>=6?`<div class="muted" style="font-size:11px;margin-top:4px">…and shift to 4-2-4: sacrifice a holder, flood the box.</div>`:"");
 }
 /* ===== PRE-MATCH ORDER OF MARCH (Plan A) — kills the per-match "what XI + tactic + instructions?" decision ===== */
 let planFx=0;                                   // which upcoming fixture we're planning (0 = next)
@@ -1927,26 +1955,31 @@ function repFinance(){
 }
 function buildMentorGroups(){
   if(!hasCol(KEYS.pers)) return "";
-  const ps=players(), ya=STATE.settings.youthAge;
-  const mentors=ps.filter(p=>p.age>=25&&persIsGood(rawOf(p,KEYS.pers))&&A(p,"Det")>=13)
-    .map(p=>({p,score:A(p,"Det")+A(p,"Ldr")*0.5+(/(model|born leader|charismatic|perfectionist|driven|iron)/i.test(rawOf(p,KEYS.pers)||"")?6:2)}))
-    .sort((a,b)=>b.score-a.score);
-  const mentees=ps.filter(p=>p.age<=ya&&(persIsBad(rawOf(p,KEYS.pers))||A(p,"Det")<11))
-    .map(p=>({p,need:(persIsBad(rawOf(p,KEYS.pers))?2:0)+(11-A(p,"Det"))/11})).sort((a,b)=>b.need-a.need);
-  if(!mentors.length||!mentees.length) return `<div class="tipbox"><b>🤝 Mentoring:</b> ${!mentors.length?"No settled senior pro to lead a group yet — develop one first.":"No youngsters need mentoring right now — attitudes look healthy. ✅"}</div>`;
-  const nGroups=Math.min(2,mentors.length,Math.max(1,Math.ceil(mentees.length/3)));
-  const groups=[]; for(let g=0;g<nGroups;g++) groups.push({leader:mentors[g],extra:[],kids:[]});
-  mentors.slice(nGroups,nGroups*2).forEach((m,i)=>groups[i%nGroups].extra.push(m));
-  let gi=0; for(const k of mentees){ let placed=false; for(let t=0;t<nGroups;t++){const idx=(gi+t)%nGroups; if(groups[idx].kids.length<4){groups[idx].kids.push(k);gi=idx+1;placed=true;break;}} if(!placed)break; }
+  const ps=players();
+  const infl=p=>A(p,"Det")*0.4 + A(p,"Ldr")*0.4 + Math.min(p.age,30)*0.2 + (persIsGood(rawOf(p,KEYS.pers))?6:0); // influence proxy (export has no reputation)
+  // anchors = good-personality, settled, high-Determination seniors — NEVER a bad personality (he'd drag the group down)
+  const mentors=ps.filter(p=>p.age>=22 && persIsGood(rawOf(p,KEYS.pers)) && !persIsBad(rawOf(p,KEYS.pers)) && A(p,"Det")>=13)
+    .map(p=>({p,score:infl(p)})).sort((a,b)=>b.score-a.score);
+  // to-improve = impressionable (≤23) with weak personality OR low Determination; skip those already elite
+  const mentees=ps.filter(p=>p.age<=23 && (persIsBad(rawOf(p,KEYS.pers))||A(p,"Det")<12) && !/(model citizen|model professional|resolute|perfectionist)/i.test(rawOf(p,KEYS.pers)||""))
+    .map(p=>({p,need:(persIsBad(rawOf(p,KEYS.pers))?3:0)+Math.max(0,12-A(p,"Det"))/4})).sort((a,b)=>b.need-a.need);
+  if(!mentors.length||!mentees.length) return `<div class="tipbox"><b>🤝 Mentoring:</b> ${!mentors.length?"No settled good-personality senior to anchor a group yet — keep/develop one first (never use a bad-personality senior, he'd rub off the wrong habits).":"No youngsters need mentoring right now — attitudes & Determination look healthy. ✅"}</div>`;
+  // tight groups: 1 anchor : 2 kids (sweet spot); spread extra anchors so a weak kid is outnumbered by good seniors
+  const nGroups=Math.min(mentors.length, Math.max(1,Math.ceil(mentees.length/2)));
+  const groups=[]; for(let g=0;g<nGroups;g++) groups.push({anchors:[mentors[g]],kids:[]});
+  mentors.slice(nGroups).forEach((m,i)=>{ if(groups[i%nGroups].anchors.length<2) groups[i%nGroups].anchors.push(m); });
+  let gi=0; for(const k of mentees){ let placed=false; for(let t=0;t<nGroups;t++){const idx=(gi+t)%nGroups; if(groups[idx].kids.length<3){groups[idx].kids.push(k);gi=idx+1;placed=true;break;}} if(!placed)break; }
+  const valid=groups.filter(g=>g.anchors.length+g.kids.length>=3); // FM hard rule: min 3 per group
+  if(!valid.length) return `<div class="tipbox"><b>🤝 Mentoring:</b> Not enough for a valid group yet — FM needs at least <b>3</b> players in a mentoring group. Develop another good-personality senior, or wait until more youngsters need it.</div>`;
   return `<h3>🤝 Suggested mentoring groups</h3>
-  <p class="sub">Mentoring transfers <b>personality, Determination & mental attributes</b> from the leader to the kids — create these as tutoring groups in FM.</p>
-  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">${groups.map((grp,i)=>`
-    <div class="card" style="margin:0"><b>Group ${i+1}</b>
-    <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-top:6px">Tutor (leader)</div>
-    ${advItem(grp.leader.p.name,esc(rawOf(grp.leader.p,KEYS.pers))+" · Det "+A(grp.leader.p,"Det"),'<span class="tag good">lead</span>')}
-    ${grp.extra.map(m=>advItem(m.p.name,"support tutor",'<span class="tag info">tutor</span>')).join("")}
-    <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-top:8px">Learners</div>
-    ${grp.kids.map(k=>advItem(k.p.name,esc(rawOf(k.p,KEYS.pers)||"")+" · Det "+A(k.p,"Det"),'<span class="tag bad">learn</span>')).join("")}
+  <p class="sub">FM24 mentoring nudges <b>personality + hidden mentals (Determination — the only way to raise it — Professionalism, Ambition)</b> and player traits toward the group, weighted by influence. Build them in FM under <b>Squad → select the players → Mentoring</b>.</p>
+  <div class="tipbox amber" style="margin:6px 0"><b>⚠️ Game rules:</b> every member must be in the <b>SAME squad</b> (First team / U21 / U18) — you can't mentor across squads, so register an anchor and a kid together first. Minimum <b>3</b> per group; keep it tight (≈1 senior : 2 kids — wide groups barely work); the effect lands on the <b>≤24s</b>.</div>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">${valid.map((grp,i)=>`
+    <div class="card" style="margin:0"><b>Group ${i+1}</b> <span class="muted">(${grp.anchors.length+grp.kids.length} players)</span>
+    <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-top:6px">Anchors — good influence</div>
+    ${grp.anchors.map(m=>advItem(m.p.name,m.p.age+"y · "+esc(rawOf(m.p,KEYS.pers))+" · Det "+A(m.p,"Det"),'<span class="tag good">anchor</span>')).join("")}
+    <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-top:8px">To improve — will absorb</div>
+    ${grp.kids.map(k=>advItem(k.p.name,k.p.age+"y · "+esc(rawOf(k.p,KEYS.pers)||"?")+" · Det "+A(k.p,"Det"),'<span class="tag warn">learn</span>')).join("")}
     </div>`).join("")}</div>`;
 }
 function repPersonality(){
