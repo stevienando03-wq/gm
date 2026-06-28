@@ -454,6 +454,8 @@ function famMult(p,r){
   const d=Math.min(...elig.map(x=>roleDist(r,x)));  // distance to his nearest natural position
   return d<=0.5?0.90: d<=1?0.82: d<=1.5?0.72: d<=2?0.62: 0.50; // Accomplished→Ineffectual
 }
+/* Familiarity for playing p in a specific FORMATION SLOT (side-aware): 1.0 natural here, 0.90 right line/wrong side, else distance penalty */
+function slotMult(p,slot){ if(eligible(p,slot)) return 1.0; if(roleEligible(p,slot.role)) return 0.90; return famMult(p,slot.role); }
 /* Best role = the role where he is most EFFECTIVE (raw fit × familiarity), so a fast CB is no longer crowned a striker.
    Returns the raw fit IN that role (familiarity-adjusted only decides which role wins). */
 function bestRole(p){
@@ -473,7 +475,7 @@ function eligible(p,slot){ const mp=parsePos(p.position); for(const tok in slot.
 let xiPins={};
 function bestXI(opts={}){
   const ps=players().filter(p=>opts.includeUnavailable||p.avail), ya=STATE.settings.youthAge, pairs=[];
-  curFormation().forEach(slot=>ps.forEach(p=>{const s=scoreFor(p,slot.role);const nat=eligible(p,slot);let adj=s-(nat?0:4);if(opts.youthBoost&&p.age<=ya)adj+=opts.youthBoost;if(opts.rotate){const cr=condRank(rawOf(p,KEYS.con));if(cr!=null){if(cr<=2)adj-=6;else if(cr===3)adj-=2.5;}if(/high/i.test(rawOf(p,KEYS.fatigue)||""))adj-=3;}pairs.push({slot,p,score:s,nat,adj});}));
+  curFormation().forEach(slot=>ps.forEach(p=>{const s=scoreFor(p,slot.role);const nat=eligible(p,slot);let adj=s*slotMult(p,slot);if(opts.youthBoost&&p.age<=ya)adj+=opts.youthBoost;if(opts.rotate){const cr=condRank(rawOf(p,KEYS.con));if(cr!=null){if(cr<=2)adj-=6;else if(cr===3)adj-=2.5;}if(/high/i.test(rawOf(p,KEYS.fatigue)||""))adj-=3;}pairs.push({slot,p,score:s,nat,adj});}));
   pairs.sort((a,b)=>b.adj-a.adj);
   const usedP=new Set(),filled={},assign={};
   if(!opts.ignorePins){ for(const sid in xiPins){ const slot=curFormation().find(s=>s.id===sid), p=ps.find(x=>x.name===xiPins[sid]); if(slot&&p&&!filled[sid]&&!usedP.has(p.name)){ filled[sid]=true; usedP.add(p.name); assign[sid]={p,score:scoreFor(p,slot.role),nat:eligible(p,slot),pinned:true}; } } }
@@ -1579,8 +1581,8 @@ function matchdaySubs(idx){
   const bench=players().filter(p=>p.avail && !starterNames.has(p.name));
   if(!bench.length) return "<span class='muted'>No fresh players available on the bench — your hands are tied.</span>";
   const cr=p=>condRank(rawOf(p,KEYS.con))||3;
-  const atk=p=>Math.max(scoreFor(p,"AF - Attack"),scoreFor(p,"IF - Support"),scoreFor(p,"AM - Attack"));
-  const def=p=>Math.max(scoreFor(p,"DM - Support"),scoreFor(p,"BPD - Defend"),scoreFor(p,"FB - Attack"));
+  const atk=p=>Math.max(scoreFor(p,"AF - Attack")*famMult(p,"AF - Attack"),scoreFor(p,"IF - Support")*famMult(p,"IF - Support"),scoreFor(p,"AM - Attack")*famMult(p,"AM - Attack"));
+  const def=p=>Math.max(scoreFor(p,"DM - Support")*famMult(p,"DM - Support"),scoreFor(p,"BPD - Defend")*famMult(p,"BPD - Defend"),scoreFor(p,"FB - Attack")*famMult(p,"FB - Attack"));
   // opponent-aware attacking pick: vs a high-line side bring a sprinter; vs a deep block bring a dribbler/creator
   const oppAtk={ possession:p=>A(p,"Pac")*0.6+A(p,"Acc")*0.4, counter:p=>A(p,"Dri")*0.5+A(p,"Fla")*0.25+A(p,"Vis")*0.25, targetman:p=>A(p,"Pac")*0.5+A(p,"Acc")*0.5 };
   const oppAtkWhy={ possession:"a flat-out sprinter to run in behind their high line", counter:"a dribbler/creator to unlock their deep block", targetman:"a pacey runner to exploit the space behind their pushed-up side" };
@@ -1662,9 +1664,9 @@ function matchPlan(){
   return {opp,ha,diff,arch:planQuick.arch,preset,ment:planMentality(diff,ha,surv),situ:planSituational(diff,surv),surv,xi,xiA,xiB,eff,recMode,tired,lowStakes,hasFx:!!fx.length};
 }
 function keyContingencies(xi){
-  const ent=Object.entries(xi.assign).map(([sid,a])=>({slot:FORMATION.find(s=>s.id===sid),p:a.p,score:a.score})).filter(e=>e.slot).sort((a,b)=>b.score-a.score).slice(0,2);
+  const ent=Object.entries(xi.assign).map(([sid,a])=>({slot:curFormation().find(s=>s.id===sid),p:a.p,score:a.score})).filter(e=>e.slot).sort((a,b)=>b.score-a.score).slice(0,2);
   const used=new Set();
-  return ent.map(e=>{ const back=(xi.bench||[]).map(b=>({p:b.p,s:scoreFor(b.p,e.slot.role)})).filter(b=>!used.has(b.p.name)).sort((a,b)=>b.s-a.s)[0]; if(back)used.add(back.p.name); return {pos:e.slot.label,starter:e.p.name,back:back&&back.p.name,backScore:back&&back.s}; });
+  return ent.map(e=>{ const back=(xi.bench||[]).map(b=>({p:b.p,s:scoreFor(b.p,e.slot.role)*slotMult(b.p,e.slot)})).filter(b=>!used.has(b.p.name)).sort((a,b)=>b.s-a.s)[0]; if(back)used.add(back.p.name); return {pos:e.slot.label,starter:e.p.name,back:back&&back.p.name,backScore:back&&back.s}; });
 }
 function setPlan(k,v){ if(k==="fx"){planFx=+v;} else {planQuick[k]=v; (STATE.ui=STATE.ui||{}).planQuick=planQuick; save();} render(); }
 function vMatchPlanCard(){
