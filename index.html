@@ -559,7 +559,7 @@ const GROUPS=[
   {id:"decisions",label:"🧭 Decisions",badge:true,views:[["advice","Decisions"]]},
   {id:"squad",label:"👥 Squad",views:[["squad","List"],["compare","Compare"],["depth","Depth & succession"],["release","Surplus"]]},
   {id:"team",label:"⚽ Team",views:[["xi","Best XI"],["setpiece","Set pieces"],["tactics","Tactics"],["matchday","Matchday"]]},
-  {id:"develop",label:"🌱 Develop",views:[["youth","Wonderkids"],["training","Training"],["reports","Reports"],["progress","Progress"]]},
+  {id:"develop",label:"🌱 Develop",views:[["youth","Wonderkids"],["training","Training"],["traits","Traits"],["reports","Reports"],["progress","Progress"]]},
   {id:"season",label:"📝 Season",views:[["season","Season"]]},
   {id:"data",label:"⚙️ Data",views:[["history","Data & settings"]]},
   {id:"help",label:"📖 Help",views:[["notice","Help"]]},
@@ -593,7 +593,7 @@ function render(){
   document.getElementById("refreshBtn").textContent = STATE.fmConnected ? "🔄 Refresh from FM" : "🔗 Connect FM";
   const v=document.getElementById("view");
   if(!STATE.current){ v.innerHTML=`<div class="card"><h2>No squad loaded</h2><p class="sub">Import your <code>Untitled.html</code> FM export to begin.</p><button class="btn primary" onclick="openImport()">Import now</button></div>`; return; }
-  v.innerHTML=({dash:vDash,coach:vCoach,tips:vTips,advice:vAdvice,squad:vSquad,compare:vCompare,xi:vXI,matchday:vMatchday,season:vSeason,setpiece:vSetpiece,reports:vReports,training:vTraining,youth:vYouth,release:vRelease,depth:vDepth,progress:vProgress,tactics:vTactics,history:vHistory,notice:vNotice}[TAB]||vDash)();
+  v.innerHTML=({dash:vDash,coach:vCoach,tips:vTips,advice:vAdvice,squad:vSquad,compare:vCompare,xi:vXI,matchday:vMatchday,season:vSeason,setpiece:vSetpiece,reports:vReports,training:vTraining,traits:vTraits,youth:vYouth,release:vRelease,depth:vDepth,progress:vProgress,tactics:vTactics,history:vHistory,notice:vNotice}[TAB]||vDash)();
   if(TAB==="squad") wireSquad();
   if(TAB==="training") wireTraining();
   makeSortable();
@@ -1034,27 +1034,48 @@ function vXI(){
 let trainingQ="";
 function wireTraining(){ const i=document.getElementById("trq"); if(!i)return; i.oninput=()=>{trainingQ=i.value;const pos=i.selectionStart;render();const el=document.getElementById("trq");if(el){el.focus();el.setSelectionRange(pos,pos);}}; }
 function vTraining(){
-  let rows=players().map(p=>{const tr=trainingFor(p);return{p,tr,score:scoreFor(p,tr.role),tra:traitAdvice(p)};}).sort((a,b)=>b.score-a.score);
+  let rows=players().map(p=>{const tr=trainingFor(p);return{p,tr,score:scoreFor(p,tr.role)};}).sort((a,b)=>b.score-a.score);
   if(trainingQ){const q=trainingQ.toLowerCase();rows=rows.filter(r=>r.p.name.toLowerCase().includes(q));}
   return `<div class="card">
     <h2>🎯 Training plan</h2>
     <p class="sub">For each player: the FM <b>individual role training</b> to set, plus an <b>additional focus</b> targeting his weakest important attributes for that role. Tap a row for the full breakdown.</p>
-    ${explain("A per-player training plan: which Individual Training role to set in FM, and which extra focus area will fix his biggest gaps.","'Role training' = set it on his Training screen. 'Additional focus' = the attribute group he's weakest in for his role. 'Trait to teach' = the priority Player Trait (PPM) for his role in our counter style — under-18s show '🤝 wait · U18' (don't coach traits yet, let them absorb via mentoring). 'Weak in role' lists the specific low attributes. Tap a row for the full teach/avoid trait list.","Targeted training turns raw academy kids into useful players — your only no-transfer way to get better.")}
+    ${explain("A per-player training plan: which Individual Training role to set in FM, and which extra focus area will fix his biggest gaps.","'Role training' = set it on his Training screen. 'Additional focus' = the attribute group he's weakest in for his role. 'Weak in role' lists the specific low attributes. (Player traits to teach are in the 🧠 Traits tab.)","Targeted training turns raw academy kids into useful players — your only no-transfer way to get better.")}
     <div class="tipbox" style="margin:6px 0 10px"><b>Why most focuses are physical — that's deliberate, not a bug.</b> Two reasons: (1) your squad is young, so its physicals (Strength, Jumping, Stamina, and the kids' Pace/Acc) are still underdeveloped — those are their real weak spots. (2) The FM24 match engine is won by <b>Pace, Acceleration & Jumping Reach</b> (FM-Arena's top attributes), while training the technical stats your kids are "worst" at (Passing, Crossing, Technique, Finishing, Marking) has near-zero match impact — so the app steers training to what actually wins games. Every focus is always one of his <b>role's own key/important attributes</b> — it matches his role training, never an off-role attribute (e.g. it won't tell a winger to train heading).</div>
     <div class="row" style="margin-bottom:10px"><input type="text" id="trq" placeholder="🔍 Search a player…" value="${esc(trainingQ)}" style="flex:1;min-width:160px"></div>
-    <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>Role training (FM)</th><th>Additional focus</th><th>Trait to teach</th><th>Weak in role</th></tr></thead>
+    <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>Role training (FM)</th><th>Additional focus</th><th>Weak in role</th></tr></thead>
       <tbody>${rows.map(r=>`<tr onclick="openPlayer('${jsq(r.p.name)}')">
         <td><b>${esc(r.p.name)}</b></td><td>${r.p.age}</td>
         <td class="muted">${esc(r.tr.fmRole)}</td>
         <td>${r.tr.primary?`<span class="tag info" title="set this Additional Focus in FM">${esc(r.tr.primary.focus)}</span>${r.tr.secondary.length?' <span class="muted" style="font-size:11px">+ '+r.tr.secondary.map(s=>esc(s.focus)).join(", ")+'</span>':''}`:'<span class="tag good">strong</span>'}</td>
-        <td>${(()=>{const ta=r.tra;if(!ta.teach.length)return '<span class="muted">—</span>';const top=esc(ta.teach[0].split(" (")[0]);const tip=esc(ta.teach.map(x=>x.split(" (")[0]).join(" · "));return ta.when.tag==='bad'?`<span class="tag" title="Under 18 — don't coach traits yet; let him absorb them via a mentoring group. Priority traits for his role: ${tip}">🤝 wait · U18</span>`:`<span class="tag ${ta.when.tag==='good'?'good':'warn'}" title="Priority Player Trait to coach for our counter style (${ta.when.tag==='good'?'good age to coach':'caution — core attributes first'}). All for his role: ${tip}. Tap the row for the full teach/avoid list.">${top}</span>`;})()}</td>
         <td class="muted" style="white-space:normal">${r.tr.weak.length?r.tr.weak.map(w=>`${w.a} ${w.v}`).join(", "):'—'}</td>
       </tr>`).join("")}</tbody></table></div>
-    <div class="tipbox"><b>How to apply in FM:</b> Player → <b>Training</b> tab → set <b>Individual Training → Role</b> to the one shown, and add the <b>Additional Focus</b> for ~6 weeks, then re-check here after your next import. Young players gain fastest with focus + real minutes.<br><b>Traits:</b> Player → <b>Development → Individual Training</b> → ask a coach to <b>Add</b> the trait shown — only from ~18 (a coach must rate him "suited"); for under-18s, let him pick traits up via a <b>mentoring group</b> instead (it costs no training slot). Traits cost no CA.</div>
+    <div class="tipbox"><b>How to apply in FM:</b> Player → <b>Training</b> tab → set <b>Individual Training → Role</b> to the one shown, and add the <b>Additional Focus</b> for ~6 weeks, then re-check here after your next import. Young players gain fastest with focus + real minutes. <span class="muted">(Player traits to teach → see the 🧠 Traits tab.)</span></div>
     ${focusGlossaryHTML()}
   </div>`;
 }
 
+/* ---------- PLAYER TRAITS (own Develop tab) ---------- */
+const ROLE_ORDER={"SK - Defend":0,"BPD - Defend":1,"FB - Attack":2,"DM - Support":3,"IF - Support":4,"AM - Attack":5,"AF - Attack":6};
+function vTraits(){
+  const sh=x=>x.split(" (")[0];
+  let rows=players().map(p=>({p,ta:traitAdvice(p)}));
+  rows.sort((a,b)=>((ROLE_ORDER[a.ta.role]??9)-(ROLE_ORDER[b.ta.role]??9))||last(a.p.name).localeCompare(last(b.p.name)));
+  const timeTag=t=>t.tag==='good'?'<span class="tag good">coach now</span>':t.tag==='warn'?'<span class="tag warn">core attrs first</span>':'<span class="tag">🤝 wait · U18</span>';
+  return `<div class="card">
+    <h2>🧠 Player traits to teach</h2>
+    <p class="sub">The priority <b>Player Traits (PPMs)</b> to coach each player so his movement &amp; passing suit our <b>deep-block / counter-on-pace</b> style — by role, with the age gate. Tap a row for the full why. Click a column to sort (Name sorts by surname).</p>
+    ${explain("Which Player Trait to teach each man to fit the system, plus which traits to avoid.","'When' = age gate: ‘coach now’ (~21+), ‘core attrs first’ (18-20), ‘🤝 wait · U18’ (don't coach yet — let him absorb via mentoring). 'Teach' = traits that fit his role in our counter; 'Avoid' = traits that clash with it. Mentoring-only traits are flagged.","Traits round a player out to fit the tactic — but they use a training slot, so do them at the right age (not on kids) and never one that fights the system.")}
+    <div class="tipbox" style="margin:6px 0 10px"><b>Rules (FM24):</b> a trait costs <b>0 CA</b> but uses the player's individual-training slot &amp; adds workload; <b>opposite traits cancel out</b>; some are <b>mentoring-only</b>; teach/remove via <b>Player → Development → Individual Training</b> (a coach must rate him "suited"). <b>Don't coach traits before 18</b> — let youngsters absorb them through a <b>mentoring group</b> instead.</div>
+    <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>Role</th><th>When</th><th>Teach (for our style)</th><th>Avoid</th></tr></thead>
+      <tbody>${rows.map(r=>{const ta=r.ta;const teach=ta.teach.map(sh);const mentor=(ta.mentor||[]).map(sh);return `<tr onclick="openPlayer('${jsq(r.p.name)}')">
+        <td><b>${esc(r.p.name)}</b></td><td>${r.p.age}</td>
+        <td class="muted">${esc(ta.role.split(" - ")[0])}</td>
+        <td>${timeTag(ta.when)}</td>
+        <td style="white-space:normal">${teach.map(t=>`<span class="tag good" style="font-size:11px">${esc(t)}</span>`).join(" ")}${mentor.length?` <span class="muted" style="font-size:11px">+ ${mentor.map(esc).join(", ")} (mentor-only)</span>`:""}</td>
+        <td class="muted" style="white-space:normal;font-size:12px">${ta.avoid.map(sh).map(esc).join(", ")}</td>
+      </tr>`;}).join("")}</tbody></table></div>
+  </div>`;
+}
 /* ---------- YOUTH ---------- */
 function persIsGood(s){ return s&&GOOD_PERS.some(g=>s.toLowerCase().includes(g)); }
 function persIsBad(s){ return s&&BAD_PERS.some(g=>s.toLowerCase().includes(g)); }
