@@ -1695,8 +1695,9 @@ function mdAdvice(){
 function matchdaySubs(idx){
   const xi=bestXI(); const entries=Object.entries(xi.assign).map(([sid,v])=>({sid,p:v.p}));
   const starterNames=new Set(entries.map(e=>e.p.name));
-  const bench=players().filter(p=>p.avail && !starterNames.has(p.name));
-  if(!bench.length) return "<span class='muted'>No fresh players available on the bench — your hands are tied.</span>";
+  const isGK=p=>/(^|[ ,\/])GK/.test(p.position||"");
+  const bench=players().filter(p=>p.avail && !starterNames.has(p.name) && !isGK(p)); // outfield only — never suggest the backup keeper for a tactical sub
+  if(!bench.length) return "<span class='muted'>No fresh outfield players on the bench — your hands are tied.</span>";
   const cr=p=>condRank(rawOf(p,KEYS.con))||3;
   const atk=p=>Math.max(scoreFor(p,"AF - Attack")*famMult(p,"AF - Attack"),scoreFor(p,"IF - Support")*famMult(p,"IF - Support"),scoreFor(p,"AM - Attack")*famMult(p,"AM - Attack"));
   const def=p=>Math.max(scoreFor(p,"DM - Support")*famMult(p,"DM - Support"),scoreFor(p,"BPD - Defend")*famMult(p,"BPD - Defend"),scoreFor(p,"FB - Attack")*famMult(p,"FB - Attack"));
@@ -1713,13 +1714,13 @@ function matchdaySubs(idx){
   const byDef=bench.slice().sort((x,y)=>(defFn(y)+cr(y)*0.5)-(defFn(x)+cr(x)*0.5));
   const oppWhy = oppReason[oppArch]||"a fresh defensive-minded player";
   const byFresh=bench.slice().sort((x,y)=>cr(y)-cr(x));
-  const tiredOff=entries.map(e=>e.p).slice().sort((x,y)=>cr(x)-cr(y))[0];
+  const tiredOff=entries.map(e=>e.p).filter(p=>!isGK(p)).slice().sort((x,y)=>cr(x)-cr(y))[0];
   const grpOf=sid=>{const s=curFormation().find(x=>x.id===sid);return s?s.grp:"";};
   const wideOff=entries.filter(e=>grpOf(e.sid)==="att").map(e=>e.p).sort((x,y)=>cr(x)-cr(y))[0];
   const dmOff=entries.filter(e=>grpOf(e.sid)==="mid").map(e=>e.p).sort((x,y)=>cr(x)-cr(y))[0];
   const ln=(on,off,why)=>on?`<div style="margin:4px 0">⬆️ <b onclick="openPlayer('${jsq(on.name)}')" style="cursor:pointer;color:var(--brand)">${esc(on.name)}</b> <span class="muted">(pace ${A(on,"Pac")}, ${esc(rawOf(on,KEYS.con)||"fresh")})</span>${off?` &nbsp;⬇️ for <b onclick="openPlayer('${jsq(off.name)}')" style="cursor:pointer">${esc(last(off.name))}</b>`:""} — <span class="muted">${why}</span></div>`:"";
   // a MENU of strategic options (2 named candidates each + why); the one that fits the scoreline is starred
-  const optList=(list,off,why)=>{ const seen=new Set(); const picks=list.filter(p=>{if(seen.has(p.name))return false;seen.add(p.name);return true;}).slice(0,2); if(!picks.length)return "<div class='muted' style='margin:2px 0'>No fresh option on the bench for this.</div>"; return picks.map((p,i)=>ln(p, i===0?off:null, i===0?why:"or — alternative")).join(""); };
+  const optList=(list,off,why)=>{ const seen=new Set(); const picks=list.filter(p=>{if(seen.has(p.name))return false;seen.add(p.name);return true;}).slice(0,4); if(!picks.length)return "<div class='muted' style='margin:2px 0'>No fresh option on the bench for this.</div>"; return picks.map((p,i)=>ln(p, i===0?off:null, i===0?why:"or — alternative")).join(""); };
   const star = idx>=5?"chase": idx<=2?"protect":"fresh";
   const block=(key,emoji,label,list,off,why)=>`<div style="margin:8px 0"><b>${star===key?'★ ':''}${emoji} ${label}${star===key?' <span class="tag good" style="font-size:10px">recommended now</span>':''}</b>${optList(list,off,why)}</div>`;
   return block("chase","🔥","Chase the game",byAtk,dmOff||tiredOff,"fresh goal threat / impact sub"+atkWhy)
