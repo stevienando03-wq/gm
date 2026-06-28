@@ -1718,7 +1718,7 @@ function matchdaySubs(idx){
   const grpOf=sid=>{const s=curFormation().find(x=>x.id===sid);return s?s.grp:"";};
   const wideOff=entries.filter(e=>grpOf(e.sid)==="att").map(e=>e.p).sort((x,y)=>cr(x)-cr(y))[0];
   const dmOff=entries.filter(e=>grpOf(e.sid)==="mid").map(e=>e.p).sort((x,y)=>cr(x)-cr(y))[0];
-  const ln=(on,off,why)=>on?`<div style="margin:4px 0">⬆️ <b onclick="openPlayer('${jsq(on.name)}')" style="cursor:pointer;color:var(--brand)">${esc(on.name)}</b> <span class="muted">(pace ${A(on,"Pac")}, ${esc(rawOf(on,KEYS.con)||"fresh")})</span>${off?` &nbsp;⬇️ for <b onclick="openPlayer('${jsq(off.name)}')" style="cursor:pointer">${esc(last(off.name))}</b>`:""} — <span class="muted">${why}</span></div>`:"";
+  const ln=(on,off,why)=>{ if(!on) return ""; const br=bestRole(on); return `<div style="margin:4px 0">⬆️ <b onclick="openPlayer('${jsq(on.name)}')" style="cursor:pointer;color:var(--brand)">${esc(on.name)}</b> <span class="muted">(${esc(br.role.split(" ")[0])} fit ${br.score.toFixed(1)} · pace ${A(on,"Pac")} · ${esc(rawOf(on,KEYS.con)||"fresh")})</span>${off?` &nbsp;⬇️ for <b onclick="openPlayer('${jsq(off.name)}')" style="cursor:pointer">${esc(last(off.name))}</b>`:""} — <span class="muted">${why}</span></div>`; };
   // a MENU of strategic options (2 named candidates each + why); the one that fits the scoreline is starred
   const optList=(list,off,why)=>{ const seen=new Set(); const picks=list.filter(p=>{if(seen.has(p.name))return false;seen.add(p.name);return true;}).slice(0,4); if(!picks.length)return "<div class='muted' style='margin:2px 0'>No fresh option on the bench for this.</div>"; return picks.map((p,i)=>ln(p, i===0?off:null, i===0?why:"or — alternative")).join(""); };
   const star = idx>=5?"chase": idx<=2?"protect":"fresh";
@@ -1726,7 +1726,8 @@ function matchdaySubs(idx){
   return block("chase","🔥","Chase the game",byAtk,dmOff||tiredOff,"fresh goal threat / impact sub"+atkWhy)
     + block("protect","🛡️","Protect the result",byDef,wideOff||tiredOff,oppWhy+" on for a tiring attacker to see it out")
     + block("fresh","🔄","Freshen up",byFresh,tiredOff,"like-for-like refresh of your most tired starter — keeps intensity, cuts injury risk")
-    + (idx>=6?`<div class="muted" style="font-size:11px;margin-top:4px">…and shift to 4-2-4: sacrifice a holder, flood the box.</div>`:"");
+    + (idx>=6?`<div class="muted" style="font-size:11px;margin-top:4px">…and shift to 4-2-4: sacrifice a holder, flood the box.</div>`:"")
+    + `<div class="muted" style="font-size:11px;margin-top:6px"><b>How these rank (not pace alone):</b> 🔥 attacking role-fit + the right attribute for the opponent (pace vs a high line, dribbling/vision vs a deep block) + freshness · 🛡️ defensive quality matched to their threat (heading/strength vs a target-man, pace+marking vs fast wingers, tackling vs a playmaker) + freshness · 🔄 freshest legs. The chip shows each man's <b>role-fit</b>, pace &amp; condition.</div>`;
 }
 /* ===== PRE-MATCH ORDER OF MARCH (Plan A) — kills the per-match "what XI + tactic + instructions?" decision ===== */
 let planFx=0;                                   // which upcoming fixture we're planning (0 = next)
