@@ -1630,8 +1630,9 @@ const MENT=['Very Defensive','Defensive','Cautious','Balanced','Positive','Attac
 let MD={min:75, sit:'losing1', opp:'similar', men:'even'};
 let oppArch="possession";
 let mdBase=(STATE.ui&&STATE.ui.mdBase)||"tuned"; // which tactic he's actually playing — the assistant advises CHANGES from this
-function setMdBase(v){ mdBase=v; (STATE.ui=STATE.ui||{}).mdBase=v; save(); render(); }
-const MD_BASE={ tuned:{label:"🏎️ Tuned Highway Star",anchor:3,note:"Balanced, mid-block, Counter on"}, survival:{label:"🪂 Deep-block bus",anchor:2,note:"Cautious, low block, Regroup"}, meta:{label:"⚔️ Full Gegenpress",anchor:5,note:"Attacking, high press, Counter-Press"} };
+function setMdBase(v){ mdBase=v; (STATE.ui=STATE.ui||{}).mdBase=v; if(MD_FORMATION[v]){STATE.ui.formation=MD_FORMATION[v]; xiPins={};} save(); render(); }
+const MD_BASE={ tuned:{label:"🅰 Highway Star (4-2-3-1)",anchor:4,note:"Positive · mid-block · Counter on"}, survival:{label:"🅱 Speed King deep (4-1-4-1)",anchor:2,note:"Cautious · deep block · Regroup"}, meta:{label:"🅲 EF 424 (4-2-4)",anchor:5,note:"Attacking · high press · Counter-Press"} };
+const MD_FORMATION={ tuned:"f4231", survival:"f4141", meta:"f424" }; // picking a base slot also sets its formation so the XI + subs match
 /* opponent game-plan data — hoisted to module scope so both the pre-match Order of March and the in-match assistant share it */
 const OPP_LABELS={possession:"Possession / plays out from the back",counter:"Counter-attacking & direct",targetman:"Target man & crosses",wingers:"Fast wingers out wide",playmaker:"Star number 10 / playmaker"};
 const OPP_OI={
@@ -1728,9 +1729,9 @@ let planMode="auto";                            // auto | A (strongest) | B (rot
 function setPlanMode(m){ planMode=m; render(); }
 let planQuick=(STATE.ui&&STATE.ui.planQuick)||{ha:"H",diff:"even",arch:"possession"}; // used when no fixtures are saved yet (persisted)
 const PRESET_META={
-  tuned:{label:"🏎️ Highway Star — tuned",note:"your #3-ranked shape, press dialled to your stamina"},
-  survival:{label:"🪂 Deep-block bus",note:"defend deep, soak it up, counter on your pace"},
-  meta:{label:"⚔️ Full Gegenpress",note:"only vs weak sides, once they have the legs"}
+  tuned:{label:"🅰 Highway Star 4-2-3-1 — Positive",note:"your #3-ranked shape, press dialled to your stamina"},
+  survival:{label:"🅱 Speed King deep 4-1-4-1",note:"defend deep, soak it up, counter on your pace"},
+  meta:{label:"🅲 EF 424 4-2-4",note:"only vs weak sides / chasing — make subs ~60'"}
 };
 function squadCanPress(){ const pr=squadProfile(); return !!(pr && pr.engine>=11.5); } // avg Sta/Wor/Nat high enough to sustain a high press
 function planPreset(diff,ha){
@@ -1895,8 +1896,8 @@ function vMatchday(){
     <p class="sub">Set the situation and get exactly what to change — mentality, instructions and the sub to make. Use it live while the match is paused.</p>
     ${explain("A live decision tool: tell it your base tactic + the minute, scoreline, opponent strength and red cards, and it tells you what to change right now.","Pick the tactic you actually started with (below) — the advice is the CHANGE to make from it. The green 'Do this now' card gives a mentality + in/out-of-possession tweaks + the exact named sub (who on, who off, why), adapted to the opponent type.","In-match management wins more points than your starting tactic — reacting correctly at 60-75' is where games are won and lost.")}
     <h3>🎮 Your base tactic (what you kicked off with)</h3>
-    <div class="seg">${[['tuned','🏎️ Tuned'],['survival','🪂 Deep-block'],['meta','⚔️ Gegenpress']].map(([v,l])=>`<button class="${mdBase===v?'on':''}" onclick="setMdBase('${v}')">${l}</button>`).join("")}</div>
-    <p class="sub" style="margin-top:4px">Advising changes from <b>${MD_BASE[mdBase].label}</b> <span class="muted">(${MD_BASE[mdBase].note})</span>. ${mdBase==='survival'?'Everything is a notch more cautious.':mdBase==='meta'?'Everything is a notch more aggressive.':''}</p>
+    <div class="seg">${[['tuned','🅰 Highway Star'],['survival','🅱 Speed King'],['meta','🅲 EF 424']].map(([v,l])=>`<button class="${mdBase===v?'on':''}" onclick="setMdBase('${v}')">${l}</button>`).join("")}</div>
+    <p class="sub" style="margin-top:4px">Advising changes from your <b>${MD_BASE[mdBase].label}</b> slot <span class="muted">(${MD_BASE[mdBase].note})</span> — picking a slot also sets its formation, so the XI &amp; subs below match. ${mdBase==='survival'?'Everything is a notch more cautious.':mdBase==='meta'?'Everything is a notch more aggressive.':''}</p>
     <h3 style="margin-top:6px">Minute: <b style="color:var(--brand)">${MD.min}'</b></h3>
     <input type="range" min="0" max="95" value="${MD.min}" style="width:100%" oninput="MD.min=+this.value;render()">
     <h3>Score situation</h3><div class="seg">${seg('sit',[['winningBig','🟢 Winning 2+'],['winning1','🟢 Winning by 1'],['drawing','🟡 Drawing'],['losing1','🔴 Losing by 1'],['losingBig','🔴 Losing 2+']])}</div>
