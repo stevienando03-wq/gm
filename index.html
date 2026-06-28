@@ -559,7 +559,7 @@ const GROUPS=[
   {id:"decisions",label:"🧭 Decisions",badge:true,views:[["advice","Decisions"]]},
   {id:"squad",label:"👥 Squad",views:[["squad","List"],["compare","Compare"],["depth","Depth & succession"],["release","Surplus"]]},
   {id:"team",label:"⚽ Team",views:[["xi","Best XI"],["setpiece","Set pieces"],["tactics","Tactics"],["matchday","Matchday"]]},
-  {id:"develop",label:"🌱 Develop",views:[["youth","Wonderkids"],["training","Training"],["traits","Traits"],["reports","Reports"],["progress","Progress"]]},
+  {id:"develop",label:"🌱 Develop",views:[["youth","Wonderkids"],["training","Training"],["traits","Traits"],["reports","Reports"],["progress","Growth"]]},
   {id:"season",label:"📝 Season",views:[["season","Season"]]},
   {id:"data",label:"⚙️ Data",views:[["history","Data & settings"]]},
   {id:"help",label:"📖 Help",views:[["notice","Help"]]},
@@ -596,6 +596,7 @@ function render(){
   v.innerHTML=({dash:vDash,coach:vCoach,tips:vTips,advice:vAdvice,squad:vSquad,compare:vCompare,xi:vXI,matchday:vMatchday,season:vSeason,setpiece:vSetpiece,reports:vReports,training:vTraining,traits:vTraits,youth:vYouth,release:vRelease,depth:vDepth,progress:vProgress,tactics:vTactics,history:vHistory,notice:vNotice}[TAB]||vDash)();
   if(TAB==="squad") wireSquad();
   if(TAB==="training") wireTraining();
+  if(TAB==="progress") wireGrowth();
   makeSortable();
 }
 /* Generic click-to-sort for any table in the view (skips the Squad table, which sorts itself) */
@@ -1199,18 +1200,35 @@ function vDepth(){
 }
 
 /* ---------- PROGRESSION ---------- */
+let growthQ="", growthBase=-1; // search query + chosen baseline snapshot index (-1 = latest)
+function wireGrowth(){ const i=document.getElementById("grq"); if(!i)return; i.oninput=()=>{growthQ=i.value;const pos=i.selectionStart;render();const el=document.getElementById("grq");if(el){el.focus();el.setSelectionRange(pos,pos);}}; }
 function vProgress(){
-  if(!STATE.snapshots.length) return `<div class="card"><h2>📈 Progression</h2><p class="sub">Save a snapshot first: <b>Data → Save snapshot</b>. Then import a newer export later and compare here.</p></div>`;
-  const opts=STATE.snapshots.map((s,i)=>`<option value="${i}">${esc(s.label)} (${s.date})</option>`).join("");
-  return `<div class="card"><h2>📈 Progression</h2><p class="sub">Attribute gains in <b>current data</b> vs an older snapshot, for the attributes that matter to each player's role.</p>
-    ${explain("How much each player has grown since a saved snapshot — both his role-fit score and the raw attribute points gained.","Pick the older snapshot to compare against. Green Δ = improved, red = declined. 'Improved' lists exactly which attributes went up.","It proves whether your training & game-time choices are actually developing players — the whole point of a youth save.")}
-    <div class="row"><label>Baseline: <select id="baseSel" onchange="renderProg()">${opts}</select></label></div><div id="progOut" style="margin-top:12px"></div></div>`;
-}
-function renderProg(){
-  const i=+document.getElementById("baseSel").value,base=STATE.snapshots[i];if(!base)return;
-  const bm={};base.records.map(normalize).forEach(p=>bm[p.name]=p);
-  const rows=players().map(p=>{const b=bm[p.name];if(!b)return null;const role=assignedRole(p),w=SCORING.weights[role]||{};let gain=0,ups=[];ATTRS.forEach(a=>{if((w[a]||0)>0){const d=(p.attrs[a]||0)-(b.attrs[a]||0);if(d!==0){gain+=d;if(d>0)ups.push(a+" +"+d);}}});const sN=scoreFor(p,role),sO=scoreFor(b,role);return{p,role,gain,sN,sO,ds:Math.round((sN-sO)*100)/100,ups};}).filter(Boolean).sort((a,b)=>b.gain-a.gain);
-  document.getElementById("progOut").innerHTML=`<div class="tablewrap"><table><thead><tr><th>Name</th><th>Role</th><th>Then→Now</th><th>Δ</th><th>Pts</th><th>Improved</th></tr></thead><tbody>${rows.map(r=>`<tr onclick="openPlayer('${jsq(r.p.name)}')"><td><b>${esc(r.p.name)}</b></td><td>${rolePill(r.role)}</td><td class="muted">${r.sO.toFixed(1)}→<b style="color:${scoreColor(r.sN)}">${r.sN.toFixed(1)}</b></td><td><span class="tag ${r.ds>0?'good':r.ds<0?'bad':'info'}">${r.ds>0?'+':''}${r.ds.toFixed(2)}</span></td><td><b style="color:${r.gain>0?'#34d399':r.gain<0?'#fb7185':'var(--mut)'}">${r.gain>0?'+':''}${r.gain}</b></td><td class="muted" style="white-space:normal">${esc(r.ups.slice(0,8).join(", "))}</td></tr>`).join("")}</tbody></table></div>`;
+  if(!STATE.snapshots.length) return `<div class="card"><h2>📈 Growth</h2>
+    <p class="sub">No baseline yet. From now on, <b>every time you import a new FM export the previous one is auto-saved</b> as a baseline — so after your <b>next</b> import you'll see every player's rating change here (progression or regression). You can also save one now in <b>⚙️ Data → Save snapshot</b>.</p></div>`;
+  const bi = (growthBase>=0 && growthBase<STATE.snapshots.length) ? growthBase : STATE.snapshots.length-1;
+  const base=STATE.snapshots[bi];
+  const bm={}; base.records.map(normalize).forEach(p=>bm[p.name]=p);
+  let rows=players().map(p=>{const b=bm[p.name];const role=assignedRole(p);const sN=scoreFor(p,role);const sO=b?scoreFor(b,role):null;const w=SCORING.weights[role]||{};let gain=0,ups=[];if(b){ATTRS.forEach(a=>{if((w[a]||0)>0){const d=(p.attrs[a]||0)-(b.attrs[a]||0);if(d){gain+=d;if(d>0)ups.push(a+" +"+d);}}});}return{p,role,sN,sO,ds:sO==null?null:Math.round((sN-sO)*100)/100,gain,ups,isNew:!b};}).sort((a,b)=>(b.ds==null?-99:b.ds)-(a.ds==null?-99:a.ds));
+  if(growthQ){const q=growthQ.toLowerCase();rows=rows.filter(r=>r.p.name.toLowerCase().includes(q));}
+  const prog=rows.filter(r=>r.ds!=null&&r.ds>0).length, reg=rows.filter(r=>r.ds!=null&&r.ds<0).length, same=rows.filter(r=>r.ds===0).length;
+  const opts=STATE.snapshots.map((s,i)=>`<option value="${i}" ${i===bi?'selected':''}>${esc(s.label)} (${s.date})</option>`).join("");
+  return `<div class="card"><h2>📈 Growth — rating change vs a baseline</h2>
+    <p class="sub">Each player's role-fit rating <b>now</b> vs the baseline import below. <span style="color:#34d399">Green = progressed</span>, <span style="color:#fb7185">red = regressed</span>. Tap a row for details · click a column to sort (Name sorts by surname) · the search filters live.</p>
+    ${explain("How every player's rating has moved since a baseline import — and the exact attributes that changed.","Pick the baseline (defaults to your last import). Δ rating = now minus then; 'Attr pts' = net attribute points gained; 'Improved' lists which went up. Search + sort like the Squad list.","It proves whether your training, minutes & mentoring are actually developing players — or who's stagnating/declining and needs a change.")}
+    <div class="row" style="gap:12px;flex-wrap:wrap;margin-bottom:8px">
+      <label class="muted">Baseline: <select onchange="growthBase=+this.value;render()">${opts}</select></label>
+      <span class="muted">📈 ${prog} up · 📉 ${reg} down · ➖ ${same} same</span>
+    </div>
+    <div class="row" style="margin-bottom:10px"><input type="text" id="grq" placeholder="🔍 Search a player…" value="${esc(growthQ)}" style="flex:1;min-width:160px"></div>
+    <div class="tablewrap"><table><thead><tr><th>Name</th><th>Age</th><th>Role</th><th>Then→Now</th><th>Δ rating</th><th>Attr pts</th><th>Improved</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr onclick="openPlayer('${jsq(r.p.name)}')">
+        <td><b>${esc(r.p.name)}</b>${r.isNew?' <span class="tag info" style="font-size:10px">new</span>':''}</td><td>${r.p.age}</td><td>${rolePill(r.role)}</td>
+        <td class="muted">${r.sO==null?'':r.sO.toFixed(1)+'→'}<b style="color:${scoreColor(r.sN)}">${r.sN.toFixed(1)}</b></td>
+        <td>${r.ds==null?'<span class="muted">new</span>':`<span class="tag ${r.ds>0?'good':r.ds<0?'bad':'info'}">${r.ds>0?'+':''}${r.ds.toFixed(2)}</span>`}</td>
+        <td><b style="color:${r.gain>0?'#34d399':r.gain<0?'#fb7185':'var(--mut)'}">${r.gain>0?'+':''}${r.gain||0}</b></td>
+        <td class="muted" style="white-space:normal;font-size:12px">${esc(r.ups.slice(0,8).join(", "))||'—'}</td>
+      </tr>`).join("")}</tbody></table></div>
+  </div>`;
 }
 
 /* ---------- TACTICS (two tactics) ---------- */
@@ -2347,6 +2365,14 @@ function applyImport(text,label){
   if(recs.length<1){toast("Couldn't find a player table");return false;}
   const prev=STATE.current, prevSeed=!prev||prev.label==="Seed squad";
   const delta=prev?squadDelta(prev.records,recs):{added:[],removed:[]};
+  // auto-save the OUTGOING squad as a baseline so Growth always has something to compare (no manual snapshot needed)
+  if(prev && prev.records && prev.records.length){
+    const last=STATE.snapshots[STATE.snapshots.length-1];
+    if(!last || last.date!==prev.date || last.label!==prev.label){
+      STATE.snapshots.push(JSON.parse(JSON.stringify({label:prev.label,date:prev.date,records:prev.records})));
+      if(STATE.snapshots.length>6) STATE.snapshots=STATE.snapshots.slice(-6); // cap localStorage
+    }
+  }
   STATE.current={label:label||("Update "+todayStr()),date:todayStr(),records:recs};
   // merge by stable identity, never row index: GC role overrides for players no longer in the squad
   const names=new Set(recs.map(recName).filter(Boolean));
